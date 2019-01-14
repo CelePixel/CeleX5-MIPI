@@ -1,0 +1,63 @@
+Realeased Date: 2019-01-11
+New Features:
+1) Added show by time mode, show by count mode and show by row cycle mode.
+2) Added event intensity mode. (Including gray information)
+3) Added support for converting bin file to csv.
+4) Added support for switching between real time and playback. 
+5) Added support for switching between real time and converting.
+
+Bug Fixed:
+1) Limitation of video recording length.
+
+Changed:
+1) Updated the frame time unit to microsecond.
+
+
+CeleX-5 SDK Version 1.1
+Realeased Date: 2018-12-23
+
+New Features:
+1) Added interface to obtain denoised event data;
+2) Added interfaces to obtain the direction and speed information of optical-flow mode;
+3) Added support for rotating picture;
+4) Added support for recording video and converting bin file to video;
+
+*****************************************************************************************************
+CeleX-5 SDK Version 1.0 
+Realeased Date: 2018-11-20
+
+New Features:
+1) Added support for CeleX-5 Sensor.
+2) Added support for MIPI data output (CeleX-5 Sensor).
+3) Added support for both fixed mode and loop mode (CeleX-5 Sensor).
+4) Added support for adjusting the brightness automatically (CeleX-5 Sensor).
+5) Added interfaces to obtain data (full-frame pic, event pic and full-frame optical-flow pic) of the CeleX-5 Sensor.
+6) Added OpenCV-based interfaces to obtain data (full-frame pic, event pic and full-frame optical-flow pic) of the CeleX-5 Sensor.
+7) Added interfaces to control CeleX-5 Sensor (brightness, threshold, contrast, event duration and picture number)
+
+Bug Fixed:
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+SDK Development Environment:
+ 
+Windows
+   + Windows 7, 8, 10 (x32 / x64)
+   + VS2015
+   + OpenCV 3.3.0
+   + qt-msvc2015-5.6.3
+ 
+Linux (Ubuntu 14.04 LTS x32 / x64)
+   + Linux 4.4.0-31-generic
+   + g++ 4.8.4
+   + C++
+   + OpenCV 3.3.0
+ 
+Linux (Ubuntu 16.04 LTS x32 / x64)
+   + Linux 4.13.0-32-generic
+   + g++ 5.4.0
+   + C++
+   + OpenCV 3.3.0
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+

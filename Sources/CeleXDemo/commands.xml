@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<commands>
+    <command name="Wait 100">
+        <wait>
+            <duration> 100 </duration>
+        </wait>
+    </command>
+    <command name="Wait 10">
+        <wait>
+            <duration> 10 </duration>
+        </wait>
+    </command>
+    <command name="Wait 1">
+        <wait>
+            <duration> 1 </duration>
+        </wait>
+    </command>
+
+    <command name="Reset All">
+        <wirein>
+            <address>0x00</address>
+            <value>0x01</value>
+            <mask>0x01</mask>
+        </wirein>
+    </command>
+
+    <command name="Dereset All">
+        <wirein>
+            <address>0x00</address>
+            <value>0x00</value>
+            <mask>0x01</mask>
+        </wirein>
+    </command>
+
+    <command name="Reset FPGA">
+        <wirein>
+            <address>0x00</address>
+            <value>0x02</value>
+            <mask>0x02</mask>
+        </wirein>
+    </command>
+
+    <command name="Dereset FPGA">
+        <wirein>
+            <address>0x00</address>
+            <value>0x00</value>
+            <mask>0x02</mask>
+        </wirein>
+    </command>
+
+    <command name="Forcefire ON">
+        <wirein>
+            <address>0x00</address>
+            <value>0x10</value>
+            <mask>0x10</mask>
+        </wirein>
+    </command>
+
+    <command name="Forcefire OFF">
+        <wirein>
+            <address>0x00</address>
+            <value>0x00</value>
+            <mask>0x10</mask>
+        </wirein>
+    </command>
+
+    <command name="SetMode Event">
+        <wirein>
+            <address>0x0000</address>
+            <value>0x0000</value>
+            <mask>0xc000</mask>
+        </wirein>
+    </command>
+    <command name="SetMode Fullpic">
+        <wirein>
+            <address>0x0000</address>
+            <value>0x4000</value>
+            <mask>0xc000</mask>
+        </wirein>
+    </command>
+    <command name="SetMode Optical">
+        <wirein>
+            <address>0x0000</address>
+            <value>0x8000</value>
+            <mask>0xc000</mask>
+        </wirein>
+    </command>
+	
+	<command name="SetMode Total Time">
+        <wirein>
+            <address>0x05</address>
+            <value>0x0016E360</value>
+            <mask>0x00FFFFFF</mask>
+        </wirein>
+    </command>
+	
+    <command name="SetADC Enalbe">
+        <wirein>
+            <address>0x0000</address>
+            <value>0x0000</value>
+            <mask>0x0040</mask>
+        </wirein>
+    </command>
+    <command name="SetADC Disable">
+        <wirein>
+            <address>0x0000</address>
+            <value>0x0040</value>
+            <mask>0x0040</mask>
+        </wirein>
+    </command>
+
+    <command name="VDD_IO_EN OFF">
+        <wirein>
+            <address>0x03</address>
+            <value>0x00</value>
+            <mask>0x01</mask>
+        </wirein>
+    </command>
+    <command name="VDD_IO_EN ON">
+        <wirein>
+            <address>0x03</address>
+            <value>0x01</value>
+            <mask>0x01</mask>
+        </wirein>
+    </command>
+    <command name="VDD_RB_EN OFF">
+        <wirein>
+            <address>0x03</address>
+            <value>0x00</value>
+            <mask>0x02</mask>
+        </wirein>
+    </command>
+    <command name="VDD_RB_EN ON">
+        <wirein>
+            <address>0x03</address>
+            <value>0x02</value>
+            <mask>0x02</mask>
+        </wirein>
+    </command>
+    <command name="SPI_DEFAULT OFF">
+        <wirein>
+            <address>0x05</address>
+            <value>0x00</value>
+            <mask>0x02</mask>
+        </wirein>
+    </command>
+    <command name="SPI_DEFAULT ON">
+        <wirein>
+            <address>0x05</address>
+            <value>0x02</value>
+            <mask>0x02</mask>
+        </wirein>
+    </command>
+    <command name="VDD_CORE_EN OFF">
+        <wirein>
+            <address>0x03</address>
+            <value>0x00</value>
+            <mask>0x04</mask>
+        </wirein>
+    </command>
+    <command name="VDD_CORE_EN ON">
+        <wirein>
+            <address>0x03</address>
+            <value>0x04</value>
+            <mask>0x04</mask>
+        </wirein>
+    </command>
+	
+	<command name="set Clock_M to #value#">
+        <wirein>
+            <address>0x02</address>
+            <mask>0x00FF</mask>
+        </wirein>
+    </command>
+	<command name="set Clock_D to #value#">
+        <wirein>
+            <address>0x02</address>
+            <mask>0xFF00</mask>
+        </wirein>
+    </command>
+	<command name="Clock_APPLY OFF">
+        <wirein>
+            <address>0x02</address>
+			<value>0x00</value>
+            <mask>0x10000</mask>
+        </wirein>
+    </command>
+	<command name="Clock_APPLY ON">
+        <wirein>
+            <address>0x02</address>
+			<value>0x10000</value>
+            <mask>0x10000</mask>
+        </wirein>
+    </command>
+
+    <command name="DAC_APPLY OFF">
+        <wirein>
+            <address>0x05</address>
+            <value>0x00</value>
+            <mask>0x01</mask>
+        </wirein>
+    </command>
+    <command name="DAC_APPLY ON">
+        <wirein>
+            <address>0x05</address>
+            <value>0x01</value>
+            <mask>0x01</mask>
+        </wirein>
+    </command>
+
+    <command name="set clock to #value#">
+        <wirein>
+            <address>0x0000</address>
+            <mask>0x3800</mask>
+        </wirein>
+    </command>
+
+    <command name="set resolution to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+
+    <command name="set DAC_CHANNEL to #fixed value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0xF000</mask>
+        </wirein>
+    </command>
+
+    <command name="set EVT_VL to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set EVT_VH to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set RAMP- to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set RAMP+ to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set REF- to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set REF+ to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set REF-H to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set REF+H to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set EVT_DC to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set LEAK to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set CDS_DC to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set CDS_V1 to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set PixBias to #value#">
+        <wirein>
+            <address>0x04</address>
+            <mask>0x03FF</mask>
+        </wirein>
+    </command>
+    <command name="set GAIN to #value#">
+        <wirein>
+            <address>0x00</address>
+            <mask>0x20</mask>
+        </wirein>
+    </command>
+    
+</commands>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<sequences>
+
+    <sequence name="Power Up" show="no">
+        <command name="Reset All"></command>
+        <command name="VDD_IO_EN OFF"></command>
+        <command name="VDD_RB_EN OFF"></command>
+        <command name="SPI_DEFAULT OFF"></command>
+        <command name="VDD_CORE_EN OFF"></command>
+        <command name="Wait 1"></command>
+
+        <command name="VDD_IO_EN ON"></command>
+        <command name="Wait 1"></command>
+        <command name="VDD_RB_EN ON"></command>
+        <command name="Wait 1"></command>
+        <command name="SPI_DEFAULT ON"></command>
+        <command name="Wait 1"></command>
+        <command name="VDD_CORE_EN ON"></command>
+        <command name="Wait 1"></command>
+        <command name="SPI_DEFAULT OFF"></command>
+        <command name="Wait 1"></command>
+
+        <command name="Dereset All"></command>
+        <command name="Reset All"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+
+    <sequence name="Reset-Dereset All" show="yes">
+        <command name="Reset All"></command>
+        <command name="Wait 100"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+
+    <sequence name="Event Mode" show="yes" next="Full Picture">
+        <command name="Reset All"></command>
+        <command name="SetMode Fullpic"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+    <sequence name="Full Picture" show="no" next="Event Mode">
+        <command name="Reset All"></command>
+        <command name="SetMode Event"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+	<sequence name="Optical Mode" show="no">
+        <command name="Reset All"></command>
+        <command name="SetMode Optical"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+
+    <sequence name="ADC Enalbe" show="yes" next="ADC Disable">
+        <command name="Reset All"></command>
+        <command name="SetADC Disable"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+    <sequence name="ADC Disable" show="no" next="ADC Enalbe">
+        <command name="Reset All"></command>
+        <command name="SetADC Enalbe"></command>
+        <command name="Dereset All"></command>
+    </sequence>
+
+    <sequence name="Force Fire">
+        <command name="Forcefire OFF"></command>
+        <command name="Wait 100"></command>
+        <command name="Forcefire ON"></command>
+        <command name="Forcefire OFF"></command>
+    </sequence>
+
+    <sequence name="Reset-Dereset FPGA" show="yes">
+        <command name="Reset FPGA"></command>  
+        <command name="Wait 10"></command>
+        <command name="Dereset FPGA"></command>
+    </sequence>
+	
+	<sequence name="SetMode Total Time">
+        <command name="SetMode Total Time"></command>
+		<command name="Wait 10"></command>        
+    </sequence>
+	
+</sequences>

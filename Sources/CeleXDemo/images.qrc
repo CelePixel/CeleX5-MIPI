@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/celepixel.png</file>
+        <file>images/player_pause.png</file>
+        <file>images/player_play.png</file>
+        <file>images/player_stop.png</file>
+        <file>images/mode.png</file>
+        <file>images/mode2.png</file>
+        <file>images/mode_loop_2.png</file>
+        <file>images/mode_loop_3.png</file>
+        <file>images/mode_loop_4.png</file>
+        <file>images/spi.png</file>
+    </qresource>
+</RCC>

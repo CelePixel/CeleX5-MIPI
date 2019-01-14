@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<sliders>
+
+    <slider name="Lower ADC" min="0" max="511" initial="0" show="yes">
+        <system name="set lower ADC to #value#" value="0"></system>
+    </slider>
+    <slider name="Upper ADC" min="0" max="511" initial="511" show="yes">
+        <system name="set upper ADC to #value#" value="511"></system>
+    </slider>
+
+    <slider name="Brightness" min="0" max="1023" initial="263">
+        <system name="set brightness to #value#" value="263"></system>
+    </slider>
+
+    <slider name="Contrast" min="10" max="900" initial="342">
+        <system name="set contrast to #value#" value="342"></system>
+    </slider>
+	
+	<slider name="Threshold" min="25" max="200" initial="40" step="1">
+        <system name="set threshold to #value#" value="40"></system>
+    </slider>
+
+    <slider name="Time Slice" min="1" max="1000" initial="60" step="1">
+        <system name="set Time Slice to #value#" value="60"></system>
+    </slider>
+	
+	<slider name="Overlap" min="0" max="200" initial="0" step="1">
+        <system name="set Overlap to #value#" value="0"></system>
+    </slider>
+	
+	<slider name="Clock" min="2" max="50" initial="25" step="1">
+        <system name="set Clock to #value#" value="0"></system>
+    </slider>
+
+    <slider name="EVT_VL" min="0" max="1023" initial="456" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set EVT_VL to #value#" value="456"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x1"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="EVT_VH" min="0" max="1023" initial="536" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set EVT_VH to #value#" value="536"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x3"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="ZONE-" min="0" max="1023" initial="341" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set RAMP- to #value#" value="341"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x6"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="ZONE+" min="0" max="1023" initial="528" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set RAMP+ to #value#" value="528"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x7"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="REF-" min="0" max="1023" initial="341" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set REF- to #value#" value="341"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0xA"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="REF+" min="0" max="1023" initial="683" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set REF+ to #value#" value="683"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0xC"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="REF-H" min="0" max="1023" initial="362" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set REF-H to #value#" value="362"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0xB"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="REF+H" min="0" max="1023" initial="704" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set REF+H to #value#" value="704"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0xD"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="EVT_DC" min="0" max="1023" initial="496" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set EVT_DC to #value#" value="496"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x2"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="LEAK" min="0" max="1023" initial="310" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set LEAK to #value#" value="310"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x0"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="CDS_DC" min="0" max="1023" initial="263" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set CDS_DC to #value#" value="263"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x8"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="CDS_V1" min="0" max="1023" initial="465" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set CDS_V1 to #value#" value="465"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x9"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="PixBias" min="0" max="200" initial="186" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set PixBias to #value#" value="186"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0x4"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+    <slider name="Gain" min="0" max="1" initial="1" advanced="yes">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set GAIN to #value#" value="1"></command>
+        <command name="DAC_APPLY ON"></command>
+    </slider>
+
+    <slider name="Resolution" min="0" max="31" initial="0" advanced="yes" step="1">
+        <command name="DAC_APPLY OFF"></command>
+        <command name="set resolution to #value#" value="0"></command>
+        <command name="set DAC_CHANNEL to #fixed value#" value="0xF"></command>
+        <command name="DAC_APPLY ON"></command>
+        <command name="Reset All"></command>
+        <command name="Dereset All"></command>
+    </slider>
+</sliders>
