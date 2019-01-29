@@ -1,5 +1,5 @@
-# CeleX5-SDK
-SDK for CeleX5 sensor.
+# CeleX5-MIPI
+SDK for CeleX5 sensor on CX3 platform.
 
 ![Structure](https://github.com/CelePixel/CeleX5-SDK/blob/master/Sources/CeleXDemo/images/SDK_Structure.png)
 
@@ -24,7 +24,7 @@ OpenCV-based interfaces to obtain data from the sensor.
 
 * This SDK provides three working modes of CeleX5 Sensor: Full-frame Picture data, Event data, and Full-frame Optical-Flow data. CeleX5 also provides Loop Mode data which alternately renders Full-frame Picture data, Event data, and Full-frame Optical-Flow data.
 
-`The CeleX5-SDK is structured as follows:`
+`The CeleX5-MIPI is structured as follows:`
 
 * _DemoGUI_: CeleX5 Demo GUI execution (Windows and Linux).
 * _Documentation_:
