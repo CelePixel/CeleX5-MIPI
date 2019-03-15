@@ -1,0 +1,31 @@
+﻿#ifndef CONSTANTS_H
+#define CONSTANTS_H
+
+#define SLIDER_DELAY 100
+#define MAX_LOG_LINES 100
+
+#define PIPEOUT_TIMER 10
+#define EVENT_SIZE 4
+#define PIXELS_PER_COL 768
+#define PIXELS_PER_ROW 640
+#define PIXELS_NUMBER 491520
+
+#define MIRROR_VERTICAL 1
+#define MIRROR_HORIZONTAL 1
+
+#define FILE_COMMANDS "commands.xml"
+#define FILE_SEQUENCES "sequences.xml"
+#define FILE_SLIDERS "sliders.xml"
+
+#define SEQUENCE_LAYOUT_WIDTH 3 //7
+#define SLIDER_LAYOUT_WIDTH   1 //4
+#define DIALOG_LAYOUT_WIDTH   2
+
+#define BUFFER_SIZE 16777216
+
+#define FPN_CALCULATION_TIMES 5
+
+#define TIMER_CYCLE 25000000  //1s
+#define HARD_TIMER_CYCLE 262144  //262144 * 0.04us
+
+#endif // CONSTANTS_H
