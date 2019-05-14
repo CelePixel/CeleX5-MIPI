@@ -26,11 +26,13 @@ OpenCV-based interfaces to obtain data from the sensor.
 
 `The CeleX5-MIPI is structured as follows:`
 
+* _API_: Header files and API libraries (Windows and Linux).
 * _DemoGUI_: CeleX5 Demo GUI execution (Windows and Linux).
 * _Documentation_:
   * _CeleX5_SDK_Reference_: The introduction of CeleX5 sensor and the references of all the classes and functions in the SDK.
   * _CeleX5_SDK_Getting_Started_Guide_: The instructions to use the CeleX5 sensor demo kit, install CX3 USB3.0 driver, run the CeleXDemo GUI and compile the source code.
 * _Drivers_: CX3 USB3.0 driver (Windows / Linux).
+* _Firmware_: Firmware file and documentation for updating firmware.
 * _Sources_:
   * _CeleX_: Source code of CeleX5 library.
   * _CeleXDemo_: Source code (developed by Qt) of CeleX5 demo.
