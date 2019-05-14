@@ -1,0 +1,18 @@
+********** HHXmlReader::importCommands_CeleX5 Begin 
+********** HHXmlReader::importCommands_CeleX5 End
+***Disable PLL
+Load-PLL-Parameters 
+CeleX5::writeCSRDefaults: PLL_Parameters
+***Enable PLL
+***Disable MIPI
+***Load MIPI Parameters
+CeleX5::writeCSRDefaults: MIPI_Parameters
+***Enable MIPI
+***Enter CFG Mode
+CeleX5::writeCSRDefaults: Sensor_Core_Parameters
+CeleX5::writeCSRDefaults: Sensor_Core_Parameters
+CeleX5::writeCSRDefaults: Sensor_Core_Parameters
+CeleX5::writeCSRDefaults: Sensor_Core_Parameters
+CeleX5::writeCSRDefaults: Sensor_Operation_Mode_Control_Parameters
+CeleX5::writeCSRDefaults: Sensor_Data_Transfer_Parameters
+***Entering Start Mode
