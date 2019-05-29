@@ -1,7 +1,7 @@
 # CeleX5-MIPI
 SDK for CeleX5 sensor on CX3 platform.
 
-![Structure](https://github.com/CelePixel/CeleX5-SDK/blob/master/Sources/CeleXDemo/images/SDK_Structure.png)
+![Structure](https://github.com/CelePixel/CeleX5-MIPI/blob/CeleX5_MP_V1.2/Sources/CeleXDemo/images/SDK_Structure.png)
 
 * CeleX<sup>TM</sup> is a family of smart image sensor, specially designed for machine vision. Each pixel in CeleX<sup>TM</sup>
 sensor can individually monitor the relative change in light intensity and report an event if a threshold is
@@ -35,6 +35,7 @@ OpenCV-based interfaces to obtain data from the sensor.
   * _CeleX_: Source code of CeleX5 library.
   * _CeleXDemo_: Source code (developed by Qt) of CeleX5 demo.
   * _CeleDriver_: Source code of CX3 USB3.0 driver.
+* _Sample-ROS_: : Sample code for ROS Kinetic environment under Ubuntu 16.04.
 * _Samples_: Several examples developed based on SDK and a sample user manual file.
 * _ReleaseNotes.txt_: New features, fixed bugs and SDK development environment.
 
