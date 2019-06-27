@@ -149,80 +149,6 @@ public:
 	bool isIMUModuleEnabled();
 
 	/*
-	* Control Sensor interfaces
-	*/
-	void reset(); //soft reset sensor
-	void pauseSensor();
-	void restartSensor();
-	void stopSensor();
-
-	DeviceType getDeviceType();
-
-	bool setFpnFile(const std::string& fpnFile);
-	void generateFPN(std::string fpnFile);
-
-	void setSensorFixedMode(CeleX5Mode mode);
-	CeleX5Mode getSensorFixedMode();
-
-	void setSensorLoopMode(CeleX5Mode mode, int loopNum); //LopNum = 1/2/3
-	CeleX5Mode getSensorLoopMode(int loopNum); //LopNum = 1/2/3
-	void setLoopModeEnabled(bool enable);
-	bool isLoopModeEnabled();
-
-	//------- for fixed mode -------
-	uint32_t getFullPicFrameTime();
-	void setEventFrameTime(uint32_t value); //unit: microsecond
-	uint32_t getEventFrameTime();
-	void setOpticalFlowFrameTime(uint32_t value); //hardware parameter
-	uint32_t getOpticalFlowFrameTime();
-
-	void setEventShowMethod(EventShowType type, int value);
-
-	void setEventFrameStartPos(uint32_t value); //unit: minisecond
-
-	//------- for loop mode -------
-	void setEventDuration(uint32_t value);
-	void setPictureNumber(uint32_t num, CeleX5Mode mode);
-
-	/*
-	* Sensor control interfaces: Threshold
-	* The threshold value only works when the CeleX-5 sensor is in the Event Mode.
-	* Configure the threshold value where the event triggers.
-	* The large the threshold value is, the less pixels that the event will be triggered (or less active pixels). 
-	* The value could be adjusted from 50 to 511, and the default value is 171.
-	*/
-	void setThreshold(uint32_t value);
-	uint32_t getThreshold();
-
-	/*
-	* Brightness
-	* Configure register parameter, which controls the brightness of the image CeleX-5 sensor generated. 
-	* The value could be adjusted from 0 to 1023.
-	*/
-	void setBrightness(uint32_t value);
-	uint32_t getBrightness();
-
-	/*
-	* Clock 
-	* By default, the CeleX-5 sensor works at 100 MHz and the range of clock rate is from 20 to 100, step is 10.
-	*/
-	uint32_t getClockRate(); //unit: MHz
-	void setClockRate(uint32_t value); //unit: MHz
-
-	/*
-	* ISO Level
-	*/
-	void setISOLevel(uint32_t value);
-	uint32_t getISOLevel();
-	uint32_t getISOLevelCount();
-
-	void setEventDataFormat(int format); //0: format 0; 1: format 1; 2: format 2
-	int getEventDataFormat();
-
-	void setRotateType(int type);
-	int getRotateType();
-
-	/*
 	* Get Full-frame pic buffer or mat
 	*/
 	void getFullPicBuffer(unsigned char* buffer);
@@ -233,6 +159,7 @@ public:
 	* Get event pic buffer or mat
 	*/
 	void getEventPicBuffer(unsigned char* buffer, emEventPicType type = EventBinaryPic);
+	void getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emEventPicType type = EventBinaryPic);
 	cv::Mat getEventPicMat(emEventPicType type);
 
 	/*
@@ -242,7 +169,7 @@ public:
 	void getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emFullPicType type = Full_Optical_Flow_Pic);
 	cv::Mat getOpticalFlowPicMat(emFullPicType type);
 
-	/* 
+	/*
 	* Get event data vector interfaces
 	*/
 	bool getEventDataVector(std::vector<EventData> &vector);
@@ -250,12 +177,166 @@ public:
 	bool getEventDataVectorEx(std::vector<EventData> &vector, std::time_t& time_stamp, bool bDenoised = false);
 
 	/*
+	* Get IMU Data
+	*/
+	int getIMUData(std::vector<IMUData>& data);
+
+	/*
+	* Set and get sensor mode (fixed mode)
+	*/
+	void setSensorFixedMode(CeleX5Mode mode);
+	CeleX5Mode getSensorFixedMode();
+
+	/*
+	* Set and get sensor mode (Loop mode)
+	*/
+	void setSensorLoopMode(CeleX5Mode mode, int loopNum); //LopNum = 1/2/3
+	CeleX5Mode getSensorLoopMode(int loopNum); //LopNum = 1/2/3
+	void setLoopModeEnabled(bool enable);
+	bool isLoopModeEnabled();
+
+	/*
+	* Set fpn file to be used in Full_Picture_Mode or Event_Intensity_Mode.
+	*/
+	bool setFpnFile(const std::string& fpnFile);
+
+	/*
+	* Generate fpn file
+	*/
+	void generateFPN(std::string fpnFile);
+
+	/*
+	* Clock
+	* By default, the CeleX-5 sensor works at 100 MHz and the range of clock rate is from 20 to 100, step is 10.
+	*/
+	void setClockRate(uint32_t value); //unit: MHz
+	uint32_t getClockRate(); //unit: MHz
+
+	/*
+	* Threshold
+	* The threshold value only works when the CeleX-5 sensor is in the Event Mode.
+	* The large the threshold value is, the less pixels that the event will be triggered (or less active pixels).
+	* The value could be adjusted from 50 to 511, and the default value is 171.
+	*/
+	void setThreshold(uint32_t value);
+	uint32_t getThreshold();
+
+	/*
+	* Brightness
+	* Configure register parameter, which controls the brightness of the image CeleX-5 sensor generated.
+	* The value could be adjusted from 0 to 1023.
+	*/
+	void setBrightness(uint32_t value);
+	uint32_t getBrightness();
+
+	/*
+	* ISO Level
+	*/
+	void setISOLevel(uint32_t value);
+	uint32_t getISOLevel();
+	uint32_t getISOLevelCount();
+
+	/*
+	* Get the frame time of full-frame picture mode
+	*/
+	uint32_t getFullPicFrameTime();
+
+	/*
+	* Set and get event frame time
+	*/
+	void setEventFrameTime(uint32_t value); //unit: microsecond
+	uint32_t getEventFrameTime();
+
+	/*
+	* Set and get frame time of optical-flow mode
+	*/
+	void setOpticalFlowFrameTime(uint32_t value); //hardware parameter, unit: microsecond
+	uint32_t getOpticalFlowFrameTime();
+
+	/* 
+	* Loop mode: mode duration
+	*/
+	void setEventDuration(uint32_t value);
+	void setPictureNumber(uint32_t num, CeleX5Mode mode);
+
+	/*
+	* Control Sensor interfaces
+	*/
+	void reset(); //soft reset sensor
+	void pauseSensor();
+	void restartSensor();
+	void stopSensor();
+
+	/*
+	* Get the serial number of the sensor, and each sensor has a unique serial number.
+	*/
+	std::string getSerialNumber();
+
+	/*
+	* Get the firmware version of the sensor.
+	*/
+	std::string getFirmwareVersion();
+
+	/*
+	* Get the release date of firmware.
+	*/
+	std::string getFirmwareDate();
+	
+	/*
+	* Set and get event show method
+	*/
+	void setEventShowMethod(EventShowType type, int value);
+	EventShowType getEventShowMethod();
+
+	/*
+	* Set and get rotate type
+	*/
+	void setRotateType(int type);
+	int getRotateType();
+
+	/*
+	* Set and get event count stop
+	*/
+	void setEventCountStepSize(uint32_t size);
+	uint32_t getEventCountStepSize();
+
+	/*
+	* bit7:0~99, bit6:101~199, bit5:200~299, bit4:300~399, bit3:400~499, bit2:500~599, bit1:600~699, bit0:700~799
+	* if rowMask = 240 = b'11110000, 0~399 rows will be closed.
+	*/
+	void setRowDisabled(uint8_t rowMask);
+
+	/*
+	* Whether to display the images when recording
+	*/
+	void setShowImagesEnabled(bool enable);
+	
+	/* 
+	* Set and get event data format
+	*/
+	void setEventDataFormat(int format); //0: format 0; 1: format 1; 2: format 2
+	int getEventDataFormat();
+
+	void setEventFrameStartPos(uint32_t value); //unit: minisecond
+
+	/*
+	* Disable/Enable AntiFlashlight function.
+	*/
+	void setAntiFlashlightEnabled(bool enabled);
+
+	/*
+	* Disable/Enable Auto ISP function.
+	*/
+	void setAutoISPEnabled(bool enable);
+	bool isAutoISPEnabled();
+	void setISPThreshold(uint32_t value, int num);
+	void setISPBrightness(uint32_t value, int num);
+
+	/*
 	* Start/Stop recording raw data.
 	*/
 	void startRecording(std::string filePath);
 	void stopRecording();
-
-	CX5SensorDataServer* getSensorDataServer();
 
 	/*
 	* Playback Interfaces
@@ -273,48 +354,23 @@ public:
 	void setPlaybackState(PlaybackState state);
 	void setIsPlayBack(bool state);
 
+	CX5SensorDataServer* getSensorDataServer();
+	
+	DeviceType getDeviceType();
+
 	uint32_t getFullFrameFPS();
 
-	void setAntiFlashlightEnabled(bool enabled);
-
 	/*
-	* Disable/Enable Auto ISP function.
+	* Obtain the number of events that being produced per second.
+	* Unit: events per second
 	*/
-	void setAutoISPEnabled(bool enable);
-	bool isAutoISPEnabled();
-	void setISPThreshold(uint32_t value, int num);
-	void setISPBrightness(uint32_t value, int num);
-
-	/*
-	* bit7:0~99, bit6:101~199, bit5:200~299, bit4:300~399, bit3:400~499, bit2:500~599, bit1:600~699, bit0:700~799
-	* if rowMask = 240 = b'11110000, 0~399 rows will be closed.
-	*/
-	void setRowDisabled(uint8_t rowMask);
-
-	/*
-	* Whether to display the images when recording
-	*/
-	void setShowImagesEnabled(bool enable); 
-
-	void setEventCountStepSize(uint32_t size);
-
-	/*
-	* Get IMU Data
-	*/
-	int getIMUData(std::vector<IMUData>& data);
-
-	/*
-	* Version Information
-	*/
-	std::string getSerialNumber();
-	std::string getFirmwareVersion();
-	std::string getFirmwareDate();
+	uint32_t getEventRate(); 
 
 	/*
 	* Sensor Configures
 	*/
-	map<string, vector<CfgInfo>> getCeleX5Cfg();
-	map<string, vector<CfgInfo>> getCeleX5CfgModified();
+	map<string, vector<CfgInfo> > getCeleX5Cfg();
+	map<string, vector<CfgInfo> > getCeleX5CfgModified();
 	void writeRegister(int16_t addressH, int16_t addressM, int16_t addressL, uint32_t value);
 	CfgInfo getCfgInfoByName(string csrType, string name, bool bDefault);
 	void writeCSRDefaults(string csrType);
@@ -347,8 +403,8 @@ private:
 	DataProcessThreadEx*           m_pDataProcessThread;
 	DataRecorder*                  m_pDataRecorder;
 	//
-	map<string, vector<CfgInfo>>   m_mapCfgDefaults;
-	map<string, vector<CfgInfo>>   m_mapCfgModified;
+	map<string, vector<CfgInfo> >  m_mapCfgDefaults;
+	map<string, vector<CfgInfo> >  m_mapCfgModified;
 	//
 	unsigned char*                 m_pReadBuffer;
 	uint8_t*                       m_pDataToRead;
@@ -385,7 +441,6 @@ private:
 	bool                           m_bClockAutoChanged;
 	uint32_t                       m_uiISOLevelCount; //4 or 6
 
-	string						   m_strFirmwareVer;
 	bool                           m_bSensorReady;
 	bool                           m_bShowImagesEnabled;
 	bool                           m_bAutoISPFrofileLoaded;

@@ -9,7 +9,7 @@ typedef enum
 	BUFFER_STATUS_FULL,
 }BUFFER_STATUS;
 
-#define  MAX_ELEMENT_BUFFER_SIZE   42976 //24576 / 24544 / 32752
+#define  MAX_ELEMENT_BUFFER_SIZE   43008 // 42976 / 24576 / 24544 / 32752
 
 class CElement
 {
@@ -40,12 +40,12 @@ public:
 	void ClearData();
 	int  Size();
 
-	std::time_t           m_lTime_Stamp_End;
+	std::time_t                m_lTime_Stamp_End;
 	std::vector<IMU_Raw_Data>  m_vecIMUData;
 
 private:
 	std::vector<CElement *>    element_list;
-	BUFFER_STATUS         Status;
-	size_t                Offset;
+	BUFFER_STATUS              Status;
+	size_t                     Offset;
 };
 

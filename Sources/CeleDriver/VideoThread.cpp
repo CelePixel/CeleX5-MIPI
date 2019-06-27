@@ -26,16 +26,6 @@ DWORD  CVideoThread::VideoThread(LPVOID args)
 	return 0;
 #endif // __linux__
 }
-
-#ifndef __linux__
-unsigned int CVideoThread::staticThreadFunc(void* args)
-{
-	CVideoThread* pThread = (CVideoThread*)args;
-	pThread->Worker();
-	return 0;
-}
-#endif
-
 void CVideoThread::Worker(void)
 {
     bRunning = true;
@@ -53,8 +43,7 @@ bool CVideoThread::video_start(void)
     if (pthread_create(&m_threadID, nullptr, VideoThread, this) == 0)
     {
 #else
-	//m_handle = CreateThread(nullptr, 0, VideoThread, this, 0, NULL);
-	m_handle = (HANDLE)_beginthreadex(nullptr, 0, staticThreadFunc, this, 0, nullptr);
+	m_handle = CreateThread(nullptr, 0, VideoThread, this, 0, NULL);
     if (m_handle)
     {
 #endif

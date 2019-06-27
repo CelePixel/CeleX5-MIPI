@@ -25,7 +25,6 @@ private:
 	static void* VideoThread(void* args);
 #else
 	static DWORD VideoThread(LPVOID args);
-	static unsigned int WINAPI staticThreadFunc(void* args);
 #endif // __linux__
 	void Worker(void);
 private:

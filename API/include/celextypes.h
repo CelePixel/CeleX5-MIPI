@@ -71,7 +71,7 @@ typedef enum EventShowType
 	EventShowByTime = 0,
 	EventShowByCount = 1,
 	EventShowByRowCycle = 2,
-};
+}EventShowType;
 
 typedef enum PlaybackState {
 	NoBinPlaying = 0,
@@ -79,7 +79,7 @@ typedef enum PlaybackState {
 	BinReadFinished,
 	PlayFinished,
 	Replay
-};
+}PlaybackState;
 
 typedef struct IMUData {
 	double			x_GYROS;

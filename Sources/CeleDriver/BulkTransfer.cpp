@@ -21,6 +21,8 @@ clock_t clock_begin = 0;
 clock_t clock_end = 0;
 bool    g_bIMU_Module_Enabled = true;
 
+bool    g_bTransfer_Error = false;
+
 #ifdef __linux__
     static sem_t     m_sem;
 #else
@@ -73,10 +75,11 @@ void generate_image(uint8_t *buffer, int length)
 	}
 	if (current_package)
 		current_package->Insert(buffer + buffer[0], length - buffer[0]);
+
 	if (g_bIMU_Module_Enabled && buffer[7] == 1)
 	{
 		IMU_Raw_Data imu_data;
-		memcpy(imu_data.imu_data, buffer + 7, 21);
+		memcpy(imu_data.imu_data, buffer + 8, 20);
 		imu_data.time_stamp = getTimeStamp();
 
 		current_package->m_vecIMUData.push_back(imu_data);
@@ -204,6 +207,7 @@ void callbackUSBTransferComplete(libusb_transfer *xfr)
 			break;
 
         case LIBUSB_TRANSFER_ERROR:
+			g_bTransfer_Error = true;
 			printf("LIBUSB_TRANSFER_ERROR\r\n");
 			break;
 
@@ -242,6 +246,7 @@ libusb_transfer *alloc_bulk_transfer(libusb_device_handle *device_handle, uint8_
 
 bool Init(void)
 {
+	//libusb_set_debug(nullptr, LIBUSB_LOG_LEVEL_ERROR);
 #ifdef __linux__
     if ( sem_init(&m_sem,0,0) == 0 )
     {

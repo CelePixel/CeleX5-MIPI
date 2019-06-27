@@ -4,6 +4,8 @@
 #include "libusb.h"
 #include "Package.h"
 
+extern bool    g_bTransfer_Error;
+
 bool Init(void);
 void Exit(void);
 libusb_transfer *alloc_bulk_transfer(libusb_device_handle *device_handle, uint8_t address, uint8_t *buffer);

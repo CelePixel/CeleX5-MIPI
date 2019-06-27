@@ -42,10 +42,9 @@ void DataProcessThreadEx::addData(unsigned char *data, long length, time_t timeS
 	m_queueData.push(data, length, timeStamp);
 }
 
-void DataProcessThreadEx::addIMUData(vector<IMURawData> imuData)
+void DataProcessThreadEx::addData(unsigned char* data, long length, vector<IMURawData> imuData, time_t timeStamp)
 {
-	//cout << imuData.size() << endl;
-	m_vecIMUData.swap(imuData);
+	m_queueData.push(data, length, imuData, timeStamp);
 }
 
 void DataProcessThreadEx::addData(vector<uint8_t> vecData)
@@ -141,12 +140,13 @@ void DataProcessThreadEx::run()
 			{
 				long dataLen = 0;
 				time_t timestamp = 0;
-				m_queueData.pop(m_pData, &dataLen, &timestamp);
+				m_queueData.pop(m_pData, &dataLen, m_vecIMUData, &timestamp);
 				//cout << "------------------" << "pop data size = " << dataLen << endl;
 				if (dataLen > 0)
 				{
 					m_pDataProcessor->processMIPIData(m_pData, dataLen, timestamp, m_vecIMUData);
-					if (m_vecIMUData.size()>0)
+					//cout << __FUNCTION__ << ": imu size = " << m_vecIMUData.size() << endl;
+					if (m_vecIMUData.size() > 0)
 						m_vecIMUData.clear();
 					m_uiPackageNo++;
 				}

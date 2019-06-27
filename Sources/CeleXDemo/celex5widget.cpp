@@ -22,6 +22,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+bool    m_bRecordingData = false;
+bool    m_bShowImageEndabled = true;
+
 class MyThread : public QThread
 {
 public:
@@ -44,7 +47,7 @@ void MyThread::closeThread()
     isStop = true;
 }
 
-vector<uint8_t> buffer;
+vector<uint8_t> sensor_buffer;
 void MyThread::run()
 {
     while (1)
@@ -52,10 +55,15 @@ void MyThread::run()
         if(isStop)
             return;
 
-        m_pCeleX5->getMIPIData(buffer);
-        if (buffer.size() > 0)
-            m_pCeleX5->parseMIPIData(buffer.data(), buffer.size());
-        buffer.clear();
+        std::time_t time_stamp_end = 0;
+        vector<IMURawData> imu_data;
+        m_pCeleX5->getMIPIData(sensor_buffer, time_stamp_end, imu_data);
+        if (sensor_buffer.size() > 0)
+        {
+            if (!m_bRecordingData || (m_bRecordingData && m_bShowImageEndabled))
+            m_pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size(), time_stamp_end, imu_data);
+        }
+        sensor_buffer.clear();
 
         //qDebug() << tr("currentThreadId = ") << QThread::currentThreadId();
         //sleep(1);
@@ -904,8 +912,8 @@ void SensorDataObserver::paintEvent(QPaintEvent *event)
                 m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Optical_Flow_Mode ||
                 m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Intensity_Mode)
             {
-                //painter.fillRect(QRect(10, 10, 80, 30), QBrush(Qt::blue));
-                //painter.drawText(QRect(14, 14, 80, 30), "T: " + QString::number(m_uiTemperature));
+                painter.fillRect(QRect(10, 10, 280, 30), QBrush(Qt::blue));
+                painter.drawText(QRect(14, 14, 280, 30), "Event Rate: " + QString::number(m_pCeleX5->getEventRate()) + " eps");
             }
             else
             {
@@ -1316,6 +1324,7 @@ void CeleX5Widget::record(QPushButton* pButton)
 {
     if ("Start Recording Bin" == pButton->text())
     {
+        m_bRecordingData = true;
         pButton->setText("Stop Recording Bin");
         setButtonEnable(pButton);
         //
@@ -1348,6 +1357,7 @@ void CeleX5Widget::record(QPushButton* pButton)
     }
     else
     {
+        m_bRecordingData = false;
         pButton->setText("Start Recording Bin");
         setButtonNormal(pButton);
         m_pCeleX5->stopRecording();
@@ -2395,6 +2405,7 @@ void CeleX5Widget::onEventShowTypeChanged(int index)
 void CeleX5Widget::onShowImagesSwitch(bool state)
 {
     cout << "CeleX5Widget::onShowImagesSwitch: state = " << state << endl;
+    m_bShowImageEndabled = state;
     m_pCeleX5->setShowImagesEnabled(state);
     QList<QRadioButton*> radio1 = m_pAdSettingWidget->findChildren<QRadioButton *>("Display Switch");
     if (state)

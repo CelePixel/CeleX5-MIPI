@@ -17,12 +17,21 @@
 #include "datarecorder.h"
 #include "../base/xbase.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+CRITICAL_SECTION    g_csDataRecorder;
+#else
+#endif
+
 DataRecorder::DataRecorder()
 	: m_bRecording(false)
 	, m_iTimeStampStart(0)
 	, m_uiPackageCount(0)
 {
-
+#ifdef _WIN32
+	InitializeCriticalSection(&g_csDataRecorder);
+#else
+#endif
 }
 
 DataRecorder::~DataRecorder()
@@ -36,12 +45,17 @@ bool DataRecorder::isRecording()
 
 void DataRecorder::startRecording(std::string filePath)
 {
+	//cout << __FUNCTION__ << ": start open file!" << endl;
 	XBase base;
 	m_iTimeStampStart = base.getTimeStamp();
 
 	m_ofstreamRecord.open(filePath.c_str(), std::ios::binary);
 	if (!m_ofstreamRecord.is_open())
+	{
 		cout << "Can't open recording file." << endl;
+		return;
+	}
+	cout << __FUNCTION__ << ": filePath = " << filePath << endl;
 
 	CeleX5::BinFileAttributes header;
 	m_ofstreamRecord.write((char*)&header, sizeof(CeleX5::BinFileAttributes));
@@ -50,36 +64,16 @@ void DataRecorder::startRecording(std::string filePath)
 	m_uiPackageCount = 0;
 }
 
-void DataRecorder::stopRecording(uint32_t clock, int mode)
-{
-	XBase base;
-	int iTimeRecorded = base.getTimeStamp() - m_iTimeStampStart;
-
-	int hour = iTimeRecorded / 3600;
-	int minute = (iTimeRecorded % 3600) / 60;
-	int second = (iTimeRecorded % 3600) % 60;
-
-	// write a header
-	char header[8];
-	header[0] = second;
-	header[1] = minute;
-	header[2] = hour;
-	header[3] = 0;
-	header[4] = 0;
-	header[5] = 0;
-	header[6] = clock;
-	header[7] = mode;
-
-	m_ofstreamRecord.seekp(0, ios::beg);
-	m_ofstreamRecord.write(header, sizeof(header));
-	m_bRecording = false;
-	m_ofstreamRecord.close();
-}
-
 void DataRecorder::stopRecording(CeleX5::BinFileAttributes* header)
 {
-	XBase base;
+	//cout << __FUNCTION__ << ": close file!" << endl;
+#ifdef _WIN32
+	EnterCriticalSection(&g_csDataRecorder);
+#endif
 
+	m_bRecording = false;
+
+	XBase base;
 	int iTimeRecorded = base.getTimeStamp() - m_iTimeStampStart;
 
 	int hour = iTimeRecorded / 3600;
@@ -96,10 +90,12 @@ void DataRecorder::stopRecording(CeleX5::BinFileAttributes* header)
 
 	m_ofstreamRecord.seekp(0, ios::beg);
 	m_ofstreamRecord.write((char*)header, sizeof(CeleX5::BinFileAttributes));
-
 	m_ofstreamRecord.flush();
-	m_bRecording = false;
 	m_ofstreamRecord.close();
+
+#ifdef _WIN32
+	LeaveCriticalSection(&g_csDataRecorder);
+#endif
 }
 
 void DataRecorder::writeData(unsigned char* pData, long length)
@@ -109,6 +105,8 @@ void DataRecorder::writeData(unsigned char* pData, long length)
 
 bool DataRecorder::writeData(vector<uint8_t> vecData)
 {
+	if (!m_ofstreamRecord.is_open())
+		return false;
 	uint32_t size = vecData.size();
 	if (size > 1536001)
 		return false;
@@ -129,8 +127,23 @@ bool DataRecorder::writeData(vector<uint8_t> vecData)
 
 bool DataRecorder::writeData(vector<uint8_t> vecData, time_t time_stamp_end, vector<IMURawData> imuData)
 {
+#ifdef _WIN32
+	EnterCriticalSection(&g_csDataRecorder);
+#endif
+
+	if (!m_ofstreamRecord.is_open())
+	{
+#ifdef _WIN32
+		LeaveCriticalSection(&g_csDataRecorder);
+#endif
+		return false;
+	}		
+
 	if (!writeData(vecData)) //write the data buffer
 	{
+#ifdef _WIN32
+		LeaveCriticalSection(&g_csDataRecorder);
+#endif
 		return false;
 	}
 	m_ofstreamRecord.write((char*)&time_stamp_end, 8);	//timestamp of frame
@@ -138,5 +151,10 @@ bool DataRecorder::writeData(vector<uint8_t> vecData, time_t time_stamp_end, vec
 	uint32_t size = imuData.size();
 	m_ofstreamRecord.write((char*)&size, 4);
 	m_ofstreamRecord.write((char*)imuData.data(), imuData.size()*sizeof(IMURawData));
+
+#ifdef _WIN32
+	LeaveCriticalSection(&g_csDataRecorder);
+#endif
+
 	return true;
 }

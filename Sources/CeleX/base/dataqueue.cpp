@@ -114,6 +114,24 @@ void DataQueueEx::push(unsigned char *pData, long length, time_t timeStamp)
 		m_iTail = 0;
 }
 
+void DataQueueEx::push(unsigned char* pData, long length, std::vector<IMURawData> imuData, time_t timeStamp)
+{
+	if (m_size == ARRAY_SIZE)
+	{
+		cout << __FUNCTION__ << ": data array is full!" << endl;
+		return;
+	}
+	int len_copy = length > MAX_DATA_LEN ? MAX_DATA_LEN : length;
+	memcpy(m_arrayData[m_iTail].pData, pData, len_copy);
+	m_arrayData[m_iTail].length = len_copy;
+	m_arrayData[m_iTail].timeStamp = timeStamp;
+	m_arrayData[m_iTail].vecIMUData.swap(imuData);
+	m_size++;
+	m_iTail++;
+	if (m_iTail == ARRAY_SIZE)
+		m_iTail = 0;
+}
+
 void DataQueueEx::pop(unsigned char *pData, long *length, time_t* timeStamp)
 {
 	if (m_size <= 0)
@@ -132,6 +150,32 @@ void DataQueueEx::pop(unsigned char *pData, long *length, time_t* timeStamp)
 		memcpy(pData, m_arrayData[m_iHead].pData, m_arrayData[m_iHead].length);
 		*length = m_arrayData[m_iHead].length;
 		*timeStamp = m_arrayData[m_iHead].timeStamp;
+	}
+	m_size--;
+	m_iHead++;
+	if (ARRAY_SIZE == m_iHead)
+		m_iHead = 0;
+}
+
+void DataQueueEx::pop(unsigned char* pData, long* length, std::vector<IMURawData> &imuData, time_t* timeStamp)
+{
+	if (m_size <= 0)
+	{
+		cout << __FUNCTION__ << ": data array is empty!" << endl;
+		return;
+	}
+	if (NULL == m_arrayData[m_iHead].pData)
+	{
+		//pData = NULL;
+		*length = 0;
+	}
+	else
+	{
+		//pData = m_arrayData[m_iHead].pData;	
+		memcpy(pData, m_arrayData[m_iHead].pData, m_arrayData[m_iHead].length);
+		*length = m_arrayData[m_iHead].length;
+		*timeStamp = m_arrayData[m_iHead].timeStamp;
+		imuData.swap(m_arrayData[m_iHead].vecIMUData);
 	}
 	m_size--;
 	m_iHead++;

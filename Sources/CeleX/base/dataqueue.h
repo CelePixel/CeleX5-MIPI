@@ -20,12 +20,15 @@
 #include <queue>
 #include <stdint.h>
 #include <array>
+#include <vector>
+#include "../include/celextypes.h"
 
 typedef struct DataInfo
 {
-    unsigned char* pData;
-    unsigned long  length;
-	time_t	timeStamp;
+    unsigned char*     pData;
+    unsigned long      length;
+	time_t             timeStamp;
+	std::vector<IMURawData> vecIMUData;
 } DataInfo;
 
 class DataQueue
@@ -53,7 +56,10 @@ public:
 	~DataQueueEx();
 
 	void push(unsigned char* pData, long length, time_t timeStamp = 0);
+	void push(unsigned char* pData, long length, std::vector<IMURawData> imuData, time_t timeStamp);
+
 	void pop(unsigned char* pData, long* length, time_t* timeStamp);
+	void pop(unsigned char* pData, long* length, std::vector<IMURawData> &imuData, time_t* timeStamp);
 	unsigned long size();
 	void clear();
 

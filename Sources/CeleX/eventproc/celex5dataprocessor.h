@@ -34,6 +34,7 @@ public:
 	void getFullPicBuffer(unsigned char* buffer, std::time_t& time_stamp);
 	//
 	void getEventPicBuffer(unsigned char* buffer, CeleX5::emEventPicType type);
+	void getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, CeleX5::emEventPicType type);
 	//
 	void getOpticalFlowPicBuffer(unsigned char* buffer, CeleX5::emFullPicType type);
 	void getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_stamp, CeleX5::emFullPicType type);
@@ -70,21 +71,23 @@ public:
 	void setEventFrameTime(uint32_t value, uint32_t clock);
 	uint32_t getEventFrameTime();
 	void setEventShowMethod(EventShowType type, int value);
+	EventShowType getEventShowMethod();
 	void setEventFrameStartPos(uint32_t value);
 	void setRotateType(int type);
+	int  getRotateType();
 	void setEventCountStep(uint32_t step);
 	uint32_t getEventCountStep();
 	int getIMUData(std::vector<IMUData>& data);
 
 	void saveFullPicRawData();
 	void resetTimestamp();
+	uint32_t getEventRate();
 
 private:
 	void processFullPicData(uint8_t* pData, int dataSize, std::time_t time_stamp_end);
-	void parseEventDataFormat0(uint8_t* pData, int dataSize);
-	void parseEventDataFormat1(uint8_t* pData, int dataSize);
-	void parseEventDataFormat2(uint8_t* pData, int dataSize);
-	//
+	void parseEventDataFormat0(uint8_t* pData, int dataSize); //Format0: 24-bit packet with ADC data (CSR_73=2'b00)
+	void parseEventDataFormat1(uint8_t* pData, int dataSize); //Format1: 28-bit packet with ADC data (CSR_73=2'b01)
+	void parseEventDataFormat2(uint8_t* pData, int dataSize); //Format2: 14-bit packet without ADC data (CSR_73=2'b10)
 	void parseIMUData(std::time_t time_stamp);
 
 	void checkIfShowImage(); //only for mipi
@@ -105,7 +108,7 @@ private:
 		{
 			if (1 == m_iMIPIDataFormat)
 				diffT += FORMAT1_T_MAX;
-			else if (2 == m_iMIPIDataFormat)
+			else
 				diffT += FORMAT2_T_MAX;
 		}	
 		/*if (diffT > 1)
@@ -114,11 +117,20 @@ private:
 		{
 			m_uiEventTCounter += diffT;
 			m_uiEventTCounter_Total += diffT;
+			m_uiEventTCounter_EPS += diffT;
 			m_uiPackageTCounter += diffT;
+			//cout << "m_uiEventTCounter_Total = " << m_uiEventTCounter_Total << endl;
 		}
 		if (!m_bLoopModeEnabled)
 		{
 			checkIfShowImage();
+		}
+		if (m_uiEventTCounter_EPS > m_uiEventTCountForEPS)
+		{
+			//cout << "m_uiPixelCountForER = " << m_uiPixelCountForER << endl;
+			m_uiEventNumberEPS = m_uiPixelCountForEPS;
+			m_uiPixelCountForEPS = 0;
+			m_uiEventTCounter_EPS = 0;
 		}
 	}
 
@@ -133,6 +145,21 @@ private:
 	long*                    m_pFpnGenerationBuffer;
 	int*                     m_pFpnBuffer;
 	//
+	//
+	unsigned char*           m_pFullFrameBuffer_ForUser;
+
+	unsigned char*           m_pEventFrameBuffer1_ForUser;
+	unsigned char*           m_pEventFrameBuffer2_ForUser;
+	unsigned char*           m_pEventFrameBuffer3_ForUser;
+	unsigned char*           m_pEventFrameBuffer4_ForUser;
+	unsigned char*           m_pEventFrameBuffer5_ForUser;
+	unsigned char*           m_pEventFrameBuffer6_ForUser;
+	unsigned char*           m_pEventFrameBuffer7_ForUser;
+
+	unsigned char*           m_pOpticalFrameBuffer1_ForUser;
+	unsigned char*           m_pOpticalFrameBuffer2_ForUser;
+	unsigned char*           m_pOpticalFrameBuffer3_ForUser;
+	//
 	CeleX5::CeleX5Mode       m_emCurrentSensorMode;
 	CeleX5::CeleX5Mode       m_emSensorFixedMode;
 	CeleX5::CeleX5Mode       m_emSensorLoopAMode;
@@ -142,13 +169,17 @@ private:
 	string                   m_strFpnFilePath;
 	//
 	uint32_t                 m_uiPixelCount;
+	uint32_t                 m_uiPixelCountForEPS; //For event rate
+	uint32_t                 m_uiEventNumberEPS; //The number of events that being produced per second
 	uint32_t                 m_uiEventTCounter; //This value will be reset after the end of a frame
 	uint64_t                 m_uiEventTCounter_Total; //This value won't be reset, it's a monotonically increasing value
+	uint64_t                 m_uiEventTCounter_EPS; //This value will be reset after the end of a second
 	uint32_t                 m_uiEventRowCycleCount;
 
 	uint32_t                 m_uiEventTCountForShow;
 	uint32_t                 m_uiEventTCountForRemove;//The data between 0 and m_uiEventTCountForRemove will be removed
-	uint32_t                 m_uiEventCountForShow;
+	uint32_t                 m_uiEventTCountForEPS; //The number of T units corresponding to 1s.
+	uint32_t                 m_uiEventCountForShow;  
 	uint32_t                 m_uiEventRowCycleCountForShow;
 
 	uint32_t                 m_uiISOLevel; //range: 1 ~ 6
@@ -169,6 +200,7 @@ private:
 	int						 m_iRotateType;	//rotate param
 
 	vector<EventData>        m_vecEventData;
+	vector<EventData>        m_vecEventData_ForUser;
 
 	int                      m_iMIPIDataFormat;
 	uint16_t                 m_uiEventTUnitList[16];
@@ -188,6 +220,10 @@ private:
 	//
 	bool                     m_bFrameModuleEnabled;
 	bool                     m_bIMUModuleEnabled;
+	//
+	std::time_t              m_lFullFrameTimeStamp_ForUser;
+	std::time_t              m_lEventFrameTimeStamp_ForUser;
+	std::time_t              m_lOpticalFrameTimeStamp_ForUser;
 };
 
 #endif // CELEX5DATAPROCESSOR_H

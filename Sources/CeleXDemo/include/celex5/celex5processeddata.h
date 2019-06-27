@@ -41,7 +41,11 @@ public:
 		}
 		return NULL;
 	}
-	inline void setEventDataVector(std::vector<EventData> eventData) { m_vectorEventData.swap(eventData); }
+	inline void setEventDataVector(std::vector<EventData> eventData)
+	{
+		m_vectorEventData.clear();
+		m_vectorEventData = eventData;
+	}
 	inline std::vector<EventData> getEventDataVector() { return m_vectorEventData; }
 	inline unsigned char* getEventPicBuffer(CeleX5::emEventPicType type) 
 	{ 
