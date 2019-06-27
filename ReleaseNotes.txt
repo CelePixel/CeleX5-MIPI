@@ -1,5 +1,5 @@
 CeleX-5 SDK Version 1.4
-Realeased Date: 2019-05-15
+Realeased Date: 2019-05-14
 
 New Features:
 1) Added support for Chinese path.
