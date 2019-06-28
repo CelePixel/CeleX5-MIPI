@@ -496,6 +496,19 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		writeRegister(84, -1, 85, 680);
 		writeRegister(86, -1, 87, 1300);
 	}
+
+	if (m_uiISOLevelCount == 6)
+	{
+		if (CeleX5::Full_Picture_Mode == mode)
+		{
+			wireIn(45, 2, 0xFF);
+		}
+		else
+		{
+			wireIn(45, 1, 0xFF);
+		}
+	}
+
 	//Enter Start Mode
 	wireIn(90, 0, 0xFF);
 	wireIn(93, 1, 0xFF);

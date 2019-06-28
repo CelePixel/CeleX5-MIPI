@@ -102,6 +102,11 @@ private:
 
 	inline void processMIPIEventTimeStamp() 
 	{
+		if (m_bFirstEventTimestamp)
+		{
+			m_uiEventTCounter_Total = m_iRowTimeStamp;
+			m_bFirstEventTimestamp = false;
+		}
 		//cout << "m_iRowTimeStamp = " << m_iRowTimeStamp << ", m_iLastRowTimeStamp = " << m_iLastRowTimeStamp << endl;
 		int diffT = m_iRowTimeStamp - m_iLastRowTimeStamp;
 		if (diffT < 0)
@@ -224,6 +229,7 @@ private:
 	std::time_t              m_lFullFrameTimeStamp_ForUser;
 	std::time_t              m_lEventFrameTimeStamp_ForUser;
 	std::time_t              m_lOpticalFrameTimeStamp_ForUser;
+	bool                     m_bFirstEventTimestamp;
 };
 
 #endif // CELEX5DATAPROCESSOR_H

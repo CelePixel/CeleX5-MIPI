@@ -66,6 +66,7 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_lFullFrameTimeStamp_ForUser(0)
 	, m_lEventFrameTimeStamp_ForUser(0)
 	, m_lOpticalFrameTimeStamp_ForUser(0)
+	, m_bFirstEventTimestamp(true)
 {
 	m_pEventADCBuffer = new unsigned char[CELEX5_PIXELS_NUMBER];
 	m_pEventCountBuffer = new unsigned char[CELEX5_PIXELS_NUMBER];
@@ -1817,6 +1818,7 @@ void CeleX5DataProcessor::resetTimestamp()
 	m_uiEventNumberEPS = 0;
 	m_uiPixelCountForEPS = 0;
 	m_uiEventTCounter_EPS = 0;
+	m_bFirstEventTimestamp = true;
 }
 
 uint32_t CeleX5DataProcessor::getEventRate()
