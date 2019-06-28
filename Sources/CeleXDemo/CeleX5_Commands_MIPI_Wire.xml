@@ -59,17 +59,17 @@
         </BIAS_C3>
         <BIAS_RAMPN>
             <address_high>14</address_high>
-            <value_high>2</value_high>
+            <value_high>1</value_high>
             <address_low>15</address_low>
-            <value_low>13</value_low>
+            <value_low>64</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_RAMPN>
         <BIAS_RAMPP>
             <address_high>16</address_high>
-            <value_high>2</value_high>
+            <value_high>3</value_high>
             <address_low>17</address_low>
-            <value_low>253</value_low>
+            <value_low>132</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_RAMPP>
@@ -83,7 +83,7 @@
             <address_high>20</address_high>
             <value_high>0</value_high>
             <address_low>21</address_low>
-            <value_low>225</value_low>
+            <value_low>200</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_BRT_T>
