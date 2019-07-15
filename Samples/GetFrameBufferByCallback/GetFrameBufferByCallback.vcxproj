@@ -93,8 +93,8 @@
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)Samples\config\*.xml" "$(SolutionDir)x64\debug\" &amp; 
-copy "$(SolutionDir)Samples\config\*.bit" "$(SolutionDir)x64\debug\" &amp; 
+      <Command>copy "$(SolutionDir)Samples\config\cfg_mp" "$(SolutionDir)x64\debug\" &amp; 
+copy "$(SolutionDir)Samples\config\cfg_mp_wire" "$(SolutionDir)x64\debug\" &amp; 
 copy "$(SolutionDir)Samples\lib\Windows\x64\debug\*.dll" "$(SolutionDir)x64\debug\"</Command>
     </PostBuildEvent>
     <Link>
@@ -128,8 +128,8 @@ copy "$(SolutionDir)Samples\lib\Windows\x64\debug\*.dll" "$(SolutionDir)x64\debu
       <AdditionalDependencies>opencv_world330.lib;celex.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)Samples\config\*.xml" "$(SolutionDir)x64\release\" &amp; 
-copy "$(SolutionDir)Samples\config\*.bit" "$(SolutionDir)x64\release\" &amp; 
+      <Command>copy "$(SolutionDir)Samples\config\cfg_mp" "$(SolutionDir)x64\release\" &amp; 
+copy "$(SolutionDir)Samples\config\cfg_mp_wire" "$(SolutionDir)x64\release\" &amp; 
 copy "$(SolutionDir)Samples\lib\Windows\x64\release\*.dll" "$(SolutionDir)x64\release\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
