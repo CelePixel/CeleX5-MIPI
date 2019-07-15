@@ -68,13 +68,12 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_lOpticalFrameTimeStamp_ForUser(0)
 	, m_bFirstEventTimestamp(true)
 {
-	m_pEventADCBuffer = new unsigned char[CELEX5_PIXELS_NUMBER];
+	m_pEventADCBuffer = new uint16_t[CELEX5_PIXELS_NUMBER];
 	m_pEventCountBuffer = new unsigned char[CELEX5_PIXELS_NUMBER];
 	m_pLastADC = new uint16_t[CELEX5_PIXELS_NUMBER];
 
 	m_pFpnGenerationBuffer = new long[CELEX5_PIXELS_NUMBER];
 	m_pFpnBuffer = new int[CELEX5_PIXELS_NUMBER];
-	//
 
 	m_pFullFrameBuffer_ForUser = new unsigned char[CELEX5_PIXELS_NUMBER];
 
@@ -222,8 +221,6 @@ bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData, ui
 bool CeleX5DataProcessor::getEventDataVectorEx(std::vector<EventData> &vecData, std::time_t& time_stamp, bool bDenoised)
 {
 	vecData = m_vecEventData_ForUser;
-	m_vecEventData_ForUser.clear();
-
 	if (bDenoised)
 	{
 		//todo
@@ -347,6 +344,10 @@ void CeleX5DataProcessor::processFullPicData(uint8_t* pData, int dataSize, std::
 	m_uiRowCount = 0;
 	m_uiEventRowCycleCount = 0;
 	m_uiEventTCounter = 0;
+	if (m_bLoopModeEnabled)
+	{
+		m_uiEventTCounter_Total = 0;
+	}
 	m_iLastRowTimeStamp = -1;
 	m_iRowTimeStamp = -1;
 
@@ -385,18 +386,25 @@ void CeleX5DataProcessor::processFullPicData(uint8_t* pData, int dataSize, std::
 		uint8_t value2 = *(pData + i + 1);
 		uint8_t value3 = *(pData + i + 2);
 
-		uint8_t adc1 = value1;
-		uint8_t adc2 = value2;
-
 		if (m_emCurrentSensorMode == CeleX5::Full_Picture_Mode ||
 			m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_S_Mode ||
 			m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_M_Mode)
 		{
-			//m_pEventADCBuffer[i / 3 * 2] = 255 - adc1;
-			//m_pEventADCBuffer[i / 3 * 2 + 1] = 255 - adc2;
+			//--- 8-bits ---
+			uint8_t adc1 = value1;
+			uint8_t adc2 = value2;
 
 			m_pEventADCBuffer[index] = 255 - adc1;
 			m_pEventADCBuffer[index + 1] = 255 - adc2;
+		}
+		else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+		{
+			//--- 12-bits ---
+			uint16_t adc11 = (value1 << 4) + (0x0F & value3);
+			uint16_t adc22 = (value2 << 4) + ((0xF0 & value3) >> 4);
+
+			m_pEventADCBuffer[index] = 4095 - adc11;
+			m_pEventADCBuffer[index + 1] = 4095 - adc22;
 		}
 		index += 2;
 		if (index == CELEX5_PIXELS_NUMBER)
@@ -1012,8 +1020,8 @@ void CeleX5DataProcessor::parseIMUData(std::time_t time_stamp)
 			int16_t z_MAG = imu_raw_data.imu_data[18] + (imu_raw_data.imu_data[19] << 8);
 			//cout << "z_MAG_19 = " << (int)imu_raw_data.imu_data[19] << ", z_MAG_20 = " << int(imu_raw_data.imu_data[20]) << endl;
 			//cout << "x_MAG = " << x_MAG << ", y_MAG = " << y_MAG << ", z_MAG = " << z_MAG << endl;
-			imuData.x_MAG = x_MAG * magResolution; 
-			imuData.y_MAG = y_MAG * magResolution; 
+			imuData.x_MAG = x_MAG * magResolution;
+			imuData.y_MAG = y_MAG * magResolution;
 			imuData.z_MAG = z_MAG * magResolution;
 			//cout << "x_MAG = " << imuData.x_MAG << ", y_MAG = " << imuData.y_MAG << ", z_MAG = " << imuData.z_MAG << endl;
 
@@ -1376,6 +1384,33 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 			calDirectionAndSpeed(i, index, m_pEventADCBuffer, pOpticalFlowSpeedPic, pOpticalFlowDirectionPic);
 		}
 	}
+	else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+	{
+		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
+		{
+			switch (m_iRotateType)
+			{
+			case 0:
+				index = CELEX5_PIXELS_NUMBER - i - 1;
+				break;
+			case 1:
+				index = (i / CELEX5_COL * CELEX5_COL + (CELEX5_COL - i % CELEX5_COL - 1));
+				break;
+			case 2:
+				index = ((CELEX5_ROW - i / CELEX5_COL - 1)* CELEX5_COL + i % CELEX5_COL);
+				break;
+			case 3:
+				index = i;
+				break;
+			}
+			value = m_pEventADCBuffer[i] >> 4;
+			//cout << "m_pEventADCBuffer: " << value << endl;
+			if (value == 255)
+				value = 0;
+			pOpticalFlowPic[index] = value;
+		}
+	}
+
 	for (int j = 0; j < CELEX5_PIXELS_NUMBER; ++j)
 	{
 		m_pEventCountBuffer[j] = 0;
@@ -1419,6 +1454,10 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 		memcpy(m_pEventFrameBuffer1_ForUser, pEventBinaryPic, CELEX5_PIXELS_NUMBER);
 		m_lEventFrameTimeStamp_ForUser = time_stamp_end;
 	}
+	else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+	{
+		memcpy(m_pOpticalFrameBuffer1_ForUser, pOpticalFlowPic, CELEX5_PIXELS_NUMBER);
+	}
 	return true;
 }
 
@@ -1454,27 +1493,42 @@ void CeleX5DataProcessor::generateFPNimpl()
 	{
 		m_bIsGeneratingFPN = false;
 		std::ofstream ff;
-		if (m_strFpnFilePath.empty())
+		if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
 		{
 			XBase base;
 			std::string filePath = base.getApplicationDirPath();
 #ifdef _WIN32
-			filePath += "/FPN_";
+			filePath += "/FPN_OpticalFlow.txt";
 #else
-			filePath += "FPN_";
+			filePath += "FPN_OpticalFlow.txt";
 #endif 
-			std::stringstream level;
-			level << m_uiISOLevel;
-			//
-			filePath += string(level.str());
-			filePath += ".txt";
-
 			// output the FPN file now
 			ff.open(filePath.c_str());
 		}
 		else
 		{
-			ff.open(m_strFpnFilePath.c_str());
+			if (m_strFpnFilePath.empty())
+			{
+				XBase base;
+				std::string filePath = base.getApplicationDirPath();
+#ifdef _WIN32
+				filePath += "/FPN_";
+#else
+				filePath += "FPN_";
+#endif 
+				std::stringstream level;
+				level << m_uiISOLevel;
+				//
+				filePath += string(level.str());
+				filePath += ".txt";
+
+				// output the FPN file now
+				ff.open(filePath.c_str());
+			}
+			else
+			{
+				ff.open(m_strFpnFilePath.c_str());
+			}
 		}
 		if (!ff)
 			return;
@@ -1725,7 +1779,7 @@ int CeleX5DataProcessor::calMean(unsigned char* pBuffer, unsigned int pos)
 		return 255;
 }
 
-void CeleX5DataProcessor::calDirectionAndSpeed(int i, int j, unsigned char* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer)
+void CeleX5DataProcessor::calDirectionAndSpeed(int i, int j, uint16_t* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer)
 {
 	int row = i / CELEX5_COL;
 	int col = i % CELEX5_COL;
@@ -1792,9 +1846,8 @@ uint32_t CeleX5DataProcessor::getEventCountStep()
 
 int CeleX5DataProcessor::getIMUData(std::vector<IMUData>& data)
 {
-	m_vectorIMUData.swap(data);
-	vector<IMUData> tempVec;
-	m_vectorIMUData.swap(tempVec);
+	data = m_vectorIMUData;
+	m_vectorIMUData.clear();
 	return data.size();
 }
 

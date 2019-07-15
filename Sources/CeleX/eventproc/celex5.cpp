@@ -471,7 +471,7 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		(6) CSR_84 / CSR_85 = 462
 		(7) CSR_86 / CSR_87 = 1200
 		*/
-		writeRegister(79, -1, 80, 200); //has bug
+		writeRegister(79, -1, 80, 200);
 		writeRegister(82, -1, 83, 800);
 		writeRegister(84, -1, 85, 462);
 		writeRegister(86, -1, 87, 1200);
@@ -496,23 +496,41 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		writeRegister(84, -1, 85, 680);
 		writeRegister(86, -1, 87, 1300);
 	}
-
-	if (m_uiISOLevelCount == 6)
+	//
+	if (CeleX5::Event_Optical_Flow_Mode == mode ||
+		CeleX5::Full_Optical_Flow_S_Mode == mode ||
+		CeleX5::Full_Optical_Flow_M_Mode == mode)
 	{
-		if (CeleX5::Full_Picture_Mode == mode)
-		{
-			wireIn(45, 2, 0xFF);
-		}
-		else
-		{
-			wireIn(45, 1, 0xFF);
-		}
+		//wireIn(45, 1, 0xFF);
+		vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
+		CfgInfo cfg_col_gain = cfgSensorCoreParameters.at(23);
+		wireIn(45, 1, cfg_col_gain.value);
+		cout << "cfg_col_gain.value = " << cfg_col_gain.value << endl;
+	}
+
+	vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
+	CfgInfo cfg_bias_rampn = cfgSensorCoreParameters.at(7);
+	CfgInfo cfg_bias_rampp = cfgSensorCoreParameters.at(8);
+	if (CeleX5::Full_Optical_Flow_Test_Mode == mode)
+	{
+		//writeRegister(16, -1, 17, 530);
+		writeRegister(16, -1, 17, cfg_bias_rampn.value + (cfg_bias_rampp.value - cfg_bias_rampn.value)/2);
+	}
+	else
+	{
+		//writeRegister(16, -1, 17, 735);
+		writeRegister(16, -1, 17, cfg_bias_rampp.value);
 	}
 
 	//Enter Start Mode
 	wireIn(90, 0, 0xFF);
 	wireIn(93, 1, 0xFF);
 
+	if (CeleX5::Event_Intensity_Mode == mode ||
+		CeleX5::Full_Picture_Mode == mode)
+	{
+		setISOLevel(m_uiISOLevel);
+	}
 	m_pDataProcessor->setSensorFixedMode(mode);
 }
 

@@ -143,7 +143,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
     m_uiRealFullFrameFPS = pSensorData->getFullFrameFPS();
     m_uiTemperature = pSensorData->getTemperature();
 
-    processSensorBuffer(pSensorData->getSensorMode());
+    processSensorBuffer(pSensorData->getSensorMode(), pSensorData->getLoopNum());
 
     if (m_emDisplayType == ConvertBin2Video)
     {
@@ -493,7 +493,7 @@ void SensorDataObserver::updateEventImage(unsigned char *pBuffer, CeleX5::emEven
     }
 }
 
-void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode)
+void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum)
 {
     if (mode == CeleX5::Event_Address_Only_Mode)
     {
@@ -516,7 +516,7 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode)
                 m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
             else if (3 == m_iPicMode)
                 m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedCountPic);
-            updateQImageBuffer(m_pBuffer[0], 1, 0);
+            updateQImageBuffer(m_pBuffer[0], loopNum, 0);
         }
         if (m_bRecordingImages)
         {
@@ -537,12 +537,12 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode)
             if (0 == m_iPicMode)
             {
                 m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[0]);
-                updateQImageBuffer(m_pBuffer[0], 1, 1);
+                updateQImageBuffer(m_pBuffer[0], loopNum, 1);
             }
             else if (1 == m_iPicMode)
             {
                 m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
-                updateQImageBuffer(m_pBuffer[0], 1, 0);
+                updateQImageBuffer(m_pBuffer[0], loopNum, 0);
             }
         }
     }
@@ -574,13 +574,13 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode)
             int colorMode = 0;
             if (3 == m_iPicMode)
                 colorMode = 4;
-            updateQImageBuffer(m_pBuffer[0], 1, colorMode);
+            updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
         }
     }
     else if (mode == CeleX5::Full_Picture_Mode)
     {
         m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
-        updateQImageBuffer(m_pBuffer[0], 1, 0);
+        updateQImageBuffer(m_pBuffer[0], loopNum, 0);
         if (m_bRecordingImages)
         {
             saveRecordingImage(m_pBuffer[0], 1);
@@ -606,7 +606,7 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode)
             else if (2 == m_iPicMode)
                 m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[0], CeleX5::Full_Optical_Flow_Direction_Pic);
             int colorMode = m_iPicMode+1;
-            updateQImageBuffer(m_pBuffer[0], 1, colorMode);
+            updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
         }
     }
 }
@@ -939,10 +939,12 @@ void SensorDataObserver::onUpdateImage()
         if (0 == m_iLoopPicMode)
             m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
         else if (1 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
+            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventGrayPic);
         else if (2 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
+            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
         else if (3 == m_iLoopPicMode)
+            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
+        else if (4 == m_iLoopPicMode)
             m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
         updateQImageBuffer(m_pBuffer[1], 2, 0);
 
@@ -961,7 +963,7 @@ void SensorDataObserver::onUpdateImage()
     {
         CeleX5::CeleX5Mode mode = m_pCeleX5->getSensorFixedMode();
 
-        processSensorBuffer(mode);
+        processSensorBuffer(mode, 1);
 
         if (m_writer1.isOpened())
             m_writer1.write(cv::Mat(800, 1280, CV_8UC1, m_pBuffer[0]));
@@ -1034,8 +1036,9 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pCbBoxLoopEventType->show();
     m_pCbBoxLoopEventType->setStyleSheet(style1 + style2);
     m_pCbBoxLoopEventType->insertItem(0, "Event Binary Pic");
-    m_pCbBoxLoopEventType->insertItem(1, "Event Denoised Binary Pic");
-    m_pCbBoxLoopEventType->insertItem(2, "Event Count Pic");
+    m_pCbBoxLoopEventType->insertItem(1, "Event Gray Pic");
+    m_pCbBoxLoopEventType->insertItem(2, "Event Denoised Binary Pic");
+    m_pCbBoxLoopEventType->insertItem(3, "Event Count Pic");
     m_pCbBoxLoopEventType->setCurrentIndex(0);
     connect(m_pCbBoxLoopEventType, SIGNAL(currentIndexChanged(int)), this, SLOT(onLoopEventTypeChanged(int)));
     m_pCbBoxLoopEventType->hide();
@@ -2287,6 +2290,7 @@ void CeleX5Widget::onSensorModeChanged(QString text)
         else if (mode == "Event_Optical_Flow Mode")
         {
             m_pCeleX5->setSensorFixedMode(CeleX5::Event_Optical_Flow_Mode);
+            m_pCeleX5->setThreshold(200);
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Event OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Event Binary Pic");
@@ -2334,7 +2338,8 @@ void CeleX5Widget::onSensorModeChanged(QString text)
         }
         else if (mode == "Full_Optical_Flow_Test Mode")
         {
-            //m_pCeleX5->setSensorFixedMode(CeleX5::Full_Optical_Flow_Test_Mode);
+            m_pCeleX5->setSensorFixedMode(CeleX5::Full_Optical_Flow_Test_Mode);
+
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Full OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Full OpticalFlow Speed Pic");

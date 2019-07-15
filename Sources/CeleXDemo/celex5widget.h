@@ -57,7 +57,7 @@ public:
 private:
     void updateQImageBuffer(unsigned char* pBuffer1, int loopNum, int colorMode);
     void updateEventImage(unsigned char* pBuffer, CeleX5::emEventPicType type);
-    void processSensorBuffer(CeleX5::CeleX5Mode mode);
+    void processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum);
     //
     void saveRecordingImage(unsigned char* pBuffer, int index);
     void savePics(CeleX5ProcessedData* pSensorData);
@@ -78,7 +78,6 @@ private:
     QImage         m_imageForSavePic;
     QImage         m_imageEvent1;
     QImage         m_imageEvent2;
-
 
     CX5SensorDataServer*    m_pSensorData;
     bool                    m_bLoopModeEnabled;

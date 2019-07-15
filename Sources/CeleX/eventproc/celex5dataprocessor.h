@@ -96,7 +96,7 @@ private:
 	void generateFPNimpl();
 	int calculateDenoiseScore(unsigned char* pBuffer, unsigned int pos);
 	int calMean(unsigned char* pBuffer, unsigned int pos);
-	void calDirectionAndSpeed(int i, int j, unsigned char* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer);
+	void calDirectionAndSpeed(int i, int j, uint16_t* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer);
 
 	void saveFullPicRawData(uint8_t* pData);
 
@@ -132,7 +132,7 @@ private:
 		}
 		if (m_uiEventTCounter_EPS > m_uiEventTCountForEPS)
 		{
-			//cout << "m_uiPixelCountForER = " << m_uiPixelCountForER << endl;
+			//cout << "m_uiPixelCountForEPS = " << m_uiPixelCountForEPS << endl;
 			m_uiEventNumberEPS = m_uiPixelCountForEPS;
 			m_uiPixelCountForEPS = 0;
 			m_uiEventTCounter_EPS = 0;
@@ -144,7 +144,7 @@ private:
 	CX5SensorDataServer*     m_pCX5Server;
 	//
 	unsigned char*           m_pEventCountBuffer;
-	unsigned char*           m_pEventADCBuffer;
+	uint16_t*                m_pEventADCBuffer;
 	uint16_t*                m_pLastADC;
 	//for fpn
 	long*                    m_pFpnGenerationBuffer;
