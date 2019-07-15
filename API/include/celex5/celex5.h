@@ -41,7 +41,6 @@
 
 using namespace std;
 
-class FrontPanel;
 class CeleDriver;
 class CeleX5DataProcessor;
 class HHSequenceMgr;
@@ -66,6 +65,7 @@ public:
 		Event_Intensity_Mode = 2,
 		Full_Picture_Mode = 3,
 		Full_Optical_Flow_S_Mode = 4,
+		Full_Optical_Flow_Test_Mode = 5,
 		Full_Optical_Flow_M_Mode = 6,
 	};
 

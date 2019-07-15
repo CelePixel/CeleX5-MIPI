@@ -38,14 +38,9 @@
 #define MIRROR_VERTICAL     1
 #define MIRROR_HORIZONTAL   1
 
-#define FILE_COMMANDS                "commands.xml"
-#define FILE_SEQUENCES               "sequences.xml"
-#define FILE_SLIDERS                 "sliders.xml"
-#define FILE_CELEX5_CFG		         "CeleX5_Commands.xml"
-#define FILE_CELEX5_CFG_NEW          "CeleX5_Commands_New.xml"
-#define FILE_CELEX5_CFG_PA           "CeleX5_Commands_PA.xml"
-#define FILE_CELEX5_CFG_MIPI         "CeleX5_Commands_MIPI.xml"
-#define FILE_CELEX5_CFG_MIPI_WRIE    "CeleX5_Commands_MIPI_Wire.xml"
+#define FILE_CELEX5_CFG              "CeleX5_Commands_MIPI.xml"
+#define FILE_CELEX5_CFG_MIPI         "cfg_mp"
+#define FILE_CELEX5_CFG_MIPI_WRIE    "cfg_mp_wire"
 
 #define SEQUENCE_LAYOUT_WIDTH 3 //7
 #define SLIDER_LAYOUT_WIDTH   1 //4

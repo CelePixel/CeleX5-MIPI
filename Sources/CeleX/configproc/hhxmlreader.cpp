@@ -42,6 +42,7 @@ bool HHXmlReader::parse(const string &filename, TiXmlDocument *pDom)
     filePath += "\\";
 #endif
     filePath += filename;
+	cout << filePath << endl;
     bool loadOk = pDom->LoadFile(filePath.c_str());
     if (!loadOk)
     {
@@ -170,7 +171,7 @@ bool HHXmlReader::importCommands_CeleX5(map<string, vector<HHCommandBase*>> &com
 bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 {
 	TiXmlDocument*  pDom = new TiXmlDocument;
-	if (parse(FILE_CELEX5_CFG_NEW, pDom))
+	if (parse(FILE_CELEX5_CFG, pDom))
 	{
 		TiXmlElement *pRootEle = pDom->RootElement();
 		if (string(pRootEle->Value()) != "commands")
@@ -187,7 +188,7 @@ bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 			{
 				continue;
 			}
-			//cout << "Classification of the CSRs = " << csrType << endl;
+			cout << "Classification of the CSRs = " << csrType << endl;
 			if (pEle->NoChildren())
 			{
 				cout << "-----" << pEle->Value() << "has no children!" << endl;
@@ -200,7 +201,7 @@ bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 				std::string strCSRName = pChildEle->Value();
 				if ("PXL_BUF_TRIM" == strCSRName)
 					continue;
-				//cout << "----- CSR Name = " << strCSRName << endl;
+				cout << "----- CSR Name = " << strCSRName << endl;
 				TiXmlNode* pNode = pChildEle->FirstChild();
 				while (NULL != pNode)
 				{
@@ -254,7 +255,17 @@ bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 				}
 			}
 		}
-		save(FILE_CELEX5_CFG_NEW, pDom);
+		save(FILE_CELEX5_CFG, pDom);
+	}
+	return true;
+}
+
+bool HHXmlReader::saveXML(const std::string& filename)
+{
+	TiXmlDocument*  pDom = new TiXmlDocument;
+	if (parse(filename, pDom))
+	{
+		save(FILE_CELEX5_CFG, pDom);
 	}
 	return true;
 }

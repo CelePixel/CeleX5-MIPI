@@ -1251,7 +1251,7 @@ QComboBox *CeleX5Widget::createModeComboBox(QString text, QRect rect, QWidget *p
     else
     {
         modeList << "Event_Address_Only Mode" << "Event_Optical_Flow Mode" << "Event_Intensity Mode"
-                 << "Full_Picture Mode" << "Full_Optical_Flow_S Mode"/* << "Full_Optical_Flow_Test Mode"*/;
+                 << "Full_Picture Mode" << "Full_Optical_Flow_S Mode" << "Full_Optical_Flow_Test Mode";
     }
 
     for (int i = 0; i < modeList.size(); i++)

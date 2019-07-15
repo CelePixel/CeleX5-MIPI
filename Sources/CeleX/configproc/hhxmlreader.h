@@ -42,6 +42,7 @@ public:
     bool importCommands_CeleX5(std::map<std::string, std::vector<HHCommandBase*>>& commandList, TiXmlDocument* pDom);
 
     bool saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo);
+	bool saveXML(const std::string& filename);
 
  private:
     bool getNumber(const std::string& text, uint32_t* pNumber);

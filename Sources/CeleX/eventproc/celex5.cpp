@@ -140,24 +140,54 @@ bool CeleX5::openSensor(DeviceType type)
 				return false;
 			}
 		}
-		std::string serialNumber = getSerialNumber();
-		if (serialNumber.size() > 4 && serialNumber.at(4) == 'M') //no wire version
+		XBase base;
+		string filePath = base.getApplicationDirPath();
+#ifdef _WIN32
+		filePath += "\\";
+#endif
+		filePath += FILE_CELEX5_CFG;
+		if (base.isFileExists(filePath))
 		{
-			m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI);
-			m_uiISOLevel = 2;
-			m_uiISOLevelCount = 4;
-			m_uiBrightness = 130;
+			std::string serialNumber = getSerialNumber();
+			m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG);
+			if (serialNumber.size() > 4 && serialNumber.at(4) == 'M') //no wire version
+			{
+				m_uiISOLevel = 2;
+				m_uiISOLevelCount = 4;
+				m_uiBrightness = 130;
+			}
+			else //wire version
+			{
+				m_uiISOLevel = 3;
+				m_uiISOLevelCount = 6;
+				m_uiBrightness = 100;
+			}
 		}
-		else //wire version
+		else
 		{
-			m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI_WRIE);
-			m_uiISOLevel = 3;
-			m_uiISOLevelCount = 6;
-			m_uiBrightness = 100;
+			ofstream out(filePath);
+			out.close();
+			std::string serialNumber = getSerialNumber();
+			if (serialNumber.size() > 4 && serialNumber.at(4) == 'M') //no wire version
+			{
+				m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI);
+				m_pSequenceMgr->saveCeleX5XML(FILE_CELEX5_CFG_MIPI);
+				m_uiISOLevel = 2;
+				m_uiISOLevelCount = 4;
+				m_uiBrightness = 130;
+			}
+			else //wire version
+			{
+				m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI_WRIE);
+				m_pSequenceMgr->saveCeleX5XML(FILE_CELEX5_CFG_MIPI_WRIE);
+				m_uiISOLevel = 3;
+				m_uiISOLevelCount = 6;
+				m_uiBrightness = 100;
+			}
 		}
-		m_pDataProcessor->setISOLevel(m_uiISOLevel);
 		m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
-
+		m_pDataProcessor->setISOLevel(m_uiISOLevel);
+		
 		if (!configureSettings(type))
 			return false;
 		clearData();
@@ -499,13 +529,14 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 	//
 	if (CeleX5::Event_Optical_Flow_Mode == mode ||
 		CeleX5::Full_Optical_Flow_S_Mode == mode ||
-		CeleX5::Full_Optical_Flow_M_Mode == mode)
+		CeleX5::Full_Optical_Flow_M_Mode == mode ||
+		CeleX5::Full_Optical_Flow_Test_Mode == mode)
 	{
 		//wireIn(45, 1, 0xFF);
 		vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
 		CfgInfo cfg_col_gain = cfgSensorCoreParameters.at(23);
 		wireIn(45, 1, cfg_col_gain.value);
-		cout << "cfg_col_gain.value = " << cfg_col_gain.value << endl;
+		//cout << "cfg_col_gain.value = " << cfg_col_gain.value << endl;
 	}
 
 	vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
