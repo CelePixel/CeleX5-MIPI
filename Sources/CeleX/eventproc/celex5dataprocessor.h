@@ -130,6 +130,13 @@ private:
 		{
 			checkIfShowImage();
 		}
+		else 
+		{
+			if (m_emSensorLoopAMode == m_emSensorLoopBMode && m_emSensorLoopBMode == m_emSensorLoopCMode)
+			{
+				checkIfShowImage();
+			}
+		}
 		if (m_uiEventTCounter_EPS > m_uiEventTCountForEPS)
 		{
 			//cout << "m_uiPixelCountForEPS = " << m_uiPixelCountForEPS << endl;

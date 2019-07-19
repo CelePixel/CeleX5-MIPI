@@ -156,7 +156,6 @@ signals:
 
 protected slots:
     void onButtonClicked(QAbstractButton* button);
-    void onRadioButtonClicked();
     //
     void onValueChanged(uint32_t value, CfgSlider* slider);
     void onRecordDataTimer();
@@ -169,6 +168,10 @@ protected slots:
     //
     void onShowImagesSwitch(bool state);
     void onShowTimestampSwitch(bool state);
+    void onJPGFormatClicked(bool state);
+    void onBMPFormatClicked(bool state);
+    //
+    void onShowMoreParameters();
 
     //------- for playback -------
     void onReadBinTimer();

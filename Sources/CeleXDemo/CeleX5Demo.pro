@@ -71,18 +71,21 @@ FORMS    += mainwindow.ui
 
 win32 {
     CONFIG(release, debug|release) {
-        QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.xml $$shell_path($$OUT_PWD)\release\ &
+        QMAKE_POST_LINK += copy $$shell_path($$PWD)\cfg_mp $$shell_path($$OUT_PWD)\release\ &
+        QMAKE_POST_LINK += copy $$shell_path($$PWD)\cfg_mp_wire $$shell_path($$OUT_PWD)\release\ &
         QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.dll $$shell_path($$OUT_PWD)\release\ &
         QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.txt $$shell_path($$OUT_PWD)\release\
     }
     else:CONFIG(debug, debug|release) {
-        QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.xml $$shell_path($$OUT_PWD)\debug\ &
+        QMAKE_POST_LINK += copy $$shell_path($$PWD)\cfg_mp $$shell_path($$OUT_PWD)\debug\ &
+        QMAKE_POST_LINK += copy $$shell_path($$PWD)\cfg_mp_wire $$shell_path($$OUT_PWD)\debug\ &
         QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.dll $$shell_path($$OUT_PWD)\debug\ &
         QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.txt $$shell_path($$OUT_PWD)\debug\
     }
 }
 linux-g++ {
-    QMAKE_POST_LINK += cp $$shell_path($$PWD)/*.xml $$shell_path($$OUT_PWD)/ &
+    QMAKE_POST_LINK += cp $$shell_path($$PWD)/cfg_mp $$shell_path($$OUT_PWD)/ &
+    QMAKE_POST_LINK += cp $$shell_path($$PWD)/cfg_mp_wire $$shell_path($$OUT_PWD)/ &
     QMAKE_POST_LINK += cp $$shell_path($$PWD)/*.txt $$shell_path($$OUT_PWD)/
 }
 

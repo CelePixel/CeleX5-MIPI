@@ -188,7 +188,7 @@ bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 			{
 				continue;
 			}
-			cout << "Classification of the CSRs = " << csrType << endl;
+			//cout << "Classification of the CSRs = " << csrType << endl;
 			if (pEle->NoChildren())
 			{
 				cout << "-----" << pEle->Value() << "has no children!" << endl;
@@ -201,7 +201,7 @@ bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 				std::string strCSRName = pChildEle->Value();
 				if ("PXL_BUF_TRIM" == strCSRName)
 					continue;
-				cout << "----- CSR Name = " << strCSRName << endl;
+				//cout << "----- CSR Name = " << strCSRName << endl;
 				TiXmlNode* pNode = pChildEle->FirstChild();
 				while (NULL != pNode)
 				{

@@ -77,6 +77,7 @@ cv::VideoWriter    m_writer,m_writer1;
 VideoStream*       m_pVideoStream = new VideoStream;
 std::ofstream      g_ofWriteMat;
 bool               g_bIncreasingTimestamp = false;
+QString            g_qsPicFormat = "JPG";
 
 SensorDataObserver::SensorDataObserver(CX5SensorDataServer *sensorData, QWidget *parent)
     : QWidget(parent)
@@ -134,6 +135,7 @@ SensorDataObserver::~SensorDataObserver()
 //This function is only for playback
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
+    //cout << (int)pSensorData->getSensorMode() << ", loop = " << pSensorData->getLoopNum() << endl;
     //cout << __FUNCTION__ << endl;
     if (m_emDisplayType == Realtime)
     {
@@ -665,6 +667,12 @@ void SensorDataObserver::saveRecordingImage(unsigned char *pBuffer, int index)
 
 void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
 {
+    QString qsFormat;
+    if (g_qsPicFormat == "JPG")
+        qsFormat = ".jpg";
+    else if (g_qsPicFormat == "BMP")
+        qsFormat = ".bmp";
+
     QDir dir;
     dir.cd(QCoreApplication::applicationDirPath());
 
@@ -679,10 +687,10 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             dir.mkdir("image_fullpic");
         }
         QString qsNum = QString("%1").arg(m_lFullFrameCount, 6, 10, QChar('0'));
-        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + ".jpg";
+        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + qsFormat;
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, "JPG");
+        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
         m_lFullFrameCount++;
     }
     else if (pSensorData->getSensorMode() == CeleX5::Event_Address_Only_Mode ||
@@ -721,12 +729,12 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             {
                 dir.mkdir(folderNameList[i]);
             }
-            QString picName = QCoreApplication::applicationDirPath() + "/" + folderNameList[i] + "/" + m_qsBinFileName + "_" + qsNum + ".jpg";
+            QString picName = QCoreApplication::applicationDirPath() + "/" + folderNameList[i] + "/" + m_qsBinFileName + "_" + qsNum + qsFormat;
             char file_path[256] = {0};
             memcpy(file_path, picName.toStdString().c_str(), picName.size());
 
             updateEventImage(pSensorData->getEventPicBuffer((CeleX5::emEventPicType)picTypeList[i]), (CeleX5::emEventPicType)picTypeList[i]);
-            m_imageForSavePic.save(file_path, "JPG");
+            m_imageForSavePic.save(file_path, g_qsPicFormat.toStdString().data());
         }
         m_lEventFrameCount++;
     }
@@ -745,10 +753,10 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
 
         QString qsNum = QString("%1").arg(m_lOpticalFrameCount, 6, 10, QChar('0'));
 
-        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + ".jpg";
+        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + qsFormat;
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, "JPG");
+        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
 
         m_lOpticalFrameCount++;
     }
@@ -933,30 +941,61 @@ void SensorDataObserver::onUpdateImage()
 {
     if (m_pCeleX5->isLoopModeEnabled())
     {
-        m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
-        updateQImageBuffer(m_pBuffer[0], 1, 0);
-
-        if (0 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
-        else if (1 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventGrayPic);
-        else if (2 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
-        else if (3 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
-        else if (4 == m_iLoopPicMode)
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
-        updateQImageBuffer(m_pBuffer[1], 2, 0);
-
-        m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[2], CeleX5::Full_Optical_Flow_Pic);
-        updateQImageBuffer(m_pBuffer[2], 3, 1);
-
-        if (m_bRecordingImages)
+        if (m_pCeleX5->getSensorLoopMode(1) == m_pCeleX5->getSensorLoopMode(2) &&
+            m_pCeleX5->getSensorLoopMode(2) == m_pCeleX5->getSensorLoopMode(3))
         {
-            saveRecordingImage(m_pBuffer[0], 1);
+            if (m_pCeleX5->getSensorLoopMode(1) == CeleX5::Full_Picture_Mode)
+            {
+                m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
+                updateQImageBuffer(m_pBuffer[0], 1, 0);
+            }
+            else if (m_pCeleX5->getSensorLoopMode(1) == CeleX5::Event_Address_Only_Mode)
+            {
+                if (0 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
+                else if (1 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventGrayPic);
+                else if (2 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
+                else if (3 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
+                else if (4 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
+                updateQImageBuffer(m_pBuffer[1], 1, 0);
+            }
+            else if (m_pCeleX5->getSensorLoopMode(1) == CeleX5::Event_Optical_Flow_Mode)
+            {
+                m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[2], CeleX5::Full_Optical_Flow_Pic);
+                updateQImageBuffer(m_pBuffer[2], 1, 1);
+            }
+        }
+        else
+        {
+            m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
+            updateQImageBuffer(m_pBuffer[0], 1, 0);
 
-            m_pCeleX5->getEventPicBuffer(m_pBuffer[3], CeleX5::EventCountPic);
-            saveRecordingImage(m_pBuffer[3], 2);
+            if (0 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
+            else if (1 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventGrayPic);
+            else if (2 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
+            else if (3 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
+            else if (4 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
+            updateQImageBuffer(m_pBuffer[1], 2, 0);
+
+            m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[2], CeleX5::Full_Optical_Flow_Pic);
+            updateQImageBuffer(m_pBuffer[2], 3, 1);
+
+            if (m_bRecordingImages)
+            {
+                saveRecordingImage(m_pBuffer[0], 1);
+
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[3], CeleX5::EventCountPic);
+                saveRecordingImage(m_pBuffer[3], 2);
+            }
         }
     }
     else
@@ -1154,6 +1193,10 @@ void CeleX5Widget::closeEvent(QCloseEvent *)
     {
         m_pAdSettingWidget->close();
     }
+    if (m_pCeleX5Cfg)
+    {
+        m_pCeleX5Cfg->close();
+    }
 }
 
 void CeleX5Widget::playback(QPushButton *pButton)
@@ -1242,11 +1285,11 @@ QComboBox *CeleX5Widget::createModeComboBox(QString text, QRect rect, QWidget *p
     if (bLoop)
     {
         if (loopNum == 1)
-            modeList << "Full_Picture Mode"/* << "Event_Address_Only Mode" << "Full_Optical_Flow_S Mode"*/;
+            modeList << "Full_Picture Mode" << "Event_Address_Only Mode" << "Event_Optical_Flow Mode";
         else if (loopNum == 2)
-            modeList << /*"Full_Picture Mode" << */"Event_Address_Only Mode"/* << "Full_Optical_Flow_S Mode"*/;
+            modeList << "Full_Picture Mode" << "Event_Address_Only Mode" << "Event_Optical_Flow Mode";
         else if (loopNum == 3)
-            modeList << /*"Full_Picture Mode" << */"Event_Address_Only Mode" << "Full_Optical_Flow_S Mode" << "Full_Optical_Flow_M Mode" ;
+            modeList << "Event_Address_Only Mode" << "Event_Optical_Flow Mode" << "Full_Optical_Flow_S Mode" << "Full_Optical_Flow_M Mode" ;
     }
     else
     {
@@ -1514,7 +1557,7 @@ void CeleX5Widget::showAdvancedSetting()
     {
         m_pAdSettingWidget = new QWidget;
         m_pAdSettingWidget->setWindowTitle("Advanced Settings");
-        m_pAdSettingWidget->setGeometry(300, 50, 800, 700);
+        m_pAdSettingWidget->setGeometry(300, 50, 1100, 780);
 
         QString style1 = "QGroupBox {"
                          "border: 2px solid #990000;"
@@ -1530,7 +1573,7 @@ void CeleX5Widget::showAdvancedSetting()
                          "}";
 
         QGroupBox* recordGroup = new QGroupBox("Data Record && Playback Parameters: ", m_pAdSettingWidget);
-        recordGroup->setGeometry(50, 20, 700, 330);
+        recordGroup->setGeometry(50, 20, 700, 440);
         recordGroup->setStyleSheet(style1 + style2);
         //
         QLabel* pLabel = new QLabel(tr("Whether to display the images while recording"), m_pAdSettingWidget);
@@ -1562,8 +1605,33 @@ void CeleX5Widget::showAdvancedSetting()
             pSlider->setObjectName(cfgObj1.at(i));
         }
 
+        QLabel* pLabelPicFormat = new QLabel(tr("The picture format for saving: "), m_pAdSettingWidget);
+        pLabelPicFormat->setGeometry(100, 360, 600, 50);
+        pLabelPicFormat->setStyleSheet("QLabel {background: transparent; font: 20px Calibri; }");
+
+        QWidget* pWidget = new QWidget(m_pAdSettingWidget);
+        pWidget->setGeometry(100, 400, 600, 50);
+
+        QRadioButton *pRadioBtnJPG = new QRadioButton(tr(" JPG"), pWidget);
+        pRadioBtnJPG->setGeometry(20, 0, 600, 50);
+        pRadioBtnJPG->setStyleSheet("QRadioButton {background: transparent; color: #990000; font: 20px Calibri; }");
+        pRadioBtnJPG->setChecked(1);
+        pRadioBtnJPG->show();
+        connect(pRadioBtnJPG, SIGNAL(toggled(bool)), this, SLOT(onJPGFormatClicked(bool)));
+        pRadioBtnJPG->setObjectName("JPG");
+        //pRadioBtnJPG->setAutoExclusive(false);
+
+        QRadioButton *pRadioBtnBMP = new QRadioButton(tr(" BMP"), pWidget);
+        pRadioBtnBMP->setGeometry(220, 0, 600, 50);
+        pRadioBtnBMP->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
+        pRadioBtnBMP->setChecked(0);
+        pRadioBtnBMP->show();
+        connect(pRadioBtnBMP, SIGNAL(toggled(bool)), this, SLOT(onBMPFormatClicked(bool)));
+        pRadioBtnBMP->setObjectName("BMP");
+        //pRadioBtnBMP->setAutoExclusive(false);
+
         QGroupBox* otherGroup = new QGroupBox("Other Parameters: ", m_pAdSettingWidget);
-        otherGroup->setGeometry(50, 400, 700, 250);
+        otherGroup->setGeometry(50, 500, 700, 250);
         otherGroup->setStyleSheet(style1 + style2);
         //
         QStringList cfgList2;
@@ -1576,7 +1644,7 @@ void CeleX5Widget::showAdvancedSetting()
         for (int i = 0; i < cfgList2.size(); i++)
         {
             CfgSlider* pSlider = new CfgSlider(m_pAdSettingWidget, min2[i], max2[i], 1, value2[i], this);
-            pSlider->setGeometry(90, 450+i*100, 600, 70);
+            pSlider->setGeometry(90, 550+i*100, 600, 70);
             pSlider->setBiasType(QString(cfgObj2.at(i)).toStdString());
             pSlider->setDisplayName(cfgList2.at(i));
             pSlider->setObjectName(cfgObj2.at(i));
@@ -1584,11 +1652,11 @@ void CeleX5Widget::showAdvancedSetting()
 
         //--- Timestamp Type ---
         QLabel* pLabe2 = new QLabel(tr("Whether to save a increasing timestamp when Bin converts to CSV"), m_pAdSettingWidget);
-        pLabe2->setGeometry(100, 550, 600, 50);
+        pLabe2->setGeometry(100, 650, 600, 50);
         pLabe2->setStyleSheet("QLabel {background: transparent; font: 20px Calibri; }");
         //
         QRadioButton *pRadioBtnTs = new QRadioButton(tr(" close"), m_pAdSettingWidget);
-        pRadioBtnTs->setGeometry(120, 590, 600, 50);
+        pRadioBtnTs->setGeometry(120, 700, 600, 50);
         pRadioBtnTs->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
         pRadioBtnTs->setChecked(0);
         pRadioBtnTs->show();
@@ -1602,6 +1670,16 @@ void CeleX5Widget::showAdvancedSetting()
     m_pAdSettingWidget->show();
     if (m_pAdSettingWidget->isMinimized())
         m_pAdSettingWidget->showNormal();
+
+    QPushButton* pButton = createButton("More Parameters ...", QRect(20, 20, 100, 36), m_pAdSettingWidget);
+    pButton->setObjectName("More Parameters ...");
+    pButton->setStyleSheet("QPushButton {background: #002F6F; color: white; "
+                           "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
+                           "font: 20px Calibri; }"
+                           "QPushButton:pressed {background: #992F6F;}");
+    pButton->setGeometry(850, 30, 200, 30);
+    pButton->show();
+    connect(pButton, SIGNAL(released()), this, SLOT(onShowMoreParameters()));
 }
 
 void CeleX5Widget::setSliderMaxValue(QWidget *parent, QString objName, int value)
@@ -1936,29 +2014,6 @@ void CeleX5Widget::onButtonClicked(QAbstractButton *button)
     else if ("Advanced Setting" == button->objectName())
     {
         showAdvancedSetting();
-    }
-}
-
-void CeleX5Widget::onRadioButtonClicked()
-{
-    cout<<m_pBtnGroup->checkedId()<<endl;
-    switch(m_pBtnGroup->checkedId())
-    {
-    case 0:
-        cout<<"level1---"<<endl;
-        break;
-    case 1:
-        cout<<"level2---"<<endl;
-
-        break;
-    case 2:
-        cout<<"level3---"<<endl;
-
-        break;
-    case 3:
-        cout<<"level4---"<<endl;
-
-        break;
     }
 }
 
@@ -2453,6 +2508,58 @@ void CeleX5Widget::onShowTimestampSwitch(bool state)
             radio1[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
         }
     }
+}
+
+void CeleX5Widget::onJPGFormatClicked(bool state)
+{
+    g_qsPicFormat = "JPG";
+    //cout << "CeleX5Widget::onJPGFormatClicked: state = " << state << endl;
+    QList<QRadioButton*> radioJPG = m_pAdSettingWidget->findChildren<QRadioButton *>("JPG");
+    if (radioJPG.size() > 0)
+    {
+        //radioJPG[0]->setChecked(true);
+        radioJPG[0]->setStyleSheet("QRadioButton {background: transparent; color: #990000; font: 20px Calibri; }");
+    }
+
+    if (g_qsPicFormat != "JPG")
+    {
+        g_qsPicFormat = "JPG";
+
+        QList<QRadioButton*> radioBMP = m_pAdSettingWidget->findChildren<QRadioButton *>("BMP");
+        if (radioBMP.size() > 0)
+        {
+            radioBMP[0]->setChecked(false);
+            radioBMP[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
+        }
+    }
+}
+
+void CeleX5Widget::onBMPFormatClicked(bool state)
+{
+    //cout << "CeleX5Widget::onBMPFormatClicked: state = " << state << endl;
+    QList<QRadioButton*> radioBMP = m_pAdSettingWidget->findChildren<QRadioButton *>("BMP");
+    if (radioBMP.size() > 0)
+    {
+        //radioBMP[0]->setChecked(true);
+        radioBMP[0]->setStyleSheet("QRadioButton {background: transparent; color: #990000; font: 20px Calibri; }");
+    }
+    if (g_qsPicFormat != "BMP")
+    {
+        g_qsPicFormat = "BMP";
+
+        QList<QRadioButton*> radioJPG = m_pAdSettingWidget->findChildren<QRadioButton *>("JPG");
+        if (radioJPG.size() > 0)
+        {
+            radioJPG[0]->setChecked(false);
+            radioJPG[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
+        }
+    }
+}
+
+void CeleX5Widget::onShowMoreParameters()
+{
+    showMoreParameters(5);
+    m_pAdSettingWidget->hide();
 }
 
 QPushButton *CeleX5Widget::createButton(QString text, QRect rect, QWidget *parent)
