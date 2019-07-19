@@ -162,6 +162,7 @@ bool CeleX5::openSensor(DeviceType type)
 				m_uiISOLevelCount = 6;
 				m_uiBrightness = 100;
 			}
+			m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
 		}
 		else
 		{
@@ -184,8 +185,10 @@ bool CeleX5::openSensor(DeviceType type)
 				m_uiISOLevelCount = 6;
 				m_uiBrightness = 100;
 			}
+			m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
+			m_pSequenceMgr->saveCeleX5XML(m_mapCfgDefaults);
 		}
-		m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
+		
 		m_pDataProcessor->setISOLevel(m_uiISOLevel);
 		
 		if (!configureSettings(type))
@@ -1602,6 +1605,7 @@ void CeleX5::modifyCSRParameter(string csrType, string cmdName, uint32_t value)
 			}
 		}
 	}
+	m_pSequenceMgr->saveCeleX5XML(m_mapCfgModified);
 }
 
 bool CeleX5::configureSettings(CeleX5::DeviceType type)
