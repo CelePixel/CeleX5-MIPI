@@ -2513,46 +2513,34 @@ void CeleX5Widget::onShowTimestampSwitch(bool state)
 void CeleX5Widget::onJPGFormatClicked(bool state)
 {
     g_qsPicFormat = "JPG";
-    //cout << "CeleX5Widget::onJPGFormatClicked: state = " << state << endl;
     QList<QRadioButton*> radioJPG = m_pAdSettingWidget->findChildren<QRadioButton *>("JPG");
     if (radioJPG.size() > 0)
     {
-        //radioJPG[0]->setChecked(true);
         radioJPG[0]->setStyleSheet("QRadioButton {background: transparent; color: #990000; font: 20px Calibri; }");
     }
 
-    if (g_qsPicFormat != "JPG")
+    QList<QRadioButton*> radioBMP = m_pAdSettingWidget->findChildren<QRadioButton *>("BMP");
+    if (radioBMP.size() > 0)
     {
-        g_qsPicFormat = "JPG";
-
-        QList<QRadioButton*> radioBMP = m_pAdSettingWidget->findChildren<QRadioButton *>("BMP");
-        if (radioBMP.size() > 0)
-        {
-            radioBMP[0]->setChecked(false);
-            radioBMP[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
-        }
+        radioBMP[0]->setChecked(false);
+        radioBMP[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
     }
 }
 
 void CeleX5Widget::onBMPFormatClicked(bool state)
 {
-    //cout << "CeleX5Widget::onBMPFormatClicked: state = " << state << endl;
+    g_qsPicFormat = "BMP";
     QList<QRadioButton*> radioBMP = m_pAdSettingWidget->findChildren<QRadioButton *>("BMP");
     if (radioBMP.size() > 0)
     {
-        //radioBMP[0]->setChecked(true);
         radioBMP[0]->setStyleSheet("QRadioButton {background: transparent; color: #990000; font: 20px Calibri; }");
     }
-    if (g_qsPicFormat != "BMP")
-    {
-        g_qsPicFormat = "BMP";
 
-        QList<QRadioButton*> radioJPG = m_pAdSettingWidget->findChildren<QRadioButton *>("JPG");
-        if (radioJPG.size() > 0)
-        {
-            radioJPG[0]->setChecked(false);
-            radioJPG[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
-        }
+    QList<QRadioButton*> radioJPG = m_pAdSettingWidget->findChildren<QRadioButton *>("JPG");
+    if (radioJPG.size() > 0)
+    {
+        radioJPG[0]->setChecked(false);
+        radioJPG[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
     }
 }
 
