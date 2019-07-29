@@ -130,12 +130,20 @@ int XBase::getTimeStamp()
 bool XBase::isFileExists(std::string filePath)
 {
     //"D:/Work/build-okBaseTest-Desktop_Qt_5_9_1_MinGW_32bit-Debug/debug/top.bit";
+<<<<<<< HEAD
     printf("XBase::isFileExists: %s", filePath.c_str());
+=======
+    //printf("XBase::isFileExists: %s", filePath.c_str());
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     fstream _file;
     _file.open(filePath.c_str(), ios::in);
     if (!_file)
     {
+<<<<<<< HEAD
         printf("%s can't find!", filePath.c_str());
+=======
+        printf("%s can't find!\n", filePath.c_str());
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
         return false;
     }
     _file.close();

@@ -56,7 +56,11 @@ bool USBIR::usb_check_device(libusb_device *dev, int usb_vid, int usb_pid, int t
     return false;
 }
 
+<<<<<<< HEAD
 bool USBIR::usb_GetInterface(int usb_vid, int usb_pid,int trans_mode)
+=======
+bool USBIR::usb_GetInterface(int usb_vid, int usb_pid, int trans_mode)
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 {
     libusb_device **devs;
     ssize_t cnt = libusb_get_device_list(nullptr, &devs);
@@ -82,7 +86,11 @@ bool USBIR::usb_open(int vid, int pid,int trans_mode)
     if( libusb_init(nullptr) == LIBUSB_SUCCESS )
     {
         InterfaceNumberList.clear();
+<<<<<<< HEAD
         if (  usb_GetInterface(vid,pid,trans_mode) == true )
+=======
+        if (usb_GetInterface(vid, pid, trans_mode) == true)
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
         {
             device_handle = libusb_open_device_with_vid_pid(nullptr, vid, pid);
             if ( device_handle )
@@ -154,7 +162,11 @@ bool USBIR::usb_control(uint8_t request_type, uint8_t request, uint16_t wValue, 
     return false;
 }
 
+<<<<<<< HEAD
 bool USBIR::usb_read_data(unsigned char *data, int length,int *actual_length)
+=======
+bool USBIR::usb_read_data(unsigned char *data, int length, int *actual_length)
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 {
     if (device_handle)
     {
@@ -166,7 +178,11 @@ bool USBIR::usb_read_data(unsigned char *data, int length,int *actual_length)
         } 
 		else
 		{
+<<<<<<< HEAD
             ret = libusb_interrupt_transfer(device_handle, video_endpoint_address, data, length,actual_length, USB_TIMEOUT);
+=======
+            ret = libusb_interrupt_transfer(device_handle, video_endpoint_address, data, length, actual_length, USB_TIMEOUT);
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
         }
         if (ret == LIBUSB_SUCCESS)
         {
@@ -225,6 +241,31 @@ void USBIR::Stop(void)
 
 bool USBIR::Run(void)
 {
+<<<<<<< HEAD
+=======
+	if (g_bTransfer_Error)
+	{
+		//close video stream
+		usb_control(0x41, 0x88, 0x00, 0x00, nullptr, 0);
+		for (int i = 0; i < MAX_URB_NUMBER; i++)
+		{
+			cancel_bulk_transfer(bulk_transfer[i]);
+		}
+		//close usb device
+		usb_close();
+
+		//open usb device
+		usb_open(0x04b4, 0x00f1, LIBUSB_TRANSFER_TYPE_BULK);
+		//open video stream
+		uint8_t video_start[] = { 0x00, 0x00,0x01,0x02,0x0A,0x8B,0x02,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x20,0x1C,0x00, 0x00,0x90,0x00, 0x00 };
+		if (usb_control(0x21, 0x01, 0x201, 0x0, video_start, sizeof(video_start)) == true)
+		{
+			usb_alloc_bulk_transfer();
+		}
+		
+		g_bTransfer_Error = false;
+	}
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     if (libusb_handle_events(NULL) != LIBUSB_SUCCESS) 
 		return false;
     //usb_alloc_bulk_transfer();
@@ -245,4 +286,8 @@ bool USBIR::get_imu_data(uint8_t* buffer, long& time_stamp1, long& time_stamp2)
 		}
 	}
 	return false;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
