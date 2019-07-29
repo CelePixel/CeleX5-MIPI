@@ -10,10 +10,7 @@ New Features:
 6) Added support for enabling or disabling the frame creating module. (The frame creating mudule could be disabled to improve the performance.)
 7) Added support for the Configuration interface to adapt to computer screen resolution.
 8) Removed the thread that processes sensor data in the API, now users need to create a thread to process sensor data.
-<<<<<<< HEAD
-=======
 9) Added support for ROS kinetic environment under ubuntu 16.04.
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 
 Bug Fixed:
 1) Fixed the bug that the last timestamp in the event vector is unstable (for example: sometimes 1500, sometimes 1501);
@@ -23,12 +20,9 @@ Bug Fixed:
 5) Optimized the issue that the sensor starts slowly.
 6) Optimized the issue of stuck when the sensor starts.
 
-<<<<<<< HEAD
-=======
 New Features For Firmware (Ver2.0 update to Ver2.1)£º
 1) When the software program is closed, the firmware will turn off the sensor to reduce power consumption.
 
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 *****************************************************************************************************
 CeleX-5 SDK Version 1.3
 Realeased Date: 2019-03-15

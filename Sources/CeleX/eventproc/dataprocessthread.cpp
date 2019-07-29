@@ -42,16 +42,9 @@ void DataProcessThreadEx::addData(unsigned char *data, long length, time_t timeS
 	m_queueData.push(data, length, timeStamp);
 }
 
-<<<<<<< HEAD
-void DataProcessThreadEx::addIMUData(vector<IMURawData> imuData)
-{
-	//cout << imuData.size() << endl;
-	m_vecIMUData.swap(imuData);
-=======
 void DataProcessThreadEx::addData(unsigned char* data, long length, vector<IMURawData> imuData, time_t timeStamp)
 {
 	m_queueData.push(data, length, imuData, timeStamp);
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 }
 
 void DataProcessThreadEx::addData(vector<uint8_t> vecData)
@@ -147,21 +140,13 @@ void DataProcessThreadEx::run()
 			{
 				long dataLen = 0;
 				time_t timestamp = 0;
-<<<<<<< HEAD
-				m_queueData.pop(m_pData, &dataLen, &timestamp);
-=======
 				m_queueData.pop(m_pData, &dataLen, m_vecIMUData, &timestamp);
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 				//cout << "------------------" << "pop data size = " << dataLen << endl;
 				if (dataLen > 0)
 				{
 					m_pDataProcessor->processMIPIData(m_pData, dataLen, timestamp, m_vecIMUData);
-<<<<<<< HEAD
-					if (m_vecIMUData.size()>0)
-=======
 					//cout << __FUNCTION__ << ": imu size = " << m_vecIMUData.size() << endl;
 					if (m_vecIMUData.size() > 0)
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 						m_vecIMUData.clear();
 					m_uiPackageNo++;
 				}

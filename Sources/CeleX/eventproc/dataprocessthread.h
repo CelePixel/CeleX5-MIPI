@@ -29,13 +29,8 @@ public:
 	~DataProcessThreadEx();
 
 	void addData(unsigned char* data, long length, time_t timeStamp = 0);
-<<<<<<< HEAD
-	void addData(vector<uint8_t> vecData);
-	void addIMUData(vector<IMURawData> imuData);
-=======
 	void addData(unsigned char* data, long length, vector<IMURawData> imuData, time_t timeStamp);
 	void addData(vector<uint8_t> vecData);
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 	void clearData();
 	uint32_t queueSize();
 	uint32_t getPackageNo();

@@ -83,10 +83,7 @@ public:
     //--- for CeleX5 ---
     bool parseCeleX5Cfg(const string& cfgName);
     bool saveCeleX5XML(map<string, vector<CeleX5::CfgInfo>> mapCfgInfo);
-<<<<<<< HEAD
-=======
 	bool saveCeleX5XML(const string& cfgName);
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 	map<string, vector<HHCommandBase*>> getCeleX5Cfg();
 
 private:

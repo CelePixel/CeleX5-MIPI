@@ -22,20 +22,11 @@
 #include <ctime>
 #include <string>
 
-<<<<<<< HEAD
-typedef void(*libcelex_transfer_cb_fn)(uint8_t *buffer, int length);
-
-=======
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 using namespace std;
 
 typedef struct IMU_Raw_Data
 {
-<<<<<<< HEAD
-	uint8_t       imu_data[21];
-=======
 	uint8_t       imu_data[20];
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 	std::time_t   time_stamp;
 } IMU_Raw_Data;
 

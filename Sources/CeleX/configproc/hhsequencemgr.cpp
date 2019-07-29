@@ -70,15 +70,12 @@ bool HHSequenceMgr::saveCeleX5XML(map<string, vector<CeleX5::CfgInfo>> mapCfgInf
 	return xml.saveXML(mapCfgInfo);
 }
 
-<<<<<<< HEAD
-=======
 bool HHSequenceMgr::saveCeleX5XML(const string& cfgName)
 {
 	HHXmlReader xml;
 	return xml.saveXML(cfgName);
 }
 
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 map<string, vector<HHCommandBase*>> HHSequenceMgr::getCeleX5Cfg()
 {
 	return m_CommandList_CeleX5;

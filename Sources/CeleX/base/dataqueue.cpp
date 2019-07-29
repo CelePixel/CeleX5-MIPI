@@ -114,8 +114,6 @@ void DataQueueEx::push(unsigned char *pData, long length, time_t timeStamp)
 		m_iTail = 0;
 }
 
-<<<<<<< HEAD
-=======
 void DataQueueEx::push(unsigned char* pData, long length, std::vector<IMURawData> imuData, time_t timeStamp)
 {
 	if (m_size == ARRAY_SIZE)
@@ -134,7 +132,6 @@ void DataQueueEx::push(unsigned char* pData, long length, std::vector<IMURawData
 		m_iTail = 0;
 }
 
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 void DataQueueEx::pop(unsigned char *pData, long *length, time_t* timeStamp)
 {
 	if (m_size <= 0)
@@ -160,8 +157,6 @@ void DataQueueEx::pop(unsigned char *pData, long *length, time_t* timeStamp)
 		m_iHead = 0;
 }
 
-<<<<<<< HEAD
-=======
 void DataQueueEx::pop(unsigned char* pData, long* length, std::vector<IMURawData> &imuData, time_t* timeStamp)
 {
 	if (m_size <= 0)
@@ -188,7 +183,6 @@ void DataQueueEx::pop(unsigned char* pData, long* length, std::vector<IMURawData
 		m_iHead = 0;
 }
 
->>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 unsigned long DataQueueEx::size()
 {
 	return m_size;
