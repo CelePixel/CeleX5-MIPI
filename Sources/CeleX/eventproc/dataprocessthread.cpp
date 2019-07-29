@@ -161,7 +161,7 @@ void DataProcessThreadEx::run()
 		}
 		else //--- for real display ---
 		{
-			/*std::time_t time_stamp_end = 0;
+			std::time_t time_stamp_end = 0;
 			vector<IMURawData> imu_data;
 			m_pCeleX5->getMIPIData(m_vecMIPIPackage, time_stamp_end, imu_data);
 			if (m_vecMIPIPackage.size() > 0)
@@ -169,7 +169,7 @@ void DataProcessThreadEx::run()
 				if (!m_bRecordData || (m_bRecordData && m_bShowImagesEnabled))
 					m_pDataProcessor->processMIPIData(m_vecMIPIPackage.data(), m_vecMIPIPackage.size(), time_stamp_end, imu_data);
 				m_vecMIPIPackage.clear();
-			}*/
+			}
 		}
 	}
 }

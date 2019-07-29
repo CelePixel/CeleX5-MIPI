@@ -25,7 +25,9 @@
 bool    m_bRecordingData = false;
 bool    m_bShowImageEndabled = true;
 
-class MyThread : public QThread
+CeleX5* m_pCeleX5 = new CeleX5;
+
+/*class MyThread : public QThread
 {
 public:
     MyThread();
@@ -35,8 +37,6 @@ protected:
 private:
     volatile bool isStop;
 };
-
-CeleX5* m_pCeleX5 = new CeleX5;
 
 MyThread::MyThread()
 {
@@ -61,14 +61,14 @@ void MyThread::run()
         if (sensor_buffer.size() > 0)
         {
             if (!m_bRecordingData || (m_bRecordingData && m_bShowImageEndabled))
-            m_pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size(), time_stamp_end, imu_data);
+                m_pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size(), time_stamp_end, imu_data);
         }
         sensor_buffer.clear();
 
         //qDebug() << tr("currentThreadId = ") << QThread::currentThreadId();
         //sleep(1);
     }
-}
+}*/
 
 #define READ_BIN_TIME            1
 #define UPDATE_PLAY_INFO_TIME    30
@@ -135,11 +135,11 @@ SensorDataObserver::~SensorDataObserver()
 //This function is only for playback
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
-    //cout << (int)pSensorData->getSensorMode() << ", loop = " << pSensorData->getLoopNum() << endl;
     //cout << __FUNCTION__ << endl;
     if (m_emDisplayType == Realtime)
     {
-        return;
+        if (!m_pCeleX5->isLoopModeEnabled())
+            return;
     }
     //cout << (int)pSensorData->getSensorMode() << ", loop = " << pSensorData->getLoopNum() << endl;
     m_uiRealFullFrameFPS = pSensorData->getFullFrameFPS();
@@ -155,7 +155,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
     }
     else if (m_emDisplayType == ConvertBin2CSV)
     {
-        writeCSVData(pSensorData->getSensorMode());
+        writeCSVData(pSensorData->getSensorMode(), pSensorData);
     }
 
     if (m_bSavePics)
@@ -183,7 +183,7 @@ void SensorDataObserver::setLoopModeEnabled(bool enable)
 
 void SensorDataObserver::setPictureMode(int picMode)
 {
-    if(m_bLoopModeEnabled)
+    if(m_pCeleX5->isLoopModeEnabled())
         m_iLoopPicMode = picMode;
     else
         m_iPicMode = picMode;
@@ -277,6 +277,8 @@ void SensorDataObserver::updateQImageBuffer(unsigned char *pBuffer1, int loopNum
     {
         return;
     }
+    if (-1 == loopNum)
+        loopNum = 1;
     //cout << "mode = " << mode << ", loopNum = " << loopNum << endl;
     uchar* pp1 = NULL;
     if (loopNum == 1)
@@ -497,7 +499,8 @@ void SensorDataObserver::updateEventImage(unsigned char *pBuffer, CeleX5::emEven
 
 void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum)
 {
-    if (mode == CeleX5::Event_Address_Only_Mode)
+    int colorMode = 0;
+    if (mode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
     {
         if (m_bShowMultipleWindows)
         {
@@ -510,22 +513,36 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNu
         }
         else
         {
-            if (0 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
-            else if (1 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedBinaryPic);
-            else if (2 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
-            else if (3 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedCountPic);
-            updateQImageBuffer(m_pBuffer[0], loopNum, 0);
+            if(loopNum > 0)
+            {
+                if (0 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
+                else if (1 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedBinaryPic);
+                else if (2 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
+                else if (3 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedCountPic);
+            }
+            else
+            {
+                if (0 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
+                else if (1 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedBinaryPic);
+                else if (2 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
+                else if (3 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedCountPic);
+            }
+            updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
         }
         if (m_bRecordingImages)
         {
             saveRecordingImage(m_pBuffer[0], 2);
         }
     }
-    else if (mode == CeleX5::Event_Optical_Flow_Mode)
+    else if (mode == CeleX5::Event_In_Pixel_Timestamp_Mode)
     {
         if (m_bShowMultipleWindows)
         {
@@ -536,17 +553,32 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNu
         }
         else
         {
-            if (0 == m_iPicMode)
+            if(loopNum > 0)
             {
-                m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[0]);
-                updateQImageBuffer(m_pBuffer[0], loopNum, 1);
+                if (0 == m_iLoopPicMode)
+                {
+                    colorMode = 1;
+                    m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[0], CeleX5::Full_Optical_Flow_Pic);
+                }
+                else if (1 == m_iLoopPicMode)
+                {
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
+                }
             }
-            else if (1 == m_iPicMode)
+            else
             {
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
-                updateQImageBuffer(m_pBuffer[0], loopNum, 0);
+                if (0 == m_iPicMode)
+                {
+                    colorMode = 1;
+                    m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[0]);
+                }
+                else if (1 == m_iPicMode)
+                {
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
+                }
             }
         }
+        updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
     }
     else if (mode == CeleX5::Event_Intensity_Mode)
     {
@@ -563,19 +595,32 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNu
         }
         else
         {
-            if (0 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
-            else if (1 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventGrayPic);
-            else if (2 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventAccumulatedPic);
-            else if (3 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventSuperimposedPic);
-            else if (4 == m_iPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
-            int colorMode = 0;
-            if (3 == m_iPicMode)
-                colorMode = 4;
+            if(loopNum > 0)
+            {
+                if (0 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
+                else if (1 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventGrayPic);
+                else if (2 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventAccumulatedPic);
+                else if (3 == m_iLoopPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
+            }
+            else
+            {
+                if (0 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventBinaryPic);
+                else if (1 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventGrayPic);
+                else if (2 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventAccumulatedPic);
+                else if (3 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventSuperimposedPic);
+                else if (4 == m_iPicMode)
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountPic);
+                if (3 == m_iPicMode)
+                    colorMode = 4;
+            }
             updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
         }
     }
@@ -655,7 +700,7 @@ void SensorDataObserver::saveRecordingImage(unsigned char *pBuffer, int index)
     }
     else
     {
-        //-------- Event_Address_Only_Mode --------
+        //-------- Event_Off_Pixel_Timestamp_Mode --------
         QString qsNum2 = QString("%1").arg(m_lEventFrameCount, 6, 10, QChar('0'));
         QString name2 = QCoreApplication::applicationDirPath() + "/image_event_count/" + m_qsRecordingTime + "_" + qsNum2 + ".jpg";
         char file_path2[256] = {0};
@@ -687,13 +732,13 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             dir.mkdir("image_fullpic");
         }
         QString qsNum = QString("%1").arg(m_lFullFrameCount, 6, 10, QChar('0'));
-        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + qsFormat;
+        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + ".jpg";
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
+        m_imageMode1.save(file_path, "JPG");
         m_lFullFrameCount++;
     }
-    else if (pSensorData->getSensorMode() == CeleX5::Event_Address_Only_Mode ||
+    else if (pSensorData->getSensorMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode ||
              pSensorData->getSensorMode() == CeleX5::Event_Intensity_Mode)
     {
         m_iIntervalCounter++;
@@ -703,7 +748,7 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
         QString qsNum = QString("%1").arg(m_lEventFrameCount, 6, 10, QChar('0'));
         QStringList folderNameList;
         int picTypeList[5] = {0};
-        if (pSensorData->getSensorMode() == CeleX5::Event_Address_Only_Mode)
+        if (pSensorData->getSensorMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode)
         {
             folderNameList << "image_event_binary" << "image_event_count" << "image_denoised_event_binary" << "image_denoised_event_count";
 
@@ -729,18 +774,18 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             {
                 dir.mkdir(folderNameList[i]);
             }
-            QString picName = QCoreApplication::applicationDirPath() + "/" + folderNameList[i] + "/" + m_qsBinFileName + "_" + qsNum + qsFormat;
+            QString picName = QCoreApplication::applicationDirPath() + "/" + folderNameList[i] + "/" + m_qsBinFileName + "_" + qsNum + ".jpg";
             char file_path[256] = {0};
             memcpy(file_path, picName.toStdString().c_str(), picName.size());
 
             updateEventImage(pSensorData->getEventPicBuffer((CeleX5::emEventPicType)picTypeList[i]), (CeleX5::emEventPicType)picTypeList[i]);
-            m_imageForSavePic.save(file_path, g_qsPicFormat.toStdString().data());
+            m_imageForSavePic.save(file_path, "JPG");
         }
         m_lEventFrameCount++;
     }
-    else if (pSensorData->getSensorMode() == CeleX5::Full_Optical_Flow_S_Mode ||
-             pSensorData->getSensorMode() == CeleX5::Full_Optical_Flow_M_Mode ||
-             pSensorData->getSensorMode() == CeleX5::Event_Optical_Flow_Mode)
+    else if (pSensorData->getSensorMode() == CeleX5::Optical_Flow_Mode ||
+             pSensorData->getSensorMode() == CeleX5::Multi_Read_Optical_Flow_Mode ||
+             pSensorData->getSensorMode() == CeleX5::Event_In_Pixel_Timestamp_Mode)
     {
         m_iIntervalCounter++;
         if ((m_iIntervalCounter-1) % (m_iPicIntervalCount+1) != 0)
@@ -753,27 +798,27 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
 
         QString qsNum = QString("%1").arg(m_lOpticalFrameCount, 6, 10, QChar('0'));
 
-        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + qsFormat;
+        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + ".jpg";
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
+        m_imageMode1.save(file_path, "JPG");
 
         m_lOpticalFrameCount++;
     }
 }
 
-void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode)
+void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode, CeleX5ProcessedData* pSensorData)
 {
     std::vector<EventData> vecEvent;
     m_pCeleX5->getEventDataVector(vecEvent);
     int dataSize = vecEvent.size();
-    if (sensorMode == CeleX5::Event_Address_Only_Mode)
+    if (sensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
     {
         if (g_bIncreasingTimestamp)
         {
             for (int i = 0; i < dataSize; i++)
             {
-                g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].t_increasing << endl;
+                g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].t_off_pixel_increasing << endl;
             }
             //cout << "t = " << vecEvent[0].t_increasing << ", " << vecEvent[dataSize-1].t_increasing << endl;
         }
@@ -781,7 +826,7 @@ void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode)
         {
             for (int i = 0; i < dataSize; i++)
             {
-                g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].t << endl;
+                g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].t_off_pixel << endl;
             }
             //cout << "t = " << vecEvent[0].t << ", " << vecEvent[dataSize-1].t << endl;
         }
@@ -793,7 +838,7 @@ void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode)
             for (int i = 0; i < dataSize; i++)
             {
                 g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].adc
-                             << ',' << vecEvent[i].polarity << ',' <<  vecEvent[i].t_increasing << endl;
+                             << ',' << vecEvent[i].polarity << ',' <<  vecEvent[i].t_off_pixel_increasing << endl;
             }
             //cout << "---------- t = " << vecEvent[0].t_increasing << ", " << vecEvent[dataSize-1].t_increasing << endl;
         }
@@ -802,28 +847,17 @@ void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode)
             for (int i = 0; i < dataSize; i++)
             {
                 g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].adc
-                             << ',' << vecEvent[i].polarity << ',' <<  vecEvent[i].t << endl;
+                             << ',' << vecEvent[i].polarity << ',' <<  vecEvent[i].t_off_pixel << endl;
             }
             //cout << "t = " << vecEvent[0].t << ", " << vecEvent[dataSize-1].t << endl;
         }
     }
-    else if (sensorMode == CeleX5::Event_Optical_Flow_Mode)
+    else if (sensorMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
     {
-        if (g_bIncreasingTimestamp)
+        for (int i = 0; i < dataSize; i++)
         {
-            for (int i = 0; i < dataSize; i++)
-            {
-                g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].adc
-                             << ',' <<  vecEvent[i].t_increasing << endl;
-            }
-        }
-        else
-        {
-            for (int i = 0; i < dataSize; i++)
-            {
-                g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].adc
-                             << ',' <<  vecEvent[i].t << endl;
-            }
+            g_ofWriteMat << vecEvent[i].row << ',' << vecEvent[i].col << ',' << vecEvent[i].t_in_pixel_increasing
+                         << ',' << vecEvent[i].t_off_pixel << endl;
         }
     }
 }
@@ -852,7 +886,7 @@ void SensorDataObserver::paintEvent(QPaintEvent *event)
     {
         if (m_bShowMultipleWindows)
         {
-            if (m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Address_Only_Mode)
+            if (m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode)
             {
                 painter.drawPixmap(0, 0, QPixmap::fromImage(m_imageMode1).scaled(640, 400));
                 painter.fillRect(QRect(0, 0, 165, 22), QBrush(Qt::darkBlue));
@@ -866,7 +900,7 @@ void SensorDataObserver::paintEvent(QPaintEvent *event)
                 painter.fillRect(QRect(0, 440, 160, 22), QBrush(Qt::darkBlue));
                 painter.drawText(QRect(0, 440, 160, 22), "Event Count Pic");
             }
-            else if (m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Optical_Flow_Mode)
+            else if (m_pCeleX5->getSensorFixedMode() == CeleX5::Event_In_Pixel_Timestamp_Mode)
             {
                 painter.drawPixmap(0, 0, QPixmap::fromImage(m_imageMode1).scaled(640, 400));
                 painter.fillRect(QRect(0, 0, 230, 22), QBrush(Qt::darkBlue));
@@ -894,7 +928,7 @@ void SensorDataObserver::paintEvent(QPaintEvent *event)
                 painter.fillRect(QRect(660, 440, 230, 22), QBrush(Qt::darkBlue));
                 painter.drawText(QRect(660, 440, 230, 22), "Event Superimposed Pic");
             }
-            else if (m_pCeleX5->getSensorFixedMode() == CeleX5::Full_Optical_Flow_S_Mode)
+            else if (m_pCeleX5->getSensorFixedMode() == CeleX5::Optical_Flow_Mode)
             {
                 painter.drawPixmap(0, 0, QPixmap::fromImage(m_imageMode1).scaled(640, 400));
                 painter.fillRect(QRect(0, 0, 170, 22), QBrush(Qt::darkBlue));
@@ -916,9 +950,9 @@ void SensorDataObserver::paintEvent(QPaintEvent *event)
         else
         {
             painter.drawPixmap(0, 0, QPixmap::fromImage(m_imageMode1));
-            if (m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Address_Only_Mode ||
-                m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Optical_Flow_Mode ||
-                m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Intensity_Mode)
+            if (m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode ||
+                    m_pCeleX5->getSensorFixedMode() == CeleX5::Event_In_Pixel_Timestamp_Mode ||
+                    m_pCeleX5->getSensorFixedMode() == CeleX5::Event_Intensity_Mode)
             {
                 painter.fillRect(QRect(10, 10, 280, 30), QBrush(Qt::blue));
                 painter.drawText(QRect(14, 14, 280, 30), "Event Rate: " + QString::number(m_pCeleX5->getEventRate()) + " eps");
@@ -941,68 +975,58 @@ void SensorDataObserver::onUpdateImage()
 {
     if (m_pCeleX5->isLoopModeEnabled())
     {
-        if (m_pCeleX5->getSensorLoopMode(1) == m_pCeleX5->getSensorLoopMode(2) &&
-            m_pCeleX5->getSensorLoopMode(2) == m_pCeleX5->getSensorLoopMode(3))
-        {
-            if (m_pCeleX5->getSensorLoopMode(1) == CeleX5::Full_Picture_Mode)
-            {
-                m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
-                updateQImageBuffer(m_pBuffer[0], 1, 0);
-            }
-            else if (m_pCeleX5->getSensorLoopMode(1) == CeleX5::Event_Address_Only_Mode)
-            {
-                if (0 == m_iLoopPicMode)
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
-                else if (1 == m_iLoopPicMode)
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventGrayPic);
-                else if (2 == m_iLoopPicMode)
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
-                else if (3 == m_iLoopPicMode)
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
-                else if (4 == m_iLoopPicMode)
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
-                updateQImageBuffer(m_pBuffer[1], 1, 0);
-            }
-            else if (m_pCeleX5->getSensorLoopMode(1) == CeleX5::Event_Optical_Flow_Mode)
-            {
-                m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[2], CeleX5::Full_Optical_Flow_Pic);
-                updateQImageBuffer(m_pBuffer[2], 1, 1);
-            }
-        }
-        else
-        {
-            m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
-            updateQImageBuffer(m_pBuffer[0], 1, 0);
+        return;
+        m_pCeleX5->getFullPicBuffer(m_pBuffer[0]);
+        updateQImageBuffer(m_pBuffer[0], 1, 0);
 
+        CeleX5::CeleX5Mode mode = m_pCeleX5->getSensorLoopMode(2);
+        if(mode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
+        {
+            if (0 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
+            else if (1 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
+            else if (2 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
+            else if (3 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
+        }
+        else if(mode == CeleX5::Event_In_Pixel_Timestamp_Mode)
+        {
+            if (0 == m_iLoopPicMode)
+                m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[1], CeleX5::Full_Optical_Flow_Pic);
+            else if (1 == m_iLoopPicMode)
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
+        }
+        else if(mode == CeleX5::Event_Intensity_Mode)
+        {
             if (0 == m_iLoopPicMode)
                 m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventBinaryPic);
             else if (1 == m_iLoopPicMode)
                 m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventGrayPic);
             else if (2 == m_iLoopPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedBinaryPic);
+                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventAccumulatedPic);
             else if (3 == m_iLoopPicMode)
                 m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventCountPic);
-            else if (4 == m_iLoopPicMode)
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[1], CeleX5::EventDenoisedCountPic);
-            updateQImageBuffer(m_pBuffer[1], 2, 0);
+        }
+        updateQImageBuffer(m_pBuffer[1], 2, 0);
 
-            m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[2], CeleX5::Full_Optical_Flow_Pic);
-            updateQImageBuffer(m_pBuffer[2], 3, 1);
+        m_pCeleX5->getOpticalFlowPicBuffer(m_pBuffer[2], CeleX5::Full_Optical_Flow_Pic);
+        updateQImageBuffer(m_pBuffer[2], 3, 1);
 
-            if (m_bRecordingImages)
-            {
-                saveRecordingImage(m_pBuffer[0], 1);
+        if (m_bRecordingImages)
+        {
+            saveRecordingImage(m_pBuffer[0], 1);
 
-                m_pCeleX5->getEventPicBuffer(m_pBuffer[3], CeleX5::EventCountPic);
-                saveRecordingImage(m_pBuffer[3], 2);
-            }
+            m_pCeleX5->getEventPicBuffer(m_pBuffer[3], CeleX5::EventCountPic);
+            saveRecordingImage(m_pBuffer[3], 2);
         }
     }
     else
     {
         CeleX5::CeleX5Mode mode = m_pCeleX5->getSensorFixedMode();
 
-        processSensorBuffer(mode, 1);
+        processSensorBuffer(mode, -1);
 
         if (m_writer1.isOpened())
             m_writer1.write(cv::Mat(800, 1280, CV_8UC1, m_pBuffer[0]));
@@ -1020,7 +1044,7 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     , m_pVersionWidget(NULL)
     , m_pBtnPlayPause(NULL)
     , m_emDeviceType(CeleX5::CeleX5_MIPI)
-    , m_emSensorFixedMode(CeleX5::Event_Address_Only_Mode)
+    , m_emSensorFixedMode(CeleX5::Event_Off_Pixel_Timestamp_Mode)
     , m_uiSaveBinDuration(300)
     , m_bPlaybackPaused(false)
     , m_iCurrCbBoxImageType(0)
@@ -1033,8 +1057,8 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
 
     this->setGeometry(10, 50, 1850, 950);
 
-    MyThread* mythread = new MyThread;
-    mythread->start();
+    //    MyThread* mythread = new MyThread;
+    //    mythread->start();
 
     m_pReadBinTimer = new QTimer(this);
     connect(m_pReadBinTimer, SIGNAL(timeout()), this, SLOT(onReadBinTimer()));
@@ -1075,9 +1099,9 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pCbBoxLoopEventType->show();
     m_pCbBoxLoopEventType->setStyleSheet(style1 + style2);
     m_pCbBoxLoopEventType->insertItem(0, "Event Binary Pic");
-    m_pCbBoxLoopEventType->insertItem(1, "Event Gray Pic");
-    m_pCbBoxLoopEventType->insertItem(2, "Event Denoised Binary Pic");
-    m_pCbBoxLoopEventType->insertItem(3, "Event Count Pic");
+    m_pCbBoxLoopEventType->insertItem(1, "Event Denoised Binary Pic");
+    m_pCbBoxLoopEventType->insertItem(2, "Event Count Pic");
+    m_pCbBoxLoopEventType->insertItem(3, "Event Denoised Count Pic");
     m_pCbBoxLoopEventType->setCurrentIndex(0);
     connect(m_pCbBoxLoopEventType, SIGNAL(currentIndexChanged(int)), this, SLOT(onLoopEventTypeChanged(int)));
     m_pCbBoxLoopEventType->hide();
@@ -1085,7 +1109,7 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     //--- create comboBox to select sensor mode
     //Fixed Mode
     m_pCbBoxFixedMode = createModeComboBox("Fixed", QRect(40, comboTop, 300, 30), this, false, 0);
-    m_pCbBoxFixedMode->setCurrentText("Fixed - Event_Address_Only Mode");
+    m_pCbBoxFixedMode->setCurrentText("Fixed - Event_Off_Pixel_Timestamp_Mode ");
     m_pCbBoxFixedMode->show();
     //Loop A
     m_pCbBoxLoopAMode = createModeComboBox("LoopA", QRect(40, comboTop, 300, 30), this, true, 1);
@@ -1261,8 +1285,8 @@ void CeleX5Widget::playback(QPushButton *pButton)
         {
             m_pCeleX5->setLoopModeEnabled(true);
             m_pCeleX5->setSensorLoopMode(CeleX5::Full_Picture_Mode, 1);
-            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Address_Only_Mode, 2);
-            m_pCeleX5->setSensorLoopMode(CeleX5::Full_Optical_Flow_S_Mode, 3);
+            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Off_Pixel_Timestamp_Mode, 2);
+            m_pCeleX5->setSensorLoopMode(CeleX5::Optical_Flow_Mode, 3);
         }
         m_bPlaybackPaused = false;
         m_pBtnPlayPause->setStyleSheet("QPushButton {background-color: #002F6F; background-image: url(:/images/player_pause.png); "
@@ -1285,16 +1309,19 @@ QComboBox *CeleX5Widget::createModeComboBox(QString text, QRect rect, QWidget *p
     if (bLoop)
     {
         if (loopNum == 1)
-            modeList << "Full_Picture Mode" << "Event_Address_Only Mode" << "Event_Optical_Flow Mode";
+            modeList << "Event_Off_Pixel_Timestamp Mode " << "Event_In_Pixel_Timestamp Mode" << "Event_Intensity Mode"
+                     << "Full_Picture Mode";
         else if (loopNum == 2)
-            modeList << "Full_Picture Mode" << "Event_Address_Only Mode" << "Event_Optical_Flow Mode";
+            modeList << "Event_Off_Pixel_Timestamp Mode " << "Event_In_Pixel_Timestamp Mode" << "Event_Intensity Mode"
+                     << "Full_Picture Mode";
         else if (loopNum == 3)
-            modeList << "Event_Address_Only Mode" << "Event_Optical_Flow Mode" << "Full_Optical_Flow_S Mode" << "Full_Optical_Flow_M Mode" ;
+            modeList << "Event_Off_Pixel_Timestamp Mode " << "Event_In_Pixel_Timestamp Mode" << "Event_Intensity Mode"
+                     << "Full_Picture Mode" << "Optical_Flow Mode";
     }
     else
     {
-        modeList << "Event_Address_Only Mode" << "Event_Optical_Flow Mode" << "Event_Intensity Mode"
-                 << "Full_Picture Mode" << "Full_Optical_Flow_S Mode" << "Full_Optical_Flow_Test Mode";
+        modeList << "Event_Off_Pixel_Timestamp Mode " << "Event_In_Pixel_Timestamp Mode" << "Event_Intensity Mode"
+                 << "Full_Picture Mode" << "Optical_Flow Mode" << "Optical_Flow_FPN Mode";
     }
 
     for (int i = 0; i < modeList.size(); i++)
@@ -1342,9 +1369,9 @@ void CeleX5Widget::createButtons(QGridLayout* layout)
                                "QPushButton:pressed {background: #992F6F;}");
         m_pButtonGroup->addButton(pButton, i);
         if ("Change FPN" == btnNameList.at(i) ||
-            "Rotate_UD" == btnNameList.at(i) ||
-            "ConvertBin2CSV" == btnNameList.at(i) ||
-            "Start Recording Images" == btnNameList.at(i))
+                "Rotate_UD" == btnNameList.at(i) ||
+                "ConvertBin2CSV" == btnNameList.at(i) ||
+                "Start Recording Images" == btnNameList.at(i))
         {
             layout->addWidget(pButton, 1, index - 1);
         }
@@ -1464,7 +1491,10 @@ void CeleX5Widget::recordVideo(QPushButton* pButton)
         }
         QStringList modeList;
         modeList << "_E_" << "_EO_" << "_EI_" << "_F_" << "_FO1_" << "_FO2_" << "_FO3_" << "_FO4_";
-        qstrVideoName += modeList.at(int(m_pCeleX5->getSensorFixedMode()));
+        if (m_pCeleX5->isLoopModeEnabled())
+            qstrVideoName += "_Loop_";
+        else
+            qstrVideoName += modeList.at(int(m_pCeleX5->getSensorFixedMode()));
 
         qstrVideoName += QString::number(m_pCeleX5->getClockRate());
         qstrVideoName += "M.avi"; //MHz
@@ -1484,13 +1514,14 @@ void CeleX5Widget::switchMode(QPushButton* pButton, bool isLoopMode, bool bPlayb
 {
     if (isLoopMode)
     {
+        m_pSensorDataObserver->setMultipleShowEnabled(false);
         m_pSensorDataObserver->setLoopModeEnabled(true);
         if (!bPlayback)
         {
             m_pCeleX5->setLoopModeEnabled(true);
             m_pCeleX5->setSensorLoopMode(CeleX5::Full_Picture_Mode, 1);
-            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Address_Only_Mode, 2);
-            m_pCeleX5->setSensorLoopMode(CeleX5::Full_Optical_Flow_S_Mode, 3);
+            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Off_Pixel_Timestamp_Mode, 2);
+            m_pCeleX5->setSensorLoopMode(CeleX5::Optical_Flow_Mode, 3);
         }
         m_pCbBoxLoopAMode->show();
         m_pCbBoxLoopBMode->show();
@@ -1506,11 +1537,11 @@ void CeleX5Widget::switchMode(QPushButton* pButton, bool isLoopMode, bool bPlayb
         //Loop A
         m_pCbBoxLoopAMode->setCurrentText("LoopA - Full_Picture Mode");
         //Loop B
-        m_pCbBoxLoopBMode->setCurrentText("LoopB - Event_Address_Only Mode");
+        m_pCbBoxLoopBMode->setCurrentText("LoopB - Event_Off_Pixel_Timestamp Mode ");
         //Loop C
-        m_pCbBoxLoopCMode->setCurrentText("LoopC - Full_Optical_Flow_S Mode");
+        m_pCbBoxLoopCMode->setCurrentText("LoopC - Optical_Flow Mode");
 
-        cout<<"m_iCurrCbBoxLoopImageType"<<m_iCurrCbBoxLoopImageType<<endl;
+        cout << "m_iCurrCbBoxLoopImageType" << m_iCurrCbBoxLoopImageType << endl;
         m_pCbBoxLoopEventType->setCurrentIndex(m_iCurrCbBoxLoopImageType);
     }
     else
@@ -1753,9 +1784,9 @@ void CeleX5Widget::showPlaybackBoard(bool show)
         m_pBtnSavePicEx = new QPushButton("Start Saving Pic (Replay)", m_pPlaybackBg);
         m_pBtnSavePicEx->setGeometry(140, 200, 220, 30);
         m_pBtnSavePicEx->setStyleSheet("QPushButton {background: #002F6F; color: white; "
-                                     "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
-                                     "font: 20px Calibri; }"
-                                     "QPushButton:pressed {background: #992F6F;}");
+                                       "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
+                                       "font: 20px Calibri; }"
+                                       "QPushButton:pressed {background: #992F6F;}");
         connect(m_pBtnSavePicEx, SIGNAL(released()), this, SLOT(onBtnSavePicExReleased()));
     }
     if (show)
@@ -1805,9 +1836,15 @@ void CeleX5Widget::convertBin2Video(QPushButton* pButton)
 
 void CeleX5Widget::convertBin2CSV(QPushButton *pButton)
 {
-    QString filePath = QFileDialog::getOpenFileName(this, "Open a bin file", QCoreApplication::applicationDirPath(), "Bin Files (*.bin)");
+    m_qstBinfilePathList.clear();
+    m_qstBinfilePathList = QFileDialog::getOpenFileNames(this, "Open a bin file", QCoreApplication::applicationDirPath(), "Bin Files (*.bin)");
+    //qDebug() << __FUNCTION__ << m_qstBinfilePathList << endl;
+    if (m_qstBinfilePathList.size() <= 0)
+        return;
+    QString filePath = m_qstBinfilePathList[0];
     if (filePath.isEmpty())
         return;
+    //qDebug() << __FUNCTION__ << m_qstBinfilePathList << endl;
 
     showPlaybackBoard(true);
     m_pSensorDataObserver->setDisplayType(ConvertBin2CSV);
@@ -1819,6 +1856,9 @@ void CeleX5Widget::convertBin2CSV(QPushButton *pButton)
     path += ".csv";
     if (m_pCeleX5->openBinFile(filePath.toLocal8Bit().data()))
     {
+        //qDebug() << __FUNCTION__ << filePath << endl;
+        m_qstBinfilePathList.removeAt(0);
+
         QList<QPushButton*> button=this->findChildren<QPushButton *>("Enter Loop Mode");
 
         if(m_pCeleX5->isLoopModeEnabled())
@@ -2006,7 +2046,7 @@ void CeleX5Widget::onButtonClicked(QAbstractButton *button)
             QLabel* pLabelAPIVer = new QLabel(m_pVersionWidget);
             //pLabelAPIVer->setGeometry(94, 10+40*3, 400, 30);
             pLabelAPIVer->setGeometry(10, 10+40*3, 500, 30);
-            pLabelAPIVer->setText("API Version:   1.4");
+            pLabelAPIVer->setText("API Version:   1.5");
             pLabelAPIVer->setStyleSheet("QLabel { color: black; font: 20px Calibri; }");
         }
         m_pVersionWidget->show();
@@ -2052,11 +2092,11 @@ void CeleX5Widget::onValueChanged(uint32_t value, CfgSlider *slider)
     }
     else if ("S FO Pic Num" == slider->getBiasType())
     {
-        m_pCeleX5->setPictureNumber(value, CeleX5::Full_Optical_Flow_S_Mode);
+        m_pCeleX5->setPictureNumber(value, CeleX5::Optical_Flow_Mode);
     }
     else if ("M FO Pic Num" == slider->getBiasType())
     {
-        m_pCeleX5->setPictureNumber(value, CeleX5::Full_Optical_Flow_M_Mode);
+        m_pCeleX5->setPictureNumber(value, CeleX5::Multi_Read_Optical_Flow_Mode);
     }
     else if ("Display FPS" == slider->getBiasType())
     {
@@ -2176,6 +2216,7 @@ void CeleX5Widget::onRecordDataTimer()
 
 void CeleX5Widget::onUpdatePlayInfo()
 {
+    bool bAllFinished = true;
     if (m_pCeleX5->getPlaybackState() == PlayFinished)
     {
         cout << "------------- Playback Finished! -------------" << endl;
@@ -2188,31 +2229,74 @@ void CeleX5Widget::onUpdatePlayInfo()
                                      "font: 20px Calibri; }"
                                      "QPushButton:pressed {background: #992F6F;}");
             QMessageBox::information(NULL, "convertBin2Video", "Convert Bin to Video completely!", QMessageBox::Yes, QMessageBox::Yes);
-            m_pSensorDataObserver->setDisplayType(Realtime);
         }
         else if (m_pSensorDataObserver->getDisplayType() == ConvertBin2CSV)
         {
             g_ofWriteMat.close();
-            QList<QPushButton*> button = this->findChildren<QPushButton *>("ConvertBin2CSV");
-            button[0]->setStyleSheet("QPushButton {background: #002F6F; color: white; "
-                                     "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
-                                     "font: 20px Calibri; }"
-                                     "QPushButton:pressed {background: #992F6F;}");
-            QMessageBox::information(NULL, "convertBin2CSV", "Convert Bin to CSV completely!", QMessageBox::Yes, QMessageBox::Yes);
-            m_pSensorDataObserver->setDisplayType(Realtime);
+            if (m_qstBinfilePathList.size() <= 0)
+            {
+                QList<QPushButton*> button = this->findChildren<QPushButton *>("ConvertBin2CSV");
+                button[0]->setStyleSheet("QPushButton {background: #002F6F; color: white; "
+                                         "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
+                                         "font: 20px Calibri; }"
+                                         "QPushButton:pressed {background: #992F6F;}");
+                QMessageBox::information(NULL, "convertBin2CSV", "Convert Bin to CSV completely!", QMessageBox::Yes, QMessageBox::Yes);
+            }
+            else
+            {
+                bAllFinished = false;
+                QString filePath = m_qstBinfilePathList[0];
+                if (filePath.isEmpty())
+                    return;
+                if (m_pCeleX5->openBinFile(filePath.toLocal8Bit().data()))
+                {
+                    //qDebug() << __FUNCTION__ << filePath << endl;
+                    m_qstBinfilePathList.removeAt(0);
+
+                    m_pReadBinTimer->start(READ_BIN_TIME);
+                    m_pUpdatePlayInfoTimer->start(UPDATE_PLAY_INFO_TIME);
+                    //
+                    QString path = filePath.left(filePath.size() - 4);
+                    path += ".csv";
+                    g_ofWriteMat.open(path.toLocal8Bit().data());
+                }
+            }
         }
-        m_pSensorDataObserver->setSaveBmp(false);
-        m_pBtnSavePic->setText("Start Saving Pic");
-        m_pBtnSavePic->setStyleSheet("QPushButton {background: #002F6F; color: white; "
-                                     "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
-                                     "font: 20px Calibri; }"
-                                     "QPushButton:pressed {background: #992F6F;}");
-        m_pBtnSavePicEx->setText("Start Saving Pic (Replay)");
-        m_pBtnSavePicEx->setStyleSheet("QPushButton {background: #002F6F; color: white; "
-                                       "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
-                                       "font: 20px Calibri; }"
-                                       "QPushButton:pressed {background: #992F6F;}");
-        m_pUpdatePlayInfoTimer->stop();
+        if(m_pSensorDataObserver->getDisplayType() == ConvertBin2Video||m_pSensorDataObserver->getDisplayType() == ConvertBin2CSV)
+        {
+            m_pSensorDataObserver->setDisplayType(Realtime);
+            showPlaybackBoard(false);
+            m_pCeleX5->restartSensor(); //restart sensor: the sensor will output data agatin
+            m_pCeleX5->setIsPlayBack(false);
+            m_pCeleX5->play();
+            if (!m_pCeleX5->isLoopModeEnabled())
+            {
+                m_pCbBoxFixedMode->setCurrentIndex(m_emSensorFixedMode);
+                m_pCeleX5->setSensorFixedMode(m_emSensorFixedMode);
+            }
+            else
+            {
+                m_pCeleX5->setLoopModeEnabled(true);
+                m_pCeleX5->setSensorLoopMode(CeleX5::Full_Picture_Mode, 1);
+                m_pCeleX5->setSensorLoopMode(CeleX5::Event_Off_Pixel_Timestamp_Mode, 2);
+                m_pCeleX5->setSensorLoopMode(CeleX5::Optical_Flow_Mode, 3);
+            }
+        }
+        if (bAllFinished)
+        {
+            m_pSensorDataObserver->setSaveBmp(false);
+            m_pBtnSavePic->setText("Start Saving Pic");
+            m_pBtnSavePic->setStyleSheet("QPushButton {background: #002F6F; color: white; "
+                                         "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
+                                         "font: 20px Calibri; }"
+                                         "QPushButton:pressed {background: #992F6F;}");
+            m_pBtnSavePicEx->setText("Start Saving Pic (Replay)");
+            m_pBtnSavePicEx->setStyleSheet("QPushButton {background: #002F6F; color: white; "
+                                           "border-style: outset; border-width: 2px; border-radius: 10px; border-color: #002F6F; "
+                                           "font: 20px Calibri; }"
+                                           "QPushButton:pressed {background: #992F6F;}");
+            m_pUpdatePlayInfoTimer->stop();
+        }
     }
     //cout << "--------- CurrentPackageNo = " << m_pCeleX5->getCurrentPackageNo() << endl;
     int value;
@@ -2313,26 +2397,57 @@ void CeleX5Widget::onSensorModeChanged(QString text)
 
         QString mode = text.mid(8);
         //cout << loopNum << ", " << mode.toStdString() << endl;
-        if (mode == "Event_Address_Only Mode")
-            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Address_Only_Mode, loopNum);
-        else if (mode == "Event_Optical_Flow Mode")
-            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Optical_Flow_Mode, loopNum);
+        if (mode == "Event_Off_Pixel_Timestamp Mode ")
+        {
+            m_pCeleX5->setSensorLoopMode(CeleX5::Event_Off_Pixel_Timestamp_Mode, loopNum);
+            if(loopNum == 2)
+            {
+                m_pCbBoxLoopEventType->clear();
+                m_pCbBoxLoopEventType->insertItem(0, "Event Binary Pic");
+                m_pCbBoxLoopEventType->insertItem(1, "Event Denoised Binary Pic");
+                m_pCbBoxLoopEventType->insertItem(2, "Event Count Pic");
+                m_pCbBoxLoopEventType->insertItem(3, "Event Denoised Count Pic");
+                m_pCbBoxLoopEventType->setCurrentIndex(0);
+            }
+        }
+        else if (mode == "Event_In_Pixel_Timestamp Mode")
+        {
+            m_pCeleX5->setSensorLoopMode(CeleX5::Event_In_Pixel_Timestamp_Mode, loopNum);
+            if(loopNum == 2)
+            {
+                m_pCbBoxLoopEventType->clear();
+                m_pCbBoxLoopEventType->insertItem(0, "Event OpticalFlow Pic");
+                m_pCbBoxLoopEventType->insertItem(1, "Event Binary Pic");
+                m_pCbBoxLoopEventType->setCurrentIndex(0);
+            }
+        }
         else if (mode == "Event_Intensity Mode")
+        {
             m_pCeleX5->setSensorLoopMode(CeleX5::Event_Intensity_Mode, loopNum);
+            if(loopNum == 2)
+            {
+                m_pCbBoxLoopEventType->clear();
+                m_pCbBoxLoopEventType->insertItem(0, "Event Binary Pic");
+                m_pCbBoxLoopEventType->insertItem(1, "Event Gray Pic");
+                m_pCbBoxLoopEventType->insertItem(2, "Event Accumulated Pic");
+                m_pCbBoxLoopEventType->insertItem(3, "Event Count Pic");
+                m_pCbBoxLoopEventType->setCurrentIndex(0);
+            }
+        }
         else if (mode == "Full_Picture Mode")
             m_pCeleX5->setSensorLoopMode(CeleX5::Full_Picture_Mode, loopNum);
-        else if (mode == "Full_Optical_Flow_S Mode")
-            m_pCeleX5->setSensorLoopMode(CeleX5::Full_Optical_Flow_S_Mode, loopNum);
-        else if (mode == "Full_Optical_Flow_M Mode")
-            m_pCeleX5->setSensorLoopMode(CeleX5::Full_Optical_Flow_M_Mode, loopNum);
+        else if (mode == "Optical_Flow Mode")
+            m_pCeleX5->setSensorLoopMode(CeleX5::Optical_Flow_Mode, loopNum);
+        else if (mode == "Multi_Read_Optical_Flow Mode")
+            m_pCeleX5->setSensorLoopMode(CeleX5::Multi_Read_Optical_Flow_Mode, loopNum);
     }
     else
     {
         QString mode = text.mid(8);
         //cout << mode.toStdString() << endl;
-        if (mode == "Event_Address_Only Mode")
+        if (mode == "Event_Off_Pixel_Timestamp Mode ")
         {
-            m_pCeleX5->setSensorFixedMode(CeleX5::Event_Address_Only_Mode);
+            m_pCeleX5->setSensorFixedMode(CeleX5::Event_Off_Pixel_Timestamp_Mode);
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Event Binary Pic");
             m_pCbBoxImageType->insertItem(1, "Event Denoised Binary Pic");
@@ -2342,10 +2457,9 @@ void CeleX5Widget::onSensorModeChanged(QString text)
             m_pSensorDataObserver->setMultipleShowEnabled(false);
             m_pBtnShowStyle->setText("Show Multiple Windows");
         }
-        else if (mode == "Event_Optical_Flow Mode")
+        else if (mode == "Event_In_Pixel_Timestamp Mode")
         {
-            m_pCeleX5->setSensorFixedMode(CeleX5::Event_Optical_Flow_Mode);
-            m_pCeleX5->setThreshold(200);
+            m_pCeleX5->setSensorFixedMode(CeleX5::Event_In_Pixel_Timestamp_Mode);
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Event OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Event Binary Pic");
@@ -2370,9 +2484,9 @@ void CeleX5Widget::onSensorModeChanged(QString text)
             m_pSensorDataObserver->setMultipleShowEnabled(false);
             m_pBtnShowStyle->setText("Show Multiple Windows");
         }
-        else if (mode == "Full_Optical_Flow_S Mode")
+        else if (mode == "Optical_Flow Mode")
         {
-            m_pCeleX5->setSensorFixedMode(CeleX5::Full_Optical_Flow_S_Mode);
+            m_pCeleX5->setSensorFixedMode(CeleX5::Optical_Flow_Mode);
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Full OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Full OpticalFlow Speed Pic");
@@ -2382,19 +2496,18 @@ void CeleX5Widget::onSensorModeChanged(QString text)
             m_pSensorDataObserver->setMultipleShowEnabled(true);
             m_pBtnShowStyle->setText("Show Single Windows");
         }
-        else if (mode == "Full_Optical_Flow_M Mode")
+        else if (mode == "Multi_Read_Optical_Flow Mode")
         {
-            m_pCeleX5->setSensorFixedMode(CeleX5::Full_Optical_Flow_M_Mode);
+            m_pCeleX5->setSensorFixedMode(CeleX5::Multi_Read_Optical_Flow_Mode);
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Full OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Full OpticalFlow Speed Pic");
             m_pCbBoxImageType->insertItem(2, "Full OpticalFlow Direction Pic");
             m_pCbBoxImageType->setCurrentIndex(0);
         }
-        else if (mode == "Full_Optical_Flow_Test Mode")
+        else if (mode == "Optical_Flow_FPN Mode")
         {
-            m_pCeleX5->setSensorFixedMode(CeleX5::Full_Optical_Flow_Test_Mode);
-
+            m_pCeleX5->setSensorFixedMode(CeleX5::Optical_Flow_FPN_Mode);
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Full OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Full OpticalFlow Speed Pic");
@@ -2483,7 +2596,7 @@ void CeleX5Widget::onShowImagesSwitch(bool state)
             radio1[0]->setText(" close");
             radio1[0]->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
         }
-    }   
+    }
 }
 
 void CeleX5Widget::onShowTimestampSwitch(bool state)

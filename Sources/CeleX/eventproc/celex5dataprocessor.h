@@ -88,6 +88,7 @@ private:
 	void parseEventDataFormat0(uint8_t* pData, int dataSize); //Format0: 24-bit packet with ADC data (CSR_73=2'b00)
 	void parseEventDataFormat1(uint8_t* pData, int dataSize); //Format1: 28-bit packet with ADC data (CSR_73=2'b01)
 	void parseEventDataFormat2(uint8_t* pData, int dataSize); //Format2: 14-bit packet without ADC data (CSR_73=2'b10)
+	//
 	void parseIMUData(std::time_t time_stamp);
 
 	void checkIfShowImage(); //only for mipi
@@ -99,6 +100,8 @@ private:
 	void calDirectionAndSpeed(int i, int j, uint16_t* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer);
 
 	void saveFullPicRawData(uint8_t* pData);
+
+	bool findModeInLoopGroup(CeleX5::CeleX5Mode mode);
 
 	inline void processMIPIEventTimeStamp() 
 	{
@@ -126,16 +129,19 @@ private:
 			m_uiPackageTCounter += diffT;
 			//cout << "m_uiEventTCounter_Total = " << m_uiEventTCounter_Total << endl;
 		}
+
+		if (m_emCurrentSensorMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
+		{
+			if (m_iRowTimeStamp % 1024 == 0 && diffT != 0)
+			{
+				m_uiEOTrampNo++;
+				//cout << "m_uiEOTrampNo = " << m_uiEOTrampNo << ", m_iRowTimeStamp = "<< m_iRowTimeStamp << endl;
+			}
+		}
+
 		if (!m_bLoopModeEnabled)
 		{
 			checkIfShowImage();
-		}
-		else 
-		{
-			if (m_emSensorLoopAMode == m_emSensorLoopBMode && m_emSensorLoopBMode == m_emSensorLoopCMode)
-			{
-				checkIfShowImage();
-			}
 		}
 		if (m_uiEventTCounter_EPS > m_uiEventTCountForEPS)
 		{
@@ -156,6 +162,7 @@ private:
 	//for fpn
 	long*                    m_pFpnGenerationBuffer;
 	int*                     m_pFpnBuffer;
+	int*                     m_pFpnBuffer_OF;
 	//
 	//
 	unsigned char*           m_pFullFrameBuffer_ForUser;
@@ -212,6 +219,7 @@ private:
 	int						 m_iRotateType;	//rotate param
 
 	vector<EventData>        m_vecEventData;
+	vector<EventData>        m_vecEventDataPerRow;
 	vector<EventData>        m_vecEventData_ForUser;
 
 	int                      m_iMIPIDataFormat;
@@ -219,6 +227,7 @@ private:
 	
 	std::ofstream            m_ofLogFile;
 	uint64_t                 m_uiEventFrameNo;
+	uint32_t                 m_uiEOTrampNo;
 	std::time_t              m_lEventFrameTimeStamp;
 	std::time_t              m_lLastPackageTimeStamp;
 	uint32_t                 m_uiPackageTCounter;
@@ -237,6 +246,10 @@ private:
 	std::time_t              m_lEventFrameTimeStamp_ForUser;
 	std::time_t              m_lOpticalFrameTimeStamp_ForUser;
 	bool                     m_bFirstEventTimestamp;
+	//
+	int                      m_iLastLoopNum;
+	CeleX5::CeleX5Mode       m_emLastLoopMode;
+	int                      m_iFPNIndexForAdjustPic;
 };
 
 #endif // CELEX5DATAPROCESSOR_H

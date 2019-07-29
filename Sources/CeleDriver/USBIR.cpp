@@ -1,6 +1,7 @@
 #include "USBIR.h"
 #include <stdio.h>
 #include <string.h>
+#include "BulkTransfer.h"
 
 #define USB_TIMEOUT     3000           //传输数据的时间延迟
 
@@ -21,7 +22,7 @@ bool USBIR::usb_check_device(libusb_device *dev, int usb_vid, int usb_pid, int t
     libusb_device_descriptor desc;
     if(libusb_get_device_descriptor(dev, &desc) == LIBUSB_SUCCESS )
     {
-        if ( ( desc.idVendor == usb_vid ) && ( desc.idProduct == usb_pid ) )
+        if ((desc.idVendor == usb_vid) && (desc.idProduct == usb_pid))
         {
             for (int i = 0; i < desc.bNumConfigurations; i++)
             {
@@ -36,15 +37,31 @@ bool USBIR::usb_check_device(libusb_device *dev, int usb_vid, int usb_pid, int t
                             if (config->interface[j].altsetting[k].bInterfaceClass == LIBUSB_CLASS_VIDEO )
                             {
                                 InterfaceNumberList.push_back(config->interface[j].altsetting[k].bInterfaceNumber);
+								bool bFindVideo = false, bFindIMU = false;
                                 for ( int l = 0; l < config->interface[j].altsetting[k].bNumEndpoints; l++)
                                 {
-                                    if( ( config->interface[j].altsetting[k].endpoint[l].bmAttributes & 0x03 ) == trans_mode ) //找到端点
+                                    if (!bFindVideo && (config->interface[j].altsetting[k].endpoint[l].bmAttributes & 0x03) == trans_mode) //找到端点，video
                                     {
                                         video_endpoint_address = config->interface[j].altsetting[k].endpoint[l].bEndpointAddress;
-                                        libusb_free_config_descriptor(config);
-                                        return true;
+                                        //libusb_free_config_descriptor(config);
+										//return true;
+										bFindVideo = true;
+										printf("------------------- find video!\n");
                                     }
+									//if (!bFindIMU && (config->interface[j].altsetting[k].endpoint[l].bmAttributes & 0x03) == LIBUSB_TRANSFER_TYPE_INTERRUPT) //找到端点, imu
+									//{
+									//	imu_endpoint_address = config->interface[j].altsetting[k].endpoint[l].bEndpointAddress;
+									//	//libusb_free_config_descriptor(config);
+									//	//return true;
+									//	printf("------------------- find imu!\n");
+									//	bFindIMU = true;
+									//}
                                 }
+								if (bFindVideo/* && bFindIMU*/)
+								{
+									libusb_free_config_descriptor(config);
+									return true;
+								}
                             }
                         }
                     }
@@ -63,7 +80,7 @@ bool USBIR::usb_GetInterface(int usb_vid, int usb_pid, int trans_mode)
 
     for (ssize_t i = 0; i < cnt; i++ )
     {
-        if( usb_check_device(devs[i], usb_vid,usb_pid ,trans_mode) == true )
+        if (usb_check_device(devs[i], usb_vid, usb_pid, trans_mode) == true)
         {
             libusb_free_device_list(devs, 1);
             return true;
@@ -79,38 +96,39 @@ bool USBIR::usb_GetInterface(int usb_vid, int usb_pid, int trans_mode)
 
 bool USBIR::usb_open(int vid, int pid,int trans_mode)
 {
-    if( libusb_init(nullptr) == LIBUSB_SUCCESS )
+    if (libusb_init(nullptr) == LIBUSB_SUCCESS)
     {
         InterfaceNumberList.clear();
         if (usb_GetInterface(vid, pid, trans_mode) == true)
         {
             device_handle = libusb_open_device_with_vid_pid(nullptr, vid, pid);
-            if ( device_handle )
+            if (device_handle)
             {
                  /* 进行设备的初始化
                  1.设置当前的设备使用的configuration,参数2是要使用配置描述符中的bConfigurationValue */
                 libusb_set_configuration(device_handle,bConfigurationValue);
                 size_t i = 0;
-                for( ;i < InterfaceNumberList.size();i++ )
+                for ( ; i < InterfaceNumberList.size(); i++)
                 {
                     int Ret = libusb_detach_kernel_driver(device_handle,InterfaceNumberList[i]);
                     if ((Ret == LIBUSB_SUCCESS) || (Ret == LIBUSB_ERROR_NOT_SUPPORTED) || (Ret == LIBUSB_ERROR_NOT_FOUND))
                     {
-                        if( libusb_claim_interface(device_handle, InterfaceNumberList[i]) != LIBUSB_SUCCESS )
+                        if (libusb_claim_interface(device_handle, InterfaceNumberList[i]) != LIBUSB_SUCCESS)
                         {
                             break;
                         }
                     }
                 }
-                if ( i < InterfaceNumberList.size() )
+                if (i < InterfaceNumberList.size())
                 {
-                    for( size_t j = 0; j < i; j++ )
+                    for (size_t j = 0; j < i; j++)
                     {
                         libusb_release_interface(device_handle, InterfaceNumberList[j]);
                         libusb_attach_kernel_driver(device_handle, InterfaceNumberList[j]);
                     }
 
-                } else
+                }
+				else
                 {
                     video_trans_mode = trans_mode;
                     return true;
@@ -196,16 +214,48 @@ bool USBIR::usb_alloc_bulk_transfer(void)
     return false;
 }
 
+bool USBIR::usb_alloc_interrupt_transfer(void)
+{
+	int i = 0;
+	for (i = 0; i < 10; i++)
+	{
+		interrupt_transfer[i] = alloc_interrupt_transfer(device_handle, imu_endpoint_address, interrupt_buffer[i]);
+		if (interrupt_buffer[i] == nullptr)
+		{
+			printf("usb_alloc_interrupt_transfer failed!\n");
+			break;
+		}
+	}
+	if (i > 0)
+		return true;
+	return false;
+}
+
 bool USBIR::Start(void)
 {
     if (video_start() == true)
     {
         if (Init() == true)
         {
+			bool bSucceed1 = false, bSucceed2 = false;
             if (usb_alloc_bulk_transfer() == true)
             {
-                return true;
+				bSucceed1 = true;
+				printf("usb_alloc_bulk_transfer was successful!\n");
+                //return true;
             }
+			//added by xiaoqin @2019.06.11 for receiving IMU data
+			//if (usb_alloc_interrupt_transfer() == true)
+			//{
+			//	bSucceed2 = true;
+			//	printf("usb_alloc_interrupt_transfer was successful!\n");
+			//	//return true;
+			//}
+			if (bSucceed1/* && bSucceed2*/)
+			{
+				return true;
+			}
+
             Exit();
         }
         video_stop();

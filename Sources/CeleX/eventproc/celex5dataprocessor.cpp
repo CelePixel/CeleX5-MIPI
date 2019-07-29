@@ -21,6 +21,8 @@
 
 //#define _ENABLE_LOG_FILE_
 
+//#define    _EO_ROW_DENOISED_
+
 using namespace std;
 
 CeleX5DataProcessor::CeleX5DataProcessor()
@@ -45,16 +47,17 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_iLastRowTimeStamp(-1)
 	, m_iRowTimeStamp(-1)
 	, m_iMIPIDataFormat(2)
-	, m_emSensorFixedMode(CeleX5::Event_Address_Only_Mode)
+	, m_emSensorFixedMode(CeleX5::Event_Off_Pixel_Timestamp_Mode)
 	, m_emSensorLoopAMode(CeleX5::Full_Picture_Mode)
-	, m_emSensorLoopBMode(CeleX5::Event_Address_Only_Mode)
-	, m_emSensorLoopCMode(CeleX5::Full_Optical_Flow_S_Mode)
+	, m_emSensorLoopBMode(CeleX5::Event_Off_Pixel_Timestamp_Mode)
+	, m_emSensorLoopCMode(CeleX5::Optical_Flow_Mode)
 	, m_uiEventFrameTime(30000)
 	, m_uiEventRowCycleCount(0)
 	, m_emEventShowType(EventShowByTime)
 	, m_uiEventTUnitList{ 10, 25, 22, 25, 20, 17, 14, 25, 22, 20, 10, 10, 10, 10, 10, 10 }
 	, m_uiCurrentEventTUnit(20)
 	, m_uiEventFrameNo(0)
+	, m_uiEOTrampNo(1)
 	, m_uiEventCountStep(30)
 	, m_lEventFrameTimeStamp(0)
 	, m_lLastPackageTimeStamp(0)
@@ -67,6 +70,9 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_lEventFrameTimeStamp_ForUser(0)
 	, m_lOpticalFrameTimeStamp_ForUser(0)
 	, m_bFirstEventTimestamp(true)
+	, m_iLastLoopNum(3)
+	, m_emLastLoopMode(CeleX5::Unknown_Mode)
+	, m_iFPNIndexForAdjustPic(1)
 {
 	m_pEventADCBuffer = new uint16_t[CELEX5_PIXELS_NUMBER];
 	m_pEventCountBuffer = new unsigned char[CELEX5_PIXELS_NUMBER];
@@ -74,6 +80,7 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 
 	m_pFpnGenerationBuffer = new long[CELEX5_PIXELS_NUMBER];
 	m_pFpnBuffer = new int[CELEX5_PIXELS_NUMBER];
+	m_pFpnBuffer_OF = new int[CELEX5_PIXELS_NUMBER];
 
 	m_pFullFrameBuffer_ForUser = new unsigned char[CELEX5_PIXELS_NUMBER];
 
@@ -97,6 +104,7 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 		//
 		m_pFpnGenerationBuffer[i] = 0;
 		m_pFpnBuffer[i] = 0;
+		m_pFpnBuffer_OF[i] = 0;
 		//
 		m_pFullFrameBuffer_ForUser[i] = 0;
 		m_pEventFrameBuffer1_ForUser[i] = 0;
@@ -118,6 +126,29 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	if (!m_ofLogFile.is_open())
 		m_ofLogFile.open("log_file_time.txt");
 #endif
+
+	XBase base;
+	std::string filePath = base.getApplicationDirPath();
+	filePath += "\FPN_OpticalFlow.txt";
+
+	int index = 0;
+	std::ifstream in;
+	in.open(filePath.c_str());
+	if (!in.is_open())
+	{
+		cout << filePath << endl;
+
+		std::string line;
+		while (!in.eof() && index < CELEX5_PIXELS_NUMBER)
+		{
+			in >> line;
+			m_pFpnBuffer_OF[index] = atoi(line.c_str());
+			//cout << index << ", " << m_pEOFpnBuffer[index] << endl;
+			index++;
+		}
+		cout << "Load Optical-flow fpn successfully!" << endl;
+		in.close();
+	}
 }
 
 CeleX5DataProcessor::~CeleX5DataProcessor()
@@ -250,38 +281,6 @@ void CeleX5DataProcessor::processMIPIData(uint8_t* pData, int dataSize, std::tim
 	//cout << "CeleX5DataProcessor::processData: data mode ================= " << (int)*(pData + dataSize -1) << endl;
 	if (*(pData + dataSize - 1) == 0 /*|| dataSize > 500000*/) //full pic mode: package size = 1536001 = 1280 * 800 * 1.5 + 1
 	{
-		if (m_bLoopModeEnabled && 
-			(m_emCurrentSensorMode == CeleX5::Event_Address_Only_Mode || 
-			 m_emCurrentSensorMode == CeleX5::Event_Optical_Flow_Mode ||
-			 m_emCurrentSensorMode == CeleX5::Event_Intensity_Mode))
-		{
-			//cout << "m_uiEventTCounter = " << (m_uiEventTCounter*20)/1000 << endl;
-			//cout << "------------------------ " << time_stamp2 - m_lLastPackageTimeStamp << endl;
-			m_uiPixelCount = 0;
-			m_uiRowCount = 0;
-			m_uiEventRowCycleCount = 0;
-			m_uiEventTCounter = 0;
-			m_uiEventFrameNo++;
-
-			m_vecEventData_ForUser.clear();
-			m_vecEventData_ForUser = m_vecEventData;
-			m_vecEventData.clear();
-
-			if (m_bIMUModuleEnabled)
-			{
-				parseIMUData(m_lLastPackageTimeStamp);
-			}
-			if (m_bFrameModuleEnabled)
-			{
-				createImage(m_lLastPackageTimeStamp);
-			}
-			else
-			{
-				m_pCX5ProcessedData->setSensorMode(m_emCurrentSensorMode);
-			}
-			m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
-			//cout << "m_uiEventTCounter = " << m_uiEventTCounter << endl;
-		}
 		uint8_t mode = 0xFF & *pData;
 		if (mode == 0x60 || mode == 0x80 || mode == 0xA0 || mode == 0xC0 || mode == 0xE0)
 		{
@@ -387,8 +386,8 @@ void CeleX5DataProcessor::processFullPicData(uint8_t* pData, int dataSize, std::
 		uint8_t value3 = *(pData + i + 2);
 
 		if (m_emCurrentSensorMode == CeleX5::Full_Picture_Mode ||
-			m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_S_Mode ||
-			m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_M_Mode)
+			m_emCurrentSensorMode == CeleX5::Optical_Flow_Mode ||
+			m_emCurrentSensorMode == CeleX5::Multi_Read_Optical_Flow_Mode)
 		{
 			//--- 8-bits ---
 			uint8_t adc1 = value1;
@@ -397,7 +396,7 @@ void CeleX5DataProcessor::processFullPicData(uint8_t* pData, int dataSize, std::
 			m_pEventADCBuffer[index] = 255 - adc1;
 			m_pEventADCBuffer[index + 1] = 255 - adc2;
 		}
-		else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+		else if (m_emCurrentSensorMode == CeleX5::Optical_Flow_FPN_Mode)
 		{
 			//--- 12-bits ---
 			uint16_t adc11 = (value1 << 4) + (0x0F & value3);
@@ -516,6 +515,8 @@ void CeleX5DataProcessor::parseEventDataFormat0(uint8_t* pData, int dataSize)
 	m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
 }
 
+int adc_zero_count = 0;
+int last_adc = 0;
 void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 {
 	//cout << "CeleX5DataProcessor::parseEventDataFormat1: dataSize = " << dataSize << endl;
@@ -554,7 +555,63 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 				//cout << "currentRow = " << m_iCurrentRow << ", lastRow = " << m_iLastRow << endl;
 				m_uiEventRowCycleCount++;
 			}
+#ifdef _EO_ROW_DENOISED_
+			int eventSize = m_vecEventDataPerRow.size();
+			if (eventSize > 1)
+			{
+				for (int i = 0; i < eventSize; i++)
+				{
+					if (i == 0)
+					{
+						EventData eventData = m_vecEventDataPerRow[i];
+						EventData eventDataR = m_vecEventDataPerRow[i + 1];
+						if (abs(eventData.col - eventDataR.col) == 1)
+						{
+							m_vecEventData.push_back(eventData);
 
+							int index = eventData.row * CELEX5_COL + eventData.col;
+							m_pEventCountBuffer[index] += 1;
+							m_pEventADCBuffer[index] = eventData.adc >> 4;
+							m_uiPixelCount++;
+							m_uiPixelCountForEPS++;
+						}
+					}
+					else if (i == eventSize - 1)
+					{
+						EventData eventDataL = m_vecEventDataPerRow[i - 1];
+						EventData eventData = m_vecEventDataPerRow[i];
+						if (abs(eventData.col - eventDataL.col) == 1)
+						{
+							m_vecEventData.push_back(eventData);
+
+							int index = eventData.row * CELEX5_COL + eventData.col;
+							m_pEventCountBuffer[index] += 1;
+							m_pEventADCBuffer[index] = eventData.adc >> 4;
+							m_uiPixelCount++;
+							m_uiPixelCountForEPS++;
+						}
+					}
+					else
+					{
+						EventData eventDataL = m_vecEventDataPerRow[i - 1];
+						EventData eventData = m_vecEventDataPerRow[i];
+						EventData eventDataR = m_vecEventDataPerRow[i + 1];
+
+						if (abs(eventData.col - eventDataL.col) == 1 || abs(eventData.col - eventDataR.col) == 1)
+						{
+							m_vecEventData.push_back(eventData);
+
+							int index = eventData.row * CELEX5_COL + eventData.col;
+							m_pEventCountBuffer[index] += 1;
+							m_pEventADCBuffer[index] = eventData.adc >> 4;
+							m_uiPixelCount++;
+							m_uiPixelCountForEPS++;
+						}
+					}
+				}
+			}
+			m_vecEventDataPerRow.clear();
+#endif
 			//-------- event time stamp --------
 			m_iLastRowTimeStamp = m_iRowTimeStamp;
 			//row_time_stamp[15:0] = data_28_1[17:2] = value6[1:0] + value5[7:6] + value1[7:0] + value5[5:2]
@@ -567,34 +624,71 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 			//adc[11:0] = data_28_1[27:16] = value2[7:0] + value6[3:0]
 			adc = (value2 << 4) + (0x0F & value6); //for 8-bit: adc = value2
 			adc = 4095 - adc;
-
+			if (adc == last_adc)
+				adc_zero_count++;
+			last_adc = adc;
+ 
 			//col[10:0] = data_28_1[15:5] = value5[7:6] + value1[7:0] + value5[5]
 			col = ((0xC0 & value5) << 3) + (value1 << 1) + ((0x20 & value5) >> 5);
 
 			if (m_iCurrentRow >= 0 && m_iCurrentRow < CELEX5_ROW)
 			{
+#ifndef _EO_ROW_DENOISED_
 				int index = m_iCurrentRow * CELEX5_COL + col;
-
 				m_pEventCountBuffer[index] += 1;
 				m_pEventADCBuffer[index] = 255 - value2;
 				m_uiPixelCount++;
 				m_uiPixelCountForEPS++;
-
+#endif		
 				EventData eventData;
-				eventData.row = m_iCurrentRow;
-				eventData.col = col;
-				eventData.adc = adc;
-				eventData.t = m_uiEventTCounter;
-				eventData.t_increasing = m_uiEventTCounter_Total;
-				//--- cal polarity ---
-				if (adc > m_pLastADC[index])
-					eventData.polarity = 1;
-				else if (adc < m_pLastADC[index])
-					eventData.polarity = -1;
-				else
+				if (CeleX5::Event_Intensity_Mode == m_emCurrentSensorMode)
+				{
+					eventData.row = m_iCurrentRow;
+					eventData.col = col;
+					eventData.adc = adc;
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
+					eventData.t_in_pixel_increasing = 0;
+
+					//--- cal polarity ---
+					if (adc > m_pLastADC[index])
+						eventData.polarity = 1;
+					else if (adc < m_pLastADC[index])
+						eventData.polarity = -1;
+					else
+						eventData.polarity = 0;
+					m_pLastADC[index] = adc;
+				}
+				else if (CeleX5::Event_In_Pixel_Timestamp_Mode == m_emCurrentSensorMode)
+				{
+					eventData.row = m_iCurrentRow;
+					eventData.col = col;
 					eventData.polarity = 0;
-				m_pLastADC[index] = adc;
+					//
+					int adc_fpn = adc - m_pFpnBuffer_OF[index];
+					if (adc_fpn < 0)
+						adc_fpn = 0;
+					else if (adc_fpn > 4095)
+						adc_fpn = 4095;
+					eventData.adc = adc_fpn;
+					//
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
+
+					uint32_t t_ramp_no = m_uiEOTrampNo;
+					int It = adc_fpn >> 2;
+					int Et = m_iRowTimeStamp % 1024;
+					if (It - Et > 500)
+						t_ramp_no = m_uiEOTrampNo - 1;
+					else
+						t_ramp_no = m_uiEOTrampNo;
+					eventData.t_in_pixel_increasing = adc_fpn + t_ramp_no * 4096;
+				}
+#ifdef _EO_ROW_DENOISED_
+				m_vecEventDataPerRow.push_back(eventData);
+#else
 				m_vecEventData.push_back(eventData);
+#endif
 			}
 		}
 		else if (dataID1 == 0) //2b'00
@@ -604,9 +698,7 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 
 			//op_mode[2:0] = data_28_1[16:14] = value6[0] + value5[7:6]
 			int op_mode = ((0x01 & value6) << 2) + ((0xC0 & value5) >> 6);
-			if (m_bLoopModeEnabled)
-				m_emCurrentSensorMode = m_emSensorLoopBMode;
-			else
+			if (!m_bLoopModeEnabled)
 				m_emCurrentSensorMode = (CeleX5::CeleX5Mode)op_mode;
 
 			//temperature[11:0] = data_28_1[13:2] = value1[7:0] + value5[5:2]
@@ -629,6 +721,65 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 				//cout << "currentRow = " << m_iCurrentRow << ", lastRow = " << m_iLastRow << endl;
 				m_uiEventRowCycleCount++;
 			}
+
+#ifdef _EO_ROW_DENOISED_
+			int eventSize = m_vecEventDataPerRow.size();
+			if (eventSize > 1)
+			{
+				for (int i = 0; i < eventSize; i++)
+				{
+					if (i == 0)
+					{
+						EventData eventData = m_vecEventDataPerRow[i];
+						EventData eventDataR = m_vecEventDataPerRow[i + 1];
+						if (abs(eventData.col - eventDataR.col) == 1)
+						{
+							m_vecEventData.push_back(eventData);
+
+							int index = eventData.row * CELEX5_COL + eventData.col;
+							m_pEventCountBuffer[index] += 1;
+							m_pEventADCBuffer[index] = eventData.adc >> 4;
+							m_uiPixelCount++;
+							m_uiPixelCountForEPS++;
+						}
+					}
+					else if (i == eventSize - 1)
+					{
+						EventData eventDataL = m_vecEventDataPerRow[i - 1];
+						EventData eventData = m_vecEventDataPerRow[i];
+						if (abs(eventData.col - eventDataL.col) == 1)
+						{
+							m_vecEventData.push_back(eventData);
+
+							int index = eventData.row * CELEX5_COL + eventData.col;
+							m_pEventCountBuffer[index] += 1;
+							m_pEventADCBuffer[index] = eventData.adc >> 4;
+							m_uiPixelCount++;
+							m_uiPixelCountForEPS++;
+						}
+					}
+					else
+					{
+						EventData eventDataL = m_vecEventDataPerRow[i - 1];
+						EventData eventData = m_vecEventDataPerRow[i];
+						EventData eventDataR = m_vecEventDataPerRow[i + 1];
+
+						if (abs(eventData.col - eventDataL.col) == 1 || abs(eventData.col - eventDataR.col) == 1)
+						{
+							m_vecEventData.push_back(eventData);
+
+							int index = eventData.row * CELEX5_COL + eventData.col;
+							m_pEventCountBuffer[index] += 1;
+							m_pEventADCBuffer[index] = eventData.adc >> 4;
+							m_uiPixelCount++;
+							m_uiPixelCountForEPS++;
+						}
+					}
+				}
+			}
+			m_vecEventDataPerRow.clear();
+#endif
+
 			//-------- event time stamp --------
 			m_iLastRowTimeStamp = m_iRowTimeStamp;
 			//row_time_stamp[15:0] = data_28_1[17:2] = value7[5:2] + value3[7:0] + value7[1:0] + value6[7:6]
@@ -642,32 +793,71 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 			adc = (value4 << 4) + ((0xF0 & value7) >> 4); //for 8-bit: adc = value4
 			adc = 4095 - adc;
 
+			if (adc == last_adc)
+				adc_zero_count++;
+			last_adc = adc;
+
 			//col[10:0] = data_28_2[15:5] = value7[3:2] + value3[7:0]  + value7[1]
 			col = ((0x0C & value7) << 7) + (value3 << 1) + ((0x02 & value7) >> 1);
 
 			if (m_iCurrentRow >= 0 && m_iCurrentRow < CELEX5_ROW)
 			{
+#ifndef _EO_ROW_DENOISED_
 				int index = m_iCurrentRow * CELEX5_COL + col;
 				m_pEventCountBuffer[index] += 1;
 				m_pEventADCBuffer[index] = 255 - value4;
 				m_uiPixelCount++;
 				m_uiPixelCountForEPS++;
-
+#endif
 				EventData eventData;
-				eventData.row = m_iCurrentRow;
-				eventData.col = col;
-				eventData.adc = adc;
-				eventData.t = m_uiEventTCounter;
-				eventData.t_increasing = m_uiEventTCounter_Total;
-				//--- cal polarity ---
-				if (adc > m_pLastADC[index]) //adc is opp
-					eventData.polarity = 1;
-				else if (adc < m_pLastADC[index])
-					eventData.polarity = -1;
-				else
+				if (CeleX5::Event_Intensity_Mode == m_emCurrentSensorMode)
+				{
+					eventData.row = m_iCurrentRow;
+					eventData.col = col;
+					eventData.adc = adc;
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
+					eventData.t_in_pixel_increasing = 0;
+
+					//--- cal polarity ---
+					if (adc > m_pLastADC[index])
+						eventData.polarity = 1;
+					else if (adc < m_pLastADC[index])
+						eventData.polarity = -1;
+					else
+						eventData.polarity = 0;
+					m_pLastADC[index] = adc;
+				}
+				else if (CeleX5::Event_In_Pixel_Timestamp_Mode == m_emCurrentSensorMode)
+				{
+					eventData.row = m_iCurrentRow;
+					eventData.col = col;
 					eventData.polarity = 0;
-				m_pLastADC[index] = adc;
+					//
+					int adc_fpn = adc - m_pFpnBuffer_OF[index];
+					if (adc_fpn < 0)
+						adc_fpn = 0;
+					else if (adc_fpn > 4095)
+						adc_fpn = 4095;
+					eventData.adc = adc_fpn;
+					//
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
+
+					uint32_t t_ramp_no = m_uiEOTrampNo;
+					int It = adc_fpn >> 2;
+					int Et = m_iRowTimeStamp % 1024;
+					if (It - Et > 500)
+						t_ramp_no = m_uiEOTrampNo - 1;
+					else
+						t_ramp_no = m_uiEOTrampNo;
+					eventData.t_in_pixel_increasing = adc_fpn + t_ramp_no * 4096;
+				}			
+#ifdef _EO_ROW_DENOISED_
+				m_vecEventDataPerRow.push_back(eventData);
+#else
 				m_vecEventData.push_back(eventData);
+#endif
 			}
 		}
 		else if (dataID2 == 0) //2b'00
@@ -677,9 +867,7 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 
 			//op_mode[2:0] = data_28_2[16:14] = value7[4:2]
 			int op_mode = ((0x1C & value7) >> 2);
-			if (m_bLoopModeEnabled)
-				m_emCurrentSensorMode = m_emSensorLoopBMode;
-			else
+			if (!m_bLoopModeEnabled)
 				m_emCurrentSensorMode = (CeleX5::CeleX5Mode)op_mode;
 
 			//temperature[11:0] = data[13:2] = value3[7:0] + value7[1:0] + value6[7:6]
@@ -689,6 +877,49 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 		}
 	}
 	m_uiPackageTCounter = 0;
+
+	if (m_bLoopModeEnabled)
+	{
+		if (dataSize < 357001) //the last package of event data
+		{
+			if (m_uiPixelCount - adc_zero_count == 1)
+			{
+				m_emCurrentSensorMode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
+			}
+			else
+			{
+				if (findModeInLoopGroup(CeleX5::Event_In_Pixel_Timestamp_Mode))
+					m_emCurrentSensorMode = CeleX5::Event_In_Pixel_Timestamp_Mode;
+				else if (findModeInLoopGroup(CeleX5::Event_Intensity_Mode))
+					m_emCurrentSensorMode = CeleX5::Event_Intensity_Mode;
+			}
+			adc_zero_count = 0;
+			m_uiPixelCount = 0;
+			m_uiRowCount = 0;
+			m_uiEventRowCycleCount = 0;
+			m_uiEventTCounter = 0;
+			m_uiEventFrameNo++;
+
+			m_vecEventData_ForUser.clear();
+			m_vecEventData_ForUser = m_vecEventData;
+			m_vecEventData.clear();
+
+			if (m_bIMUModuleEnabled)
+			{
+				parseIMUData(m_lLastPackageTimeStamp);
+			}
+			if (m_bFrameModuleEnabled)
+			{
+				createImage(m_lLastPackageTimeStamp);
+			}
+			else
+			{
+				m_pCX5ProcessedData->setSensorMode(m_emCurrentSensorMode);
+			}
+			m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
+			//cout << "m_uiEventTCounter = " << m_uiEventTCounter << endl;
+		}
+	}
 }
 
 void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
@@ -707,7 +938,7 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 	int adc = 0;
 	int temperature = 0;
 
-	m_emCurrentSensorMode = CeleX5::Event_Address_Only_Mode;
+	m_emCurrentSensorMode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
 
 #ifdef _ENABLE_LOG_FILE_
 	clock_t begin_t, poll_t;
@@ -762,8 +993,8 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 					eventData.row = m_iCurrentRow;
 					eventData.col = col;
 					eventData.adc = 0;
-					eventData.t = m_uiEventTCounter;
-					eventData.t_increasing = m_uiEventTCounter_Total;
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
 					m_vecEventData.push_back(eventData);
 				}
 			}
@@ -822,8 +1053,8 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 					eventData.row = m_iCurrentRow;
 					eventData.col = col;
 					eventData.adc = 0;
-					eventData.t = m_uiEventTCounter;
-					eventData.t_increasing = m_uiEventTCounter_Total;
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
 					m_vecEventData.push_back(eventData);
 				}
 			}
@@ -881,8 +1112,8 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 					eventData.row = m_iCurrentRow;
 					eventData.col = col;
 					eventData.adc = 0;
-					eventData.t = m_uiEventTCounter;
-					eventData.t_increasing = m_uiEventTCounter_Total;
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
 					m_vecEventData.push_back(eventData);
 				}
 			}
@@ -941,8 +1172,8 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 					eventData.row = m_iCurrentRow;
 					eventData.col = col;
 					eventData.adc = 0;
-					eventData.t = m_uiEventTCounter;
-					eventData.t_increasing = m_uiEventTCounter_Total;
+					eventData.t_off_pixel = m_uiEventTCounter;
+					eventData.t_off_pixel_increasing = m_uiEventTCounter_Total;
 					m_vecEventData.push_back(eventData);
 				}
 			}
@@ -965,6 +1196,37 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 		}
 	}
 	m_uiPackageTCounter = 0;
+
+	if (m_bLoopModeEnabled)
+	{
+		if (dataSize < 357001) //the last package of event data
+		{
+			m_uiPixelCount = 0;
+			m_uiRowCount = 0;
+			m_uiEventRowCycleCount = 0;
+			m_uiEventTCounter = 0;
+			m_uiEventFrameNo++;
+
+			m_vecEventData_ForUser.clear();
+			m_vecEventData_ForUser = m_vecEventData;
+			m_vecEventData.clear();
+
+			if (m_bIMUModuleEnabled)
+			{
+				parseIMUData(m_lLastPackageTimeStamp);
+			}
+			if (m_bFrameModuleEnabled)
+			{
+				createImage(m_lLastPackageTimeStamp);
+			}
+			else
+			{
+				m_pCX5ProcessedData->setSensorMode(m_emCurrentSensorMode);
+			}
+			m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
+			//cout << "m_uiEventTCounter = " << m_uiEventTCounter << endl;
+		}
+	}
 
 #ifdef _ENABLE_LOG_FILE_
 	poll_t = clock();
@@ -1168,17 +1430,80 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 	m_pCX5ProcessedData->setEventDataVector(m_vecEventData_ForUser);
 	if (m_bLoopModeEnabled)
 	{
-		if (m_emCurrentSensorMode == m_emSensorLoopAMode)
+		//cout << "m_emCurrentSensorMode = " << (int)m_emCurrentSensorMode << endl;
+		if (m_emSensorLoopAMode == m_emSensorLoopBMode && m_emSensorLoopBMode == m_emSensorLoopCMode)
 		{
-			m_pCX5ProcessedData->setLoopNum(1);
+			if (m_emCurrentSensorMode == m_emSensorLoopAMode && m_iLastLoopNum == 3)
+			{
+				m_pCX5ProcessedData->setLoopNum(1);
+				m_iLastLoopNum = 1;
+			}
+			else if (m_emCurrentSensorMode == m_emSensorLoopBMode && m_iLastLoopNum == 1)
+			{
+				m_pCX5ProcessedData->setLoopNum(2);
+				m_iLastLoopNum = 2;
+			}
+			else if (m_emCurrentSensorMode == m_emSensorLoopCMode && m_iLastLoopNum == 2)
+			{
+				m_pCX5ProcessedData->setLoopNum(3);
+				m_iLastLoopNum = 3;
+			}
 		}
-		else if (m_emCurrentSensorMode == m_emSensorLoopBMode)
+		else if (m_emSensorLoopAMode == m_emSensorLoopBMode || m_emSensorLoopAMode == m_emSensorLoopCMode || m_emSensorLoopBMode == m_emSensorLoopCMode)
 		{
-			m_pCX5ProcessedData->setLoopNum(2);
+			CeleX5::CeleX5Mode diffMode;
+			int diff_loop_num = -1;
+			if (m_emSensorLoopAMode == m_emSensorLoopBMode)
+			{
+				diffMode = m_emSensorLoopCMode;
+				diff_loop_num = 3;
+			}
+			else if (m_emSensorLoopAMode == m_emSensorLoopCMode)
+			{
+				diffMode = m_emSensorLoopBMode;
+				diff_loop_num = 2;
+			}
+			else
+			{
+				diffMode = m_emSensorLoopAMode;
+				diff_loop_num = 1;
+			}
+			if (m_emCurrentSensorMode == diffMode)
+			{
+				m_pCX5ProcessedData->setLoopNum(diff_loop_num);
+				m_iLastLoopNum = diff_loop_num;
+			}
+			else if (m_iLastLoopNum == diff_loop_num)
+			{
+				int same_loop_num = diff_loop_num + 1;
+				if (same_loop_num > 3)
+					same_loop_num = 1;
+				m_pCX5ProcessedData->setLoopNum(same_loop_num);
+				m_iLastLoopNum = same_loop_num;
+			}
+			else
+			{
+				int same_loop_num = m_iLastLoopNum + 1;
+				if (same_loop_num > 3)
+					same_loop_num = 1;
+				m_pCX5ProcessedData->setLoopNum(same_loop_num);
+				m_iLastLoopNum = same_loop_num;
+			}
 		}
-		else if (m_emCurrentSensorMode == m_emSensorLoopCMode)
+		else
 		{
-			m_pCX5ProcessedData->setLoopNum(3);
+			if (m_emCurrentSensorMode == m_emSensorLoopAMode)
+			{
+				m_pCX5ProcessedData->setLoopNum(1);
+			}
+			else if (m_emCurrentSensorMode == m_emSensorLoopBMode)
+			{
+				m_pCX5ProcessedData->setLoopNum(2);
+			}
+			else if (m_emCurrentSensorMode == m_emSensorLoopCMode)
+			{
+				m_pCX5ProcessedData->setLoopNum(3);
+			}
 		}
 	}
 	else
@@ -1188,7 +1513,7 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 
 	int value = 0, value1 = 0, index = 0;
 	int row, col, index1, index2, index3, index4;
-	if (m_emCurrentSensorMode == CeleX5::Event_Address_Only_Mode)
+	if (m_emCurrentSensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
 	{
 		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
 		{
@@ -1234,7 +1559,7 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 			pEventDenoisedBinaryPic[index] = score;
 		}
 	}
-	else if (m_emCurrentSensorMode == CeleX5::Event_Optical_Flow_Mode)
+	else if (m_emCurrentSensorMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
 	{
 		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
 		{
@@ -1256,7 +1581,12 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 
 			if (m_pEventADCBuffer[i] > 0)
 			{
-				pOpticalFlowPic[index] = m_pEventADCBuffer[i];
+				value = m_pEventADCBuffer[i] - m_pFpnBuffer_OF[i];
+				if (value < 0)
+					value = 0;
+				if (value > 255)
+					value = 255;
+				pOpticalFlowPic[index] = value;
 				pEventBinaryPic[index] = 255;
 			}
 			else
@@ -1310,26 +1640,36 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 	}
 	else if (m_emCurrentSensorMode == CeleX5::Full_Picture_Mode)
 	{
-		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
+		bool bAdjust = false;
+		if (m_bLoopModeEnabled)
 		{
+			if ((int)m_emLastLoopMode < 3)
+			{
+				if (m_pEventADCBuffer[m_iFPNIndexForAdjustPic] > m_pEventADCBuffer[m_iFPNIndexForAdjustPic + 1])
+				{
+					bAdjust = true;
+				}
+			}
+		}
+		for (int i = 1; i < CELEX5_PIXELS_NUMBER; i++)
+		{
+			row = i / CELEX5_COL;
+			col = i % CELEX5_COL;
 			switch (m_iRotateType)
 			{
 			case 0:
 				index = CELEX5_PIXELS_NUMBER - i - 1;
 				break;
 			case 1:
-				index = (i / CELEX5_COL * CELEX5_COL + (CELEX5_COL - i % CELEX5_COL - 1));
+				index = (row * CELEX5_COL + (CELEX5_COL - col - 1));
 				break;
 			case 2:
-				index = ((CELEX5_ROW - i / CELEX5_COL - 1)* CELEX5_COL + i % CELEX5_COL);
+				index = ((CELEX5_ROW - row - 1)* CELEX5_COL + col);
 				break;
 			case 3:
 				index = i;
 				break;
 			}
-
-			row = i / CELEX5_COL;
-			col = i % CELEX5_COL;
 			if (row == 0 || row == 799 || col == 0 || col == 1279)
 				continue;
 			index1 = (row - 1)*CELEX5_COL + col;
@@ -1337,27 +1677,61 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 			index3 = row*CELEX5_COL + col + 1;
 			index4 = (row + 1)*CELEX5_COL + col;
 
-			if (m_pEventADCBuffer[i] < 255 && m_pEventADCBuffer[i] > 0)
-				value = m_pEventADCBuffer[i] - m_pFpnBuffer[i];//Subtract FPN
-			else if (m_pEventADCBuffer[index1] < 255 && m_pEventADCBuffer[index1] > 0)
-				value = m_pEventADCBuffer[index1] - m_pFpnBuffer[index1];
-			else if (m_pEventADCBuffer[index2] < 255 && m_pEventADCBuffer[index2] > 0)
-				value = m_pEventADCBuffer[index2] - m_pFpnBuffer[index2];
-			else if (m_pEventADCBuffer[index3] < 255 && m_pEventADCBuffer[index3] > 0)
-				value = m_pEventADCBuffer[index3] - m_pFpnBuffer[index3];
-			else if (m_pEventADCBuffer[index4] < 255 && m_pEventADCBuffer[index4] > 0)
-				value = m_pEventADCBuffer[index4] - m_pFpnBuffer[index4];
+			if (bAdjust)
+			{
+				value = m_pEventADCBuffer[i] - m_pFpnBuffer[i-1];//Subtract FPN
+				if (value < 0)
+					value = 0;
+				if (value > 255)
+					value = 255;
+				pFullPic[index-1] = value;
+			}
 			else
-				value = m_pEventADCBuffer[i];
-			if (value < 0)
-				value = 0;
-			if (value > 255)
-				value = 255;
-			pFullPic[index] = value;
+			{
+				if (bAdjust)
+				{
+					if (m_pEventADCBuffer[i] < 255 && m_pEventADCBuffer[i] > 0)
+						value = m_pEventADCBuffer[i] - m_pFpnBuffer[i-1];//Subtract FPN
+					else if (m_pEventADCBuffer[index1] < 255 && m_pEventADCBuffer[index1] > 0)
+						value = m_pEventADCBuffer[index1] - m_pFpnBuffer[index1-1];
+					else if (m_pEventADCBuffer[index2] < 255 && m_pEventADCBuffer[index2] > 0)
+						value = m_pEventADCBuffer[index2] - m_pFpnBuffer[index2-1];
+					else if (m_pEventADCBuffer[index3] < 255 && m_pEventADCBuffer[index3] > 0)
+						value = m_pEventADCBuffer[index3] - m_pFpnBuffer[index3-1];
+					else if (m_pEventADCBuffer[index4] < 255 && m_pEventADCBuffer[index4] > 0)
+						value = m_pEventADCBuffer[index4] - m_pFpnBuffer[index4-1];
+					else
+						value = m_pEventADCBuffer[i];
+				}
+				else
+				{
+					if (m_pEventADCBuffer[i] < 255 && m_pEventADCBuffer[i] > 0)
+						value = m_pEventADCBuffer[i] - m_pFpnBuffer[i];//Subtract FPN
+					else if (m_pEventADCBuffer[index1] < 255 && m_pEventADCBuffer[index1] > 0)
+						value = m_pEventADCBuffer[index1] - m_pFpnBuffer[index1];
+					else if (m_pEventADCBuffer[index2] < 255 && m_pEventADCBuffer[index2] > 0)
+						value = m_pEventADCBuffer[index2] - m_pFpnBuffer[index2];
+					else if (m_pEventADCBuffer[index3] < 255 && m_pEventADCBuffer[index3] > 0)
+						value = m_pEventADCBuffer[index3] - m_pFpnBuffer[index3];
+					else if (m_pEventADCBuffer[index4] < 255 && m_pEventADCBuffer[index4] > 0)
+						value = m_pEventADCBuffer[index4] - m_pFpnBuffer[index4];
+					else
+						value = m_pEventADCBuffer[i];
+				}
+				if (value < 0)
+					value = 0;
+				if (value > 255)
+					value = 255;
+
+				if (bAdjust)
+					pFullPic[index - 1] = value;
+				else
+					pFullPic[index] = value;
+			}
 		}
 	}
-	else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_S_Mode ||
-		     m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_M_Mode)
+	else if (m_emCurrentSensorMode == CeleX5::Optical_Flow_Mode ||
+		     m_emCurrentSensorMode == CeleX5::Multi_Read_Optical_Flow_Mode)
 	{
 		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
 		{
@@ -1384,7 +1758,7 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 			calDirectionAndSpeed(i, index, m_pEventADCBuffer, pOpticalFlowSpeedPic, pOpticalFlowDirectionPic);
 		}
 	}
-	else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+	else if (m_emCurrentSensorMode == CeleX5::Optical_Flow_FPN_Mode)
 	{
 		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
 		{
@@ -1417,8 +1791,8 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 		m_pEventADCBuffer[j] = 0;
 	}
 
-	if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_S_Mode ||
-		m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_M_Mode)
+	if (m_emCurrentSensorMode == CeleX5::Optical_Flow_Mode ||
+		m_emCurrentSensorMode == CeleX5::Multi_Read_Optical_Flow_Mode)
 	{
 		memcpy(m_pOpticalFrameBuffer1_ForUser, pOpticalFlowPic, CELEX5_PIXELS_NUMBER);
 		memcpy(m_pOpticalFrameBuffer2_ForUser, pOpticalFlowSpeedPic, CELEX5_PIXELS_NUMBER);
@@ -1431,7 +1805,7 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 		memcpy(m_pFullFrameBuffer_ForUser, pFullPic, CELEX5_PIXELS_NUMBER);
 		m_lFullFrameTimeStamp_ForUser = time_stamp_end;
 	}
-	else if (m_emCurrentSensorMode == CeleX5::Event_Address_Only_Mode)
+	else if (m_emCurrentSensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
 	{
 		memcpy(m_pEventFrameBuffer1_ForUser, pEventBinaryPic, CELEX5_PIXELS_NUMBER);
 		memcpy(m_pEventFrameBuffer5_ForUser, pEventDenoisedBinaryPic, CELEX5_PIXELS_NUMBER);
@@ -1448,15 +1822,20 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 		memcpy(m_pEventFrameBuffer6_ForUser, pEventCountPic, CELEX5_PIXELS_NUMBER);
 		m_lEventFrameTimeStamp_ForUser = time_stamp_end;
 	}
-	else if (m_emCurrentSensorMode == CeleX5::Event_Optical_Flow_Mode)
+	else if (m_emCurrentSensorMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
 	{
 		memcpy(m_pOpticalFrameBuffer1_ForUser, pOpticalFlowPic, CELEX5_PIXELS_NUMBER);
 		memcpy(m_pEventFrameBuffer1_ForUser, pEventBinaryPic, CELEX5_PIXELS_NUMBER);
 		m_lEventFrameTimeStamp_ForUser = time_stamp_end;
 	}
-	else if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+	else if (m_emCurrentSensorMode == CeleX5::Optical_Flow_FPN_Mode)
 	{
 		memcpy(m_pOpticalFrameBuffer1_ForUser, pOpticalFlowPic, CELEX5_PIXELS_NUMBER);
+	}
+	//
+	if (m_bLoopModeEnabled)
+	{
+		m_emLastLoopMode = m_emCurrentSensorMode;
 	}
 	return true;
 }
@@ -1493,7 +1872,7 @@ void CeleX5DataProcessor::generateFPNimpl()
 	{
 		m_bIsGeneratingFPN = false;
 		std::ofstream ff;
-		if (m_emCurrentSensorMode == CeleX5::Full_Optical_Flow_Test_Mode)
+		if (m_emCurrentSensorMode == CeleX5::Optical_Flow_FPN_Mode)
 		{
 			XBase base;
 			std::string filePath = base.getApplicationDirPath();
@@ -1577,6 +1956,16 @@ bool CeleX5DataProcessor::setFpnFile(const std::string& fpnFile)
 	//cout << "fpn count = " << index << endl;
 	in.close();
 	cout << __FUNCTION__ << ": set fpn successfully!" << endl;
+
+	for (int j = 1; j < 1000000; j++)
+	{
+		if (m_pFpnBuffer[j+1] - m_pFpnBuffer[j] > 5 && m_pFpnBuffer[j+1] - m_pFpnBuffer[j+2] > 5)
+		{
+			m_iFPNIndexForAdjustPic = j;
+			cout << "m_iFPNIndexForAdjustPic = " << m_iFPNIndexForAdjustPic << endl;
+			break;
+		}
+	}
 	return true;
 }
 
@@ -1647,6 +2036,7 @@ void CeleX5DataProcessor::setISOLevel(uint32_t value)
 void CeleX5DataProcessor::setMIPIDataFormat(int format)
 {
 	m_iMIPIDataFormat = format;
+	cout << __FUNCTION__ << ": m_iMIPIDataFormat = " << m_iMIPIDataFormat << endl;
 }
 
 void CeleX5DataProcessor::setEventFrameTime(uint32_t value, uint32_t clock) //unit: microsecond
@@ -1904,4 +2294,12 @@ void CeleX5DataProcessor::saveFullPicRawData(uint8_t* pData)
 	}
 	ofFullPic.close();
 	m_bSaveFullPicRawData = false;
+}
+
+bool CeleX5DataProcessor::findModeInLoopGroup(CeleX5::CeleX5Mode mode)
+{
+	if (mode == m_emSensorLoopAMode || mode == m_emSensorLoopBMode || mode == m_emSensorLoopCMode)
+		return true;
+	else
+		return false;
 }

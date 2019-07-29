@@ -1,3 +1,8 @@
+<?xml version="1.2" ?>
+<!-- parameter changes:
+  SWITCH_RESET_GAP1: 120 (old value = 200)
+  BIAS_C2: 880 (old value = 819)
+-->
 <?xml version="1.1" ?>
 <!-- parameter changes:
   BIAS_BRT_T: 155 (old value = 225)
@@ -57,7 +62,7 @@
             <address_high>10</address_high>
             <value_high>3</value_high>
             <address_low>11</address_low>
-            <value_low>51</value_low>
+            <value_low>112</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_C2>
@@ -209,7 +214,7 @@
     <Sensor_Operation_Mode_Control_Parameters>
         <SWITCH_RESET_GAP1>
             <address_high>50</address_high>
-            <value_high>200</value_high>
+            <value_high>120</value_high>
             <min>0</min>
             <max>255</max>
         </SWITCH_RESET_GAP1>

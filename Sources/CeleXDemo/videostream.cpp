@@ -58,7 +58,7 @@ bool VideoStream::avWriterInit(const char* out_filename)
     }
 
     AVStream *outStream = addVideoStream(ofmt_ctx, AV_CODEC_ID_MJPEG);//create output video stream
-//    av_dump_format(ofmt_ctx, 0, out_filename, 1); //display the video info
+    //    av_dump_format(ofmt_ctx, 0, out_filename, 1); //display the video info
 
     if (!(ofmt_ctx->oformat->flags & AVFMT_NOFILE))//open the output file
     {
@@ -85,7 +85,6 @@ bool VideoStream::avWriterInit(const char* out_filename)
 void VideoStream::avWtiter(char* buffer)
 {
     FILE *file;
-
     file = fopen(buffer, "rb");
     pkt.size = fread(mydata, 1, DATASIZE, file);
     pkt.data = mydata;
@@ -101,6 +100,7 @@ void VideoStream::avWtiter(char* buffer)
 
 bool VideoStream::avWriterRelease()
 {
+    frameCount = 0;
     av_free_packet(&pkt);
     av_write_trailer(ofmt_ctx);//Write file trailer
     if (ofmt_ctx && !(ofmt_ctx->oformat->flags & AVFMT_NOFILE))

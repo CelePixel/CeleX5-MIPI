@@ -26,7 +26,7 @@
 #endif
 
 #define FPN_PATH    "../Samples/config/FPN_3.txt"
-#define BIN_FILE    "E:/API/CeleX5/MIPI/Monocular/MP_Main/Samples/MipiData_20190506_131517525_E_100M.bin"	//your bin file path
+#define BIN_FILE    "YOUR_BIN_FILE_PATH.bin"	//your bin file path
 
 CeleX5 *pCeleX5 = new CeleX5;
 
@@ -47,6 +47,7 @@ public:
 	CX5SensorDataServer* m_pServer;
 };
 
+int i = 1000;
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
 	if (NULL == pSensorData)
@@ -58,8 +59,14 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		cv::Mat matFullPic(800, 1280, CV_8UC1, pSensorData->getFullPicBuffer());
 		cv::imshow("FullPic", matFullPic);
 		cv::waitKey(1);
+
+		//save fullpic jpg
+		if (!pCeleX5->getFullPicMat().empty())
+		{
+			cv::imwrite("D:/Datasets/" + std::to_string(i) + "_FullPic.jpg", matFullPic);
+		}
 	}
-	else if (CeleX5::Event_Address_Only_Mode == sensorMode)
+	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == sensorMode)
 	{
 		//get buffers when sensor works in EventMode
 		if (pSensorData->getEventPicBuffer(CeleX5::EventBinaryPic))
@@ -70,12 +77,19 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 			cvWaitKey(1);
 		}
 	}
-	else if (CeleX5::Full_Optical_Flow_S_Mode == sensorMode)
+	else if (CeleX5::Optical_Flow_Mode == sensorMode)
 	{
 		//full-frame optical-flow pic
 		cv::Mat matOpticalFlow(800, 1280, CV_8UC1, pSensorData->getOpticalFlowPicBuffer(CeleX5::Full_Optical_Flow_Pic));
 		cv::imshow("Optical-Flow Pic", matOpticalFlow);
 		cvWaitKey(1);
+
+		//save fullpic jpg
+		if (!pCeleX5->getFullPicMat().empty())
+		{
+			cv::imwrite("D:/Datasets/" + std::to_string(i) + "_OpticalFlow.jpg", matOpticalFlow);
+		}
+		i++;
 	}
 }
 

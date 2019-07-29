@@ -15,7 +15,7 @@
 */
 
 #include "../include/celex5/celex5.h"
-#include "../driver/CeleDriver.h"
+#include "../cx3driver/include/CeleDriver.h"
 #include "../configproc/hhsequencemgr.h"
 #include "../configproc/hhwireincommand.h"
 #include "../base/xbase.h"
@@ -188,12 +188,15 @@ bool CeleX5::openSensor(DeviceType type)
 			m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
 			m_pSequenceMgr->saveCeleX5XML(m_mapCfgDefaults);
 		}
-		
-		m_pDataProcessor->setISOLevel(m_uiISOLevel);
-		
+
 		if (!configureSettings(type))
 			return false;
+
+		setISOLevel(m_uiISOLevel);
+		//m_pDataProcessor->setISOLevel(m_uiISOLevel);
+
 		clearData();
+		m_pDataProcessThread->start();
 	}
 	m_bSensorReady = true;
 	return true;
@@ -451,7 +454,7 @@ int CeleX5::getIMUData(std::vector<IMUData>& data)
 // address = 53, width = [2:0]
 void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 {
-	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_Optical_Flow_Mode == mode)
+	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_In_Pixel_Timestamp_Mode == mode)
 	{
 		if (m_uiClockRate > 70)
 		{
@@ -489,7 +492,7 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 	writeRegister(233, -1, 232, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
 	writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
 
-	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_Optical_Flow_Mode == mode)
+	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_In_Pixel_Timestamp_Mode == mode)
 	{
 		m_iEventDataFormat = 1;
 		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
@@ -509,7 +512,7 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		writeRegister(84, -1, 85, 462);
 		writeRegister(86, -1, 87, 1200);
 	}
-	else if (CeleX5::Event_Address_Only_Mode == mode)
+	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == mode)
 	{
 		m_iEventDataFormat = 2;
 		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
@@ -529,11 +532,11 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		writeRegister(84, -1, 85, 680);
 		writeRegister(86, -1, 87, 1300);
 	}
-	//
-	if (CeleX5::Event_Optical_Flow_Mode == mode ||
-		CeleX5::Full_Optical_Flow_S_Mode == mode ||
-		CeleX5::Full_Optical_Flow_M_Mode == mode ||
-		CeleX5::Full_Optical_Flow_Test_Mode == mode)
+
+	if (CeleX5::Event_In_Pixel_Timestamp_Mode == mode ||
+		CeleX5::Optical_Flow_Mode == mode ||
+		CeleX5::Multi_Read_Optical_Flow_Mode == mode ||
+		CeleX5::Optical_Flow_FPN_Mode == mode)
 	{
 		//wireIn(45, 1, 0xFF);
 		vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
@@ -545,7 +548,7 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 	vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
 	CfgInfo cfg_bias_rampn = cfgSensorCoreParameters.at(7);
 	CfgInfo cfg_bias_rampp = cfgSensorCoreParameters.at(8);
-	if (CeleX5::Full_Optical_Flow_Test_Mode == mode)
+	if (CeleX5::Optical_Flow_FPN_Mode == mode)
 	{
 		//writeRegister(16, -1, 17, 530);
 		writeRegister(16, -1, 17, cfg_bias_rampn.value + (cfg_bias_rampp.value - cfg_bias_rampn.value)/2);
@@ -565,6 +568,7 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 	{
 		setISOLevel(m_uiISOLevel);
 	}
+
 	m_pDataProcessor->setSensorFixedMode(mode);
 }
 
@@ -586,48 +590,72 @@ void CeleX5::setSensorLoopMode(CeleX5Mode mode, int loopNum)
 	}
 	clearData();
 
-	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_Optical_Flow_Mode == mode)
+	if (getSensorLoopMode(1) == CeleX5::Event_Intensity_Mode || getSensorLoopMode(1) == CeleX5::Event_In_Pixel_Timestamp_Mode ||
+		getSensorLoopMode(2) == CeleX5::Event_Intensity_Mode || getSensorLoopMode(2) == CeleX5::Event_In_Pixel_Timestamp_Mode ||
+		getSensorLoopMode(3) == CeleX5::Event_Intensity_Mode || getSensorLoopMode(3) == CeleX5::Event_In_Pixel_Timestamp_Mode)
 	{
-		if (m_uiClockRate > 70)
-		{
-			m_bClockAutoChanged = true;
-			m_uiLastClockRate = m_uiClockRate;
+		if (m_uiClockRate != 70)
 			setClockRate(70);
-		}
 	}
 	else
 	{
-		if (m_bClockAutoChanged)
-		{
-			setClockRate(m_uiLastClockRate);
-			m_bClockAutoChanged = false;
-		}
+		if (m_uiClockRate != 100)
+			setClockRate(100);
 	}
-
+	/*if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_Optical_Flow_Mode == mode)
+	{
+	if (m_uiClockRate > 70)
+	{
+	m_bClockAutoChanged = true;
+	m_uiLastClockRate = m_uiClockRate;
+	setClockRate(70);
+	}
+	}
+	else
+	{
+	if (m_bClockAutoChanged)
+	{
+	setClockRate(m_uiLastClockRate);
+	m_bClockAutoChanged = false;
+	}
+	}*/
 	enterCFGMode();
 	wireIn(52 + loopNum, static_cast<uint32_t>(mode), 0xFF);
 
-	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_Optical_Flow_Mode == mode)
+	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_In_Pixel_Timestamp_Mode == mode)
 	{
 		m_iEventDataFormat = 1;
 		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 		m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 
-		writeRegister(79, -1, 80, 200); //has bug
+		writeRegister(79, -1, 80, 200);
 		writeRegister(82, -1, 83, 800);
 		writeRegister(84, -1, 85, 462);
 		writeRegister(86, -1, 87, 1200);
 	}
-	else if (CeleX5::Event_Address_Only_Mode == mode)
+	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == mode)
 	{
-		m_iEventDataFormat = 2;
-		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
-		m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
+		int loopNum1 = loopNum + 1;
+		if (loopNum1 > 3)
+			loopNum1 = loopNum1 % 3;
+		int loopNum2 = loopNum + 2;
+		if (loopNum2 > 3)
+			loopNum2 = loopNum2 % 3;
 
-		writeRegister(79, -1, 80, 200);
-		writeRegister(82, -1, 83, 720);
-		writeRegister(84, -1, 85, 680);
-		writeRegister(86, -1, 87, 1300);
+		if (m_pDataProcessor->getSensorLoopMode(loopNum1) != CeleX5::Event_Intensity_Mode &&
+			m_pDataProcessor->getSensorLoopMode(loopNum1) != CeleX5::Event_In_Pixel_Timestamp_Mode &&
+			m_pDataProcessor->getSensorLoopMode(loopNum2) != CeleX5::Event_Intensity_Mode &&
+			m_pDataProcessor->getSensorLoopMode(loopNum2) != CeleX5::Event_In_Pixel_Timestamp_Mode)
+		{
+			m_iEventDataFormat = 2;
+			wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+			m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
+
+			writeRegister(79, -1, 80, 200);
+			writeRegister(82, -1, 83, 720);
+			writeRegister(84, -1, 85, 680);
+			writeRegister(86, -1, 87, 1300);
+		}
 	}
 	enterStartMode();
 	m_pDataProcessor->setSensorLoopMode(mode, loopNum);
@@ -970,9 +998,9 @@ void CeleX5::setPictureNumber(uint32_t num, CeleX5Mode mode)
 
 	if (Full_Picture_Mode == mode)
 		wireIn(59, num, 0xFF);
-	else if (Full_Optical_Flow_S_Mode == mode)
+	else if (Optical_Flow_Mode == mode)
 		wireIn(60, num, 0xFF);
-	else if (Full_Optical_Flow_M_Mode == mode)
+	else if (Multi_Read_Optical_Flow_Mode == mode)
 		wireIn(62, num, 0xFF);
 
 	enterStartMode();
@@ -1286,6 +1314,9 @@ bool CeleX5::openBinFile(std::string filePath)
 	{
 		m_bLoopModeEnabled = true;
 		m_pDataProcessor->setLoopModeEnabled(true);
+		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopA_mode), 1);
+		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopB_mode), 2);
+		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopC_mode), 3);
 	}
 	else
 	{
@@ -1605,7 +1636,6 @@ void CeleX5::modifyCSRParameter(string csrType, string cmdName, uint32_t value)
 			}
 		}
 	}
-	m_pSequenceMgr->saveCeleX5XML(m_mapCfgModified);
 }
 
 bool CeleX5::configureSettings(CeleX5::DeviceType type)

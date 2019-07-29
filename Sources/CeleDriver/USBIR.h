@@ -34,15 +34,22 @@ private:
     bool usb_check_device(libusb_device *dev, int usb_vid, int usb_pid, int trans_mode);
     bool usb_GetInterface(int usb_vid, int usb_pid, int trans_mode);
     bool usb_alloc_bulk_transfer(void);
-    bool usb_submit_bulk_transfer(void);
+	bool usb_alloc_interrupt_transfer(void); //added by xiaoqin @2019.06.11 for receiving IMU data
 
 private:
     libusb_device_handle *device_handle;
+
     libusb_transfer      *bulk_transfer[MAX_URB_NUMBER];
     uint8_t               bulk_buffer[MAX_URB_NUMBER][MAX_ELEMENT_BUFFER_SIZE];
+
+	libusb_transfer      *interrupt_transfer[10];
+	uint8_t               interrupt_buffer[10][32];
+
+
     std::vector<int>      InterfaceNumberList;
     int                   bConfigurationValue;
     int                   video_endpoint_address;
+	int                   imu_endpoint_address;
     int                   video_trans_mode;
 	clock_t               clock_begin;
 	clock_t               clock_end;

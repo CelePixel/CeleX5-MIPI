@@ -33,7 +33,6 @@ using namespace std;
 using namespace cv;
 
 CeleX5 *pCeleX5 = new CeleX5;
-vector<uint8_t> sensor_buffer;
 
 class SensorDataObserver : public CeleX5DataManager
 {
@@ -58,7 +57,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 	if (NULL == pSensorData)
 		return;
 
-	if (CeleX5::Event_Address_Only_Mode == pSensorData->getSensorMode() ||
+	if (CeleX5::Event_Off_Pixel_Timestamp_Mode == pSensorData->getSensorMode() ||
 		CeleX5::Event_Intensity_Mode == pSensorData->getSensorMode())
 	{
 		cout << "--------------------- event mode --------------------- " << endl;
@@ -72,12 +71,11 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 			for (int i = 0; i < imu.size(); i++)
 			{
 				cout << "---------- imu time_stamp = " << imu[i].time_stamp << endl;
-				/*cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
+				cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
 					 << ", x_ACC = " << imu[i].x_ACC << ", y_ACC = " << imu[i].y_ACC << ", z_ACC = " << imu[i].z_ACC
-					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/
+					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;
 			}
 		}
-		cout << endl;
 	}
 	else if (CeleX5::Full_Picture_Mode == pSensorData->getSensorMode())
 	{
@@ -96,7 +94,6 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/
 			}
 		}
-		cout << endl;
 	}
 	else
 	{
@@ -115,7 +112,6 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/
 			}
 		}
-		cout << endl;
 	}
 }
 
@@ -155,7 +151,7 @@ int main()
 
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	pCeleX5->setFpnFile(FPN_PATH);
-	pCeleX5->setSensorFixedMode(CeleX5::Event_Address_Only_Mode);
+	pCeleX5->setSensorFixedMode(CeleX5::Event_Off_Pixel_Timestamp_Mode);
 	//pCeleX5->setLoopModeEnabled(true);
 	//pCeleX5->setSensorLoopMode(CeleX5::Full_Picture_Mode, 1);
 	//pCeleX5->setSensorLoopMode(CeleX5::Event_Address_Only_Mode, 2);
@@ -179,15 +175,6 @@ int main()
 
 	while (true)
 	{
-		if (pCeleX5)
-		{
-			std::time_t time_stamp_end = 0;
-			vector<IMURawData> imu_data;
-			pCeleX5->getMIPIData(sensor_buffer, time_stamp_end, imu_data);
-			if (sensor_buffer.size() > 0)
-				pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size(), time_stamp_end, imu_data);
-			sensor_buffer.clear();
-		}
 #ifdef _WIN32
 		Sleep(1);
 #else

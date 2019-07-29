@@ -9,7 +9,7 @@ int CelexRos::initDevice() {}
 void CelexRos::grabEventData(
     CeleX5 *celex,
     celex5_msgs::eventVector &msg) {
-  if (celex->getSensorFixedMode() == CeleX5::Event_Address_Only_Mode) {
+  if (celex->getSensorFixedMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode) {
     std::vector<EventData> vecEvent;
 
     celex->getEventDataVector(vecEvent);

@@ -61,7 +61,7 @@ private:
     //
     void saveRecordingImage(unsigned char* pBuffer, int index);
     void savePics(CeleX5ProcessedData* pSensorData);
-    void writeCSVData(CeleX5::CeleX5Mode sensorMode);
+    void writeCSVData(CeleX5::CeleX5Mode sensorMode, CeleX5ProcessedData* pSensorData);
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -224,6 +224,8 @@ private:
     CeleX5::CeleX5Mode  m_emSensorLoopMode;
     uint32_t            m_uiSaveBinDuration; //Unit: second
     bool                m_bPlaybackPaused;
+    //
+    QStringList         m_qstBinfilePathList;
 };
 
 #endif // CELEX5WIDGET_H

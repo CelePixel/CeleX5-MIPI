@@ -109,8 +109,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libusb-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary>./build/Windows/x64/debug/$(TargetName).lib</ImportLibrary>
-      <OutputFile>./build/Windows/x64/debug/$(TargetName)$(TargetExt)</OutputFile>
+      <ImportLibrary>./build/Windows/x64/debug/CeleDriver.lib</ImportLibrary>
+      <OutputFile>./build/Windows/x64/debug/CeleDriver.dll</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -149,8 +149,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libusb-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>./build/Windows/x64/release/$(TargetName)$(TargetExt)</OutputFile>
-      <ImportLibrary>./build/Windows/x64/release/$(TargetName).lib</ImportLibrary>
+      <OutputFile>./build/Windows/x64/release/CeleDriver.dll</OutputFile>
+      <ImportLibrary>./build/Windows/x64/release/CeleDriver.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

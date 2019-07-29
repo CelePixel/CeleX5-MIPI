@@ -31,7 +31,7 @@ public:
 
     // grab the parameters
     node_.param<std::string>("celex_mode", celex_mode_,
-                             "Event_Address_Only_Mode");
+                             "Event_Off_Pixel_Timestamp_Mode");
 
     node_.param<int>("threshold", threshold_, 170);   // 0-1024
     node_.param<int>("clock_rate", clock_rate_, 100); // 0-100
@@ -79,8 +79,8 @@ void CelexRosNode::setCeleX5(CeleX5 *pcelex) {
   celex_->setThreshold(threshold_);
 
   CeleX5::CeleX5Mode mode;
-  if (celex_mode_ == "Event_Address_Only_Mode")
-    mode = CeleX5::Event_Address_Only_Mode;
+  if (celex_mode_ == "Event_Off_Pixel_Timestamp_Mode")
+    mode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
   else if (celex_mode_ == "Full_Picture_Mode")
     mode = CeleX5::Full_Picture_Mode;
 

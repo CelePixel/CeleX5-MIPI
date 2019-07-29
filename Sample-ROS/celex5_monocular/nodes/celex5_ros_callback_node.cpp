@@ -27,16 +27,16 @@ public:
     m_pServer_ = pServer;
     m_pServer_->registerData(this, CeleX5DataManager::CeleX_Frame_Data);
 
-    image_pub_ = node_.advertise<sensor_msgs::Image>("/imgshow", 1);
+    image_pub_ = node_.advertise<sensor_msgs::Image>("/imgshow", 10);
 
     // advertise custom celex5 data and subscribe the data
-    data_pub_ = node_.advertise<celex5_msgs::eventVector>("celex5", 1);
-    data_sub_ = node_.subscribe("celex5", 1,
+    data_pub_ = node_.advertise<celex5_msgs::eventVector>("celex5", 10);
+    data_sub_ = node_.subscribe("celex5", 1000,
                                 &CelexRosCallBackNode::celexDataCallback, this);
 
     // grab the parameters
     node_.param<std::string>("celex_mode", celex_mode_,
-                             "Event_Address_Only_Mode");
+                             "Event_Off_Pixel_Timestamp_Mode");
     node_.param<std::string>("event_pic_type", event_pic_type_,
                              "EventBinaryPic");
 
@@ -75,7 +75,7 @@ void CelexRosCallBackNode::celexDataCallback(
                     MAT_COLS - msg.events[i].y - 1) = msg.events[i].brightness;
     }
     cv::imshow(OPENCV_WINDOW, mat);
-    cv::waitKey(1);
+    cv::waitKey(60);
   }
 }
 
@@ -84,8 +84,8 @@ void CelexRosCallBackNode::setCeleX5(CeleX5 *pcelex) {
 
   celex_->setThreshold(threshold_);
   CeleX5::CeleX5Mode mode;
-  if (celex_mode_ == "Event_Address_Only_Mode")
-    mode = CeleX5::Event_Address_Only_Mode;
+  if (celex_mode_ == "Event_Off_Pixel_Timestamp_Mode")
+    mode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
   celex_->setSensorFixedMode(mode);
 }
 
@@ -119,6 +119,7 @@ int main(int argc, char **argv) {
 
   CeleX5 *pCelex_;
   pCelex_ = new CeleX5;
+
   if (NULL == pCelex_)
     return 0;
   pCelex_->openSensor(CeleX5::CeleX5_MIPI);

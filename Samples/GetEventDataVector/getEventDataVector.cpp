@@ -80,7 +80,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 			cv::waitKey(1);
 		}
 	}
-	else if (CeleX5::Event_Address_Only_Mode == pSensorData->getSensorMode())
+	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == pSensorData->getSensorMode())
 	{
 		std::vector<EventData> vecEvent;
 		pCeleX5->getEventDataVector(vecEvent);
@@ -133,7 +133,7 @@ int main()
 
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	pCeleX5->setFpnFile(FPN_PATH);
-	pCeleX5->setSensorFixedMode(CeleX5::Event_Address_Only_Mode);
+	pCeleX5->setSensorFixedMode(CeleX5::Event_Off_Pixel_Timestamp_Mode);
 	pCeleX5->disableFrameModule();
 	pCeleX5->disableIMUModule();
 	SensorDataObserver* pSensorData = new SensorDataObserver(pCeleX5->getSensorDataServer());
@@ -155,13 +155,6 @@ int main()
 
 	while (true)
 	{
-		if (pCeleX5)
-		{
-			pCeleX5->getMIPIData(sensor_buffer);
-			if (sensor_buffer.size() > 0)
-				pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size());
-			sensor_buffer.clear();
-		}
 #ifdef _WIN32
 		Sleep(1);
 #else

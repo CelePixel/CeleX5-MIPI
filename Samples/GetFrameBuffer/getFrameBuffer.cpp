@@ -29,27 +29,6 @@
 #define FPN_PATH    "../Samples/config/FPN_3.txt"
 
 CeleX5 *pCeleX5 = new CeleX5;
-vector<uint8_t> sensor_buffer;
-
-#ifdef _WIN32
-unsigned int _stdcall ReadDataThreadProc(LPVOID lpParameter)
-#else
-void * ReadDataThreadProc(void *arg)
-#endif
-{
-	cout << "thread function: ReadDataThreadProc!\n";
-	while (true)
-	{
-		if (pCeleX5)
-		{
-			pCeleX5->getMIPIData(sensor_buffer);
-			if (sensor_buffer.size() > 0)
-				pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size());
-			sensor_buffer.clear();
-		}
-	}
-	return 0;
-}
 
 #ifdef _WIN32
 bool exit_handler(DWORD fdwctrltype)
@@ -87,17 +66,8 @@ int main()
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	pCeleX5->setFpnFile(FPN_PATH);
 
-	CeleX5::CeleX5Mode sensorMode = CeleX5::Event_Address_Only_Mode;
+	CeleX5::CeleX5Mode sensorMode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
 	pCeleX5->setSensorFixedMode(sensorMode);
-
-	//create read sensor data thread
-#ifdef _WIN32
-	_beginthreadex(NULL, 0, ReadDataThreadProc, 0, 0, NULL);
-#else
-	pthread_t t1;
-	int a = 1;
-	pthread_create(&t1, NULL, ReadDataThreadProc, &a);
-#endif
 
 #ifdef _WIN32
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)exit_handler, true);
@@ -126,7 +96,7 @@ int main()
 			cv::imshow("FullPic", matFullPic);
 			cvWaitKey(10);
 		}
-		else if (sensorMode == CeleX5::Event_Address_Only_Mode)
+		else if (sensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
 		{
 			//get buffers when sensor works in EventMode
 			pCeleX5->getEventPicBuffer(pBuffer1, CeleX5::EventBinaryPic); //event binary pic

@@ -29,27 +29,6 @@
 #define FPN_PATH    "../Samples/config/FPN_3.txt"
 
 CeleX5 *pCeleX5 = new CeleX5;
-vector<uint8_t> sensor_buffer;
-
-#ifdef _WIN32
-unsigned int _stdcall ReadDataThreadProc(LPVOID lpParameter)
-#else
-void * ReadDataThreadProc(void *arg)
-#endif
-{
-	cout << "thread function: ReadDataThreadProc!\n";
-	while (true)
-	{
-		if (pCeleX5)
-		{
-			pCeleX5->getMIPIData(sensor_buffer);
-			if (sensor_buffer.size() > 0)
-				pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size());
-			sensor_buffer.clear();
-		}
-	}
-	return 0;
-}
 
 #ifdef _WIN32
 bool exit_handler(DWORD fdwctrltype)
@@ -85,16 +64,7 @@ int main()
 	if (NULL == pCeleX5)
 		return 0;
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
-	pCeleX5->setSensorFixedMode(CeleX5::Full_Optical_Flow_S_Mode);
-
-	//create read sensor data thread
-#ifdef _WIN32
-	_beginthreadex(NULL, 0, ReadDataThreadProc, 0, 0, NULL);
-#else
-	pthread_t t1;
-	int a = 1;
-	pthread_create(&t1, NULL, ReadDataThreadProc, &a);
-#endif
+	pCeleX5->setSensorFixedMode(CeleX5::Optical_Flow_Mode);
 
 #ifdef _WIN32
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)exit_handler, true);
@@ -117,7 +87,7 @@ int main()
 	{
 		pCeleX5->getOpticalFlowPicBuffer(pOpticalFlowBuffer); //optical-flow raw buffer
 		cv::Mat matOpticalRaw(800, 1280, CV_8UC1, pOpticalFlowBuffer);
-		//cv::Mat matOpticalRaw = pCeleX->getOpticalFlowPicMat();	//You can get the Mat form of optical flow pic directly.
+		//cv::Mat matOpticalRaw = pCeleX5->getOpticalFlowPicMat(CeleX5::Full_Optical_Flow_Pic);	//get optical flow raw data
 		cv::imshow("Optical-Flow Buffer - Gray", matOpticalRaw);
 
 		cv::Mat matOpticalSpeed = pCeleX5->getOpticalFlowPicMat(CeleX5::Full_Optical_Flow_Speed_Pic);	//get optical flow speed buffer
@@ -127,12 +97,12 @@ int main()
 		cv::imshow("Optical-Flow Direction Buffer - Gray", matOpticalDirection);
 
 		//optical-flow raw data - display color image
-		cv::Mat matOpticalRawColor(800, 1280, CV_8UC3);
-		int index = 0;
-		for (int i = 0; i < matOpticalRawColor.rows; ++i)
+		cv::Mat matOpticalColor(800, 1280, CV_8UC3);
+
+		for (int i = 0; i < matOpticalColor.rows; ++i)
 		{
-			cv::Vec3b *p = matOpticalRawColor.ptr<cv::Vec3b>(i);
-			for (int j = 0; j < matOpticalRawColor.cols; ++j)
+			cv::Vec3b *p = matOpticalColor.ptr<cv::Vec3b>(i);
+			for (int j = 0; j < matOpticalColor.cols; ++j)
 			{
 				int value = matOpticalRaw.at<uchar>(i, j);
 				//std::cout << value << std::endl;
@@ -174,7 +144,7 @@ int main()
 				}
 			}
 		}
-		cv::imshow("Optical-Flow Buffer - Color", matOpticalRawColor);
+		cv::imshow("Optical-Flow Buffer - Color", matOpticalColor);
 		cvWaitKey(30);
 	}
 	return 1;

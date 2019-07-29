@@ -77,7 +77,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>D:\Program Files\opencv\build\include;D:\Program Files\opencv\build\include\opencv;D:\Program Files\opencv\build\include\opencv2;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\lib\CeleDriver\x64\debug;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\cx3driver\lib\x64\debug;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,7 +87,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\Program Files\opencv\build\include;D:\Program Files\opencv\build\include\opencv;D:\Program Files\opencv\build\include\opencv2;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\lib\CeleDriver\x64\release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\cx3driver\lib\x64\release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -180,7 +180,6 @@
     <ClCompile Include="configproc\tinyxml\tinyxmlparser.cpp" />
     <ClCompile Include="eventproc\celex5.cpp" />
     <ClCompile Include="eventproc\celex5dataprocessor.cpp" />
-    <ClCompile Include="eventproc\celex5datareader.cpp" />
     <ClCompile Include="eventproc\celex5processeddata.cpp" />
     <ClCompile Include="eventproc\dataprocessthread.cpp" />
     <ClCompile Include="eventproc\datarecorder.cpp" />
@@ -197,7 +196,6 @@
     <ClInclude Include="configproc\tinyxml\tinystr.h" />
     <ClInclude Include="configproc\tinyxml\tinyxml.h" />
     <ClInclude Include="eventproc\celex5dataprocessor.h" />
-    <ClInclude Include="eventproc\celex5datareader.h" />
     <ClInclude Include="eventproc\dataprocessthread.h" />
     <ClInclude Include="eventproc\datarecorder.h" />
     <ClInclude Include="include\celex5\celex5.h" />

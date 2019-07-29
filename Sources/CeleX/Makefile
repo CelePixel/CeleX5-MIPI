@@ -155,8 +155,7 @@ dataprocessthread.o: ./eventproc/dataprocessthread.cpp ./eventproc/dataprocessth
 		./eventproc/celex5dataprocessor.h \
 		./include/celex5/celex5.h \
 		./include/celex5/celex5processeddata.h \
-		./include/celex5/celex5datamanager.h \
-		./eventproc/celex5datareader.h
+		./include/celex5/celex5datamanager.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o dataprocessthread.o ./eventproc/dataprocessthread.cpp
 
 celex5processeddata.o: ./eventproc/celex5processeddata.cpp ./include/celex5/celex5processeddata.h \
@@ -169,14 +168,13 @@ celex5dataprocessor.o: ./eventproc/celex5dataprocessor.cpp ./eventproc/celex5dat
 		./include/celextypes.h \
 		./include/celex5/celex5processeddata.h \
 		./include/celex5/celex5datamanager.h \
-		./eventproc/celex5datareader.h \
 		./base/xbase.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o celex5dataprocessor.o ./eventproc/celex5dataprocessor.cpp
 
 celex5.o: ./eventproc/celex5.cpp ./include/celex5/celex5.h \
 		./include/celextypes.h \
 		./base/xbase.h \
-		./driver/CeleDriver.h \
+		./cx3driver/include/CeleDriver.h \
 		./configproc/hhsequencemgr.h \
 		./configproc/hhwireincommand.h \
 		./configproc/hhcommand.h \
@@ -186,7 +184,6 @@ celex5.o: ./eventproc/celex5.cpp ./include/celex5/celex5.h \
 		./eventproc/celex5dataprocessor.h \
 		./include/celex5/celex5processeddata.h \
 		./include/celex5/celex5datamanager.h \
-		./eventproc/celex5datareader.h \
 		./eventproc/datarecorder.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o celex5.o ./eventproc/celex5.cpp
 

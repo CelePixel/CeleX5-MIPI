@@ -1,6 +1,6 @@
 <launch>
   <node name="celex_monocular" pkg="celex5_monocular" type="celex5_monocular_node" output="screen" >
-    <param name="celex_mode" value="Event_Address_Only_Mode" />
+    <param name="celex_mode" value="Event_Off_Pixel_Timestamp_Mode" />
     <param name="threshold" value="170" />
     <param name="clock_rate" value="100" />
   </node>

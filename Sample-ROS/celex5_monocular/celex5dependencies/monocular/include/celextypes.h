@@ -38,14 +38,9 @@
 #define MIRROR_VERTICAL     1
 #define MIRROR_HORIZONTAL   1
 
-#define FILE_COMMANDS                "commands.xml"
-#define FILE_SEQUENCES               "sequences.xml"
-#define FILE_SLIDERS                 "sliders.xml"
-#define FILE_CELEX5_CFG		         "CeleX5_Commands.xml"
-#define FILE_CELEX5_CFG_NEW          "CeleX5_Commands_New.xml"
-#define FILE_CELEX5_CFG_PA           "CeleX5_Commands_PA.xml"
-#define FILE_CELEX5_CFG_MIPI         "CeleX5_Commands_MIPI.xml"
-#define FILE_CELEX5_CFG_MIPI_WRIE    "CeleX5_Commands_MIPI_Wire.xml"
+#define FILE_CELEX5_CFG              "CeleX5_Commands_MIPI.xml"
+#define FILE_CELEX5_CFG_MIPI         "cfg_mp"
+#define FILE_CELEX5_CFG_MIPI_WRIE    "cfg_mp_wire"
 
 #define SEQUENCE_LAYOUT_WIDTH 3 //7
 #define SLIDER_LAYOUT_WIDTH   1 //4
@@ -60,10 +55,11 @@ typedef struct EventData
 {
 	uint16_t    col;
 	uint16_t    row;
-	uint16_t    brightness;
+	uint16_t    adc; //Event_Off_Pixel_Timestamp_Mode: adc is 0; Event Intensity Mode: adc is "Intensity"; Event_In_Pixel_Timestamp_Mode: adc is "Optical-flow T"
 	int16_t     polarity; //-1: intensity weakened; 1: intensity is increased; 0 intensity unchanged
-	uint32_t    t;
-	long        t_pc; //pc time stamp
+	uint32_t    t_off_pixel; //it will be reset after the end of a frame
+	uint64_t    t_off_pixel_increasing; //it won't be reset, it's a monotonically increasing value
+	uint64_t    t_in_pixel_increasing;
 } EventData;
 
 typedef enum EventShowType

@@ -60,13 +60,13 @@ public:
 
 	enum CeleX5Mode {
 		Unknown_Mode = -1,
-		Event_Address_Only_Mode = 0,
-		Event_Optical_Flow_Mode = 1,
-		Event_Intensity_Mode = 2,
+		Event_Off_Pixel_Timestamp_Mode = 0,	//Using Event_Off_Pixel_Timestamp_Mode, Event_Address_Only_Mode is deprecated.
+		Event_In_Pixel_Timestamp_Mode = 1,	//Using Event_In_Pixel_Timestamp_Mode, Event_Optical_Flow_Mode is deprecated.
+		Event_Intensity_Mode = 2,	
 		Full_Picture_Mode = 3,
-		Full_Optical_Flow_S_Mode = 4,
-		Full_Optical_Flow_Test_Mode = 5,
-		Full_Optical_Flow_M_Mode = 6,
+		Optical_Flow_Mode = 4,	//Using Optical_Flow_Mode, Full_Optical_Flow_S_Mode is deprecated.
+		Optical_Flow_FPN_Mode = 5,	//Using Optical_Flow_FPN_Mode, Full_Optical_Flow_Test_Mode is deprecated.
+		Multi_Read_Optical_Flow_Mode = 6,	//Using Multi_Read_Optical_Flow_Mode, Full_Optical_Flow_M_Mode  is deprecated.
 	};
 
 	enum emEventPicType {

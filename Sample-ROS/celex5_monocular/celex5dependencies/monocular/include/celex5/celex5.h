@@ -41,8 +41,8 @@
 
 using namespace std;
 
-class FrontPanel;
 class CeleDriver;
+class CeleX5DataProcessor;
 class HHSequenceMgr;
 class DataProcessThreadEx;
 class DataReaderThread;
@@ -60,12 +60,13 @@ public:
 
 	enum CeleX5Mode {
 		Unknown_Mode = -1,
-		Event_Address_Only_Mode = 0,
-		Event_Optical_Flow_Mode = 1,
-		Event_Intensity_Mode = 2,
+		Event_Off_Pixel_Timestamp_Mode = 0,	//Using Event_Off_Pixel_Timestamp_Mode, Event_Address_Only_Mode is deprecated.
+		Event_In_Pixel_Timestamp_Mode = 1,	//Using Event_In_Pixel_Timestamp_Mode, Event_Optical_Flow_Mode is deprecated.
+		Event_Intensity_Mode = 2,	
 		Full_Picture_Mode = 3,
-		Full_Optical_Flow_S_Mode = 4,
-		Full_Optical_Flow_M_Mode = 6,
+		Optical_Flow_Mode = 4,	//Using Optical_Flow_Mode, Full_Optical_Flow_S_Mode is deprecated.
+		Optical_Flow_FPN_Mode = 5,	//Using Optical_Flow_FPN_Mode, Full_Optical_Flow_Test_Mode is deprecated.
+		Multi_Read_Optical_Flow_Mode = 6,	//Using Multi_Read_Optical_Flow_Mode, Full_Optical_Flow_M_Mode  is deprecated.
 	};
 
 	enum emEventPicType {
@@ -114,77 +115,233 @@ public:
 
 	bool openSensor(DeviceType type);
 	bool isSensorReady();
-	void pipeOutFPGAData();
+
+	/*
+	* Get Sensor raw data interfaces
+	* If you don't care about IMU data, you can use the first getMIPIData interface, 
+	* otherwise you need to use the second getMIPIData interface.
+	*/
 	void getMIPIData(vector<uint8_t> &buffer);
 	void getMIPIData(vector<uint8_t> &buffer, std::time_t& time_stamp_end, vector<IMURawData>& imu_data);
 
-	DeviceType getDeviceType();
+	/*
+	* Parse Sensor raw data interfaces
+	* If you don't care about IMU data, you can use the first parseMIPIData interface,
+	* otherwise you need to use the second parseMIPIData interface.
+	*/
+	void parseMIPIData(uint8_t* pData, int dataSize);
+	void parseMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData> imu_data);
 
-	bool setFpnFile(const std::string& fpnFile);
-	void generateFPN(std::string fpnFile);
+	/* 
+	* Enable/Disable the Create Image Frame module
+	* If you just want to obtain (x,y,A,t) array (don't obtain frame data), you cound disable this function to imporve performance.
+	*/
+	void disableFrameModule(); 
+	void enableFrameModule();
+	bool isFrameModuleEnabled();
 
+	/*
+	* Disable/Enable the IMU module
+	* If you don't want to obtain IMU data, you cound disable this function to imporve performance.
+	*/
+	void disableIMUModule();
+	void enableIMUModule();
+	bool isIMUModuleEnabled();
+
+	/*
+	* Get Full-frame pic buffer or mat
+	*/
+	void getFullPicBuffer(unsigned char* buffer);
+	void getFullPicBuffer(unsigned char* buffer, std::time_t& time_stamp);
+	cv::Mat getFullPicMat();
+
+	/*
+	* Get event pic buffer or mat
+	*/
+	void getEventPicBuffer(unsigned char* buffer, emEventPicType type = EventBinaryPic);
+	void getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emEventPicType type = EventBinaryPic);
+	cv::Mat getEventPicMat(emEventPicType type);
+
+	/*
+	* Get optical-flow pic buffer or mat
+	*/
+	void getOpticalFlowPicBuffer(unsigned char* buffer, emFullPicType type = Full_Optical_Flow_Pic);
+	void getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emFullPicType type = Full_Optical_Flow_Pic);
+	cv::Mat getOpticalFlowPicMat(emFullPicType type);
+
+	/*
+	* Get event data vector interfaces
+	*/
+	bool getEventDataVector(std::vector<EventData> &vector);
+	bool getEventDataVector(std::vector<EventData> &vector, uint64_t& frameNo);
+	bool getEventDataVectorEx(std::vector<EventData> &vector, std::time_t& time_stamp, bool bDenoised = false);
+
+	/*
+	* Get IMU Data
+	*/
+	int getIMUData(std::vector<IMUData>& data);
+
+	/*
+	* Set and get sensor mode (fixed mode)
+	*/
 	void setSensorFixedMode(CeleX5Mode mode);
 	CeleX5Mode getSensorFixedMode();
 
+	/*
+	* Set and get sensor mode (Loop mode)
+	*/
 	void setSensorLoopMode(CeleX5Mode mode, int loopNum); //LopNum = 1/2/3
 	CeleX5Mode getSensorLoopMode(int loopNum); //LopNum = 1/2/3
 	void setLoopModeEnabled(bool enable);
 	bool isLoopModeEnabled();
 
-	//------- for fixed mode -------
+	/*
+	* Set fpn file to be used in Full_Picture_Mode or Event_Intensity_Mode.
+	*/
+	bool setFpnFile(const std::string& fpnFile);
+
+	/*
+	* Generate fpn file
+	*/
+	void generateFPN(std::string fpnFile);
+
+	/*
+	* Clock
+	* By default, the CeleX-5 sensor works at 100 MHz and the range of clock rate is from 20 to 100, step is 10.
+	*/
+	void setClockRate(uint32_t value); //unit: MHz
+	uint32_t getClockRate(); //unit: MHz
+
+	/*
+	* Threshold
+	* The threshold value only works when the CeleX-5 sensor is in the Event Mode.
+	* The large the threshold value is, the less pixels that the event will be triggered (or less active pixels).
+	* The value could be adjusted from 50 to 511, and the default value is 171.
+	*/
+	void setThreshold(uint32_t value);
+	uint32_t getThreshold();
+
+	/*
+	* Brightness
+	* Configure register parameter, which controls the brightness of the image CeleX-5 sensor generated.
+	* The value could be adjusted from 0 to 1023.
+	*/
+	void setBrightness(uint32_t value);
+	uint32_t getBrightness();
+
+	/*
+	* ISO Level
+	*/
+	void setISOLevel(uint32_t value);
+	uint32_t getISOLevel();
+	uint32_t getISOLevelCount();
+
+	/*
+	* Get the frame time of full-frame picture mode
+	*/
 	uint32_t getFullPicFrameTime();
+
+	/*
+	* Set and get event frame time
+	*/
 	void setEventFrameTime(uint32_t value); //unit: microsecond
 	uint32_t getEventFrameTime();
-	void setOpticalFlowFrameTime(uint32_t value); //hardware parameter
+
+	/*
+	* Set and get frame time of optical-flow mode
+	*/
+	void setOpticalFlowFrameTime(uint32_t value); //hardware parameter, unit: microsecond
 	uint32_t getOpticalFlowFrameTime();
 
-	void setEventShowMethod(EventShowType type, int value);
-
-	//------- for loop mode -------
+	/* 
+	* Loop mode: mode duration
+	*/
 	void setEventDuration(uint32_t value);
 	void setPictureNumber(uint32_t num, CeleX5Mode mode);
 
-	//------- sensor control interfaces -------
-	void setThreshold(uint32_t value);
-	uint32_t getThreshold();
-	void setBrightness(uint32_t value);
-	uint32_t getBrightness();
-	uint32_t getClockRate(); //unit: MHz
-	void setClockRate(uint32_t value); //unit: MHz
-	void setISOLevel(uint32_t value);
-	uint32_t getISOLevel();
+	/*
+	* Control Sensor interfaces
+	*/
+	void reset(); //soft reset sensor
+	void pauseSensor();
+	void restartSensor();
+	void stopSensor();
 
-	void setEventDataFormat(int format); //0: format 0; 1: format 1; 2: format 2
-	int getEventDataFormat();
+	/*
+	* Get the serial number of the sensor, and each sensor has a unique serial number.
+	*/
+	std::string getSerialNumber();
 
+	/*
+	* Get the firmware version of the sensor.
+	*/
+	std::string getFirmwareVersion();
+
+	/*
+	* Get the release date of firmware.
+	*/
+	std::string getFirmwareDate();
+	
+	/*
+	* Set and get event show method
+	*/
+	void setEventShowMethod(EventShowType type, int value);
+	EventShowType getEventShowMethod();
+
+	/*
+	* Set and get rotate type
+	*/
 	void setRotateType(int type);
 	int getRotateType();
 
+	/*
+	* Set and get event count stop
+	*/
 	void setEventCountStepSize(uint32_t size);
+	uint32_t getEventCountStepSize();
 
-	//------- get image interfaces -------
-	void getFullPicBuffer(unsigned char* buffer);
-	cv::Mat getFullPicMat();
-	void getEventPicBuffer(unsigned char* buffer, emEventPicType type = EventBinaryPic);
-	cv::Mat getEventPicMat(emEventPicType type);
+	/*
+	* bit7:0~99, bit6:101~199, bit5:200~299, bit4:300~399, bit3:400~499, bit2:500~599, bit1:600~699, bit0:700~799
+	* if rowMask = 240 = b'11110000, 0~399 rows will be closed.
+	*/
+	void setRowDisabled(uint8_t rowMask);
 
-	void getOpticalFlowPicBuffer(unsigned char* buffer, emFullPicType type = Full_Optical_Flow_Pic);
-	cv::Mat getOpticalFlowPicMat(emFullPicType type);
+	/*
+	* Whether to display the images when recording
+	*/
+	void setShowImagesEnabled(bool enable);
+	
+	/* 
+	* Set and get event data format
+	*/
+	void setEventDataFormat(int format); //0: format 0; 1: format 1; 2: format 2
+	int getEventDataFormat();
 
-	//------- get event data vector -------
-	bool getEventDataVector(std::vector<EventData> &vector);
-	bool getEventDataVector(std::vector<EventData> &vector, uint64_t& frameNo);
-	bool getEventDataVectorEx(std::vector<EventData> &vector, std::time_t& time_stamp);
+	void setEventFrameStartPos(uint32_t value); //unit: minisecond
 
-	//------- record raw data interfaces -------
+	/*
+	* Disable/Enable AntiFlashlight function.
+	*/
+	void setAntiFlashlightEnabled(bool enabled);
+
+	/*
+	* Disable/Enable Auto ISP function.
+	*/
+	void setAutoISPEnabled(bool enable);
+	bool isAutoISPEnabled();
+	void setISPThreshold(uint32_t value, int num);
+	void setISPBrightness(uint32_t value, int num);
+
+	/*
+	* Start/Stop recording raw data.
+	*/
 	void startRecording(std::string filePath);
 	void stopRecording();
 
-	CX5SensorDataServer* getSensorDataServer();
-
-	//--- Playback Interfaces ---
+	/*
+	* Playback Interfaces
+	*/
 	bool openBinFile(std::string filePath);
-	bool readPlayBackData(long length = 1968644);
 	bool readBinFileData();
 	uint32_t getTotalPackageCount();
 	uint32_t getCurrentPackageNo();
@@ -197,36 +354,21 @@ public:
 	void setPlaybackState(PlaybackState state);
 	void setIsPlayBack(bool state);
 
-	void reset();
-	void pauseSensor();
-	void restartSensor();
+	CX5SensorDataServer* getSensorDataServer();
+	
+	DeviceType getDeviceType();
 
 	uint32_t getFullFrameFPS();
 
-	void setAntiFlashlightEnabled(bool enabled);
-	void setAutoISPEnabled(bool enable);
-	bool isAutoISPEnabled();
-	void setISPThreshold(uint32_t value, int num);
-	void setISPBrightness(uint32_t value, int num);
+	/*
+	* Obtain the number of events that being produced per second.
+	* Unit: events per second
+	*/
+	uint32_t getEventRate(); 
 
-	//bit7:0~99, bit6:101~199, bit5:200~299, bit4:300~399, bit3:400~499, bit2:500~599, bit1:600~699, bit0:700~799
-	//if rowMask = 240 = b'11110000, 0~399 rows will be closed.
-	void setRowDisabled(uint8_t rowMask);
-
-	//Whether to display the images when recording
-	void setShowImagesEnabled(bool enable); 
-
-	uint32_t getISOLevelCount();
-
-	//------------------ IMU Data ------------------
-	int getIMUData(std::vector<IMUData>& data);
-
-	//------------- Version Information ------------
-	std::string getSerialNumber();
-	std::string getFirmwareVersion();
-	std::string getFirmwareDate();
-
-	//------------- cfgs ------------
+	/*
+	* Sensor Configures
+	*/
 	map<string, vector<CfgInfo> > getCeleX5Cfg();
 	map<string, vector<CfgInfo> > getCeleX5CfgModified();
 	void writeRegister(int16_t addressH, int16_t addressM, int16_t addressL, uint32_t value);
@@ -238,15 +380,15 @@ public:
 	int  denoisingMaskByEventTime(const cv::Mat& countEventImg, double timelength, cv::Mat& denoiseMaskImg);
 	void saveFullPicRawData();
 
+	void calDirectionAndSpeedEx(cv::Mat pBuffer, cv::Mat &speedBuffer, cv::Mat &dirBuffer);
+
 private:
-	bool initializeFPGA();
 	bool configureSettings(DeviceType type);
-	bool resetConfigureSettings(DeviceType type);
 	//for write register
 	void wireIn(uint32_t address, uint32_t value, uint32_t mask);
 	void writeRegister(CfgInfo cfgInfo);
-	void resetPin(bool bReset);
 	void setALSEnabled(bool enable);
+	bool isALSEnabled();
 	//
 	void enterCFGMode();
 	void enterStartMode();
@@ -255,15 +397,14 @@ private:
 	void clearData();
 
 private:
-	FrontPanel*                    m_pFrontPanel;
 	CeleDriver*                    m_pCeleDriver;
-
+	CeleX5DataProcessor*           m_pDataProcessor;
 	HHSequenceMgr*                 m_pSequenceMgr;
 	DataProcessThreadEx*           m_pDataProcessThread;
 	DataRecorder*                  m_pDataRecorder;
 	//
-	map<string, vector<CfgInfo> >   m_mapCfgDefaults;
-	map<string, vector<CfgInfo> >   m_mapCfgModified;
+	map<string, vector<CfgInfo> >  m_mapCfgDefaults;
+	map<string, vector<CfgInfo> >  m_mapCfgModified;
 	//
 	unsigned char*                 m_pReadBuffer;
 	uint8_t*                       m_pDataToRead;
@@ -271,6 +412,7 @@ private:
 	std::ifstream                  m_ifstreamPlayback;	//playback
 
 	bool                           m_bLoopModeEnabled;
+	bool                           m_bALSEnabled;
 
 	uint32_t                       m_uiBrightness;
 	uint32_t                       m_uiThreshold;
@@ -296,11 +438,12 @@ private:
 	uint32_t                       m_uiOpticalFlowFrameTime;
 
 	int							   m_iRotateType;	//rotate param
-	bool                           m_bHasIMUData;
 	bool                           m_bClockAutoChanged;
 	uint32_t                       m_uiISOLevelCount; //4 or 6
 
-	string						   m_strFirmwareVer;
+	bool                           m_bSensorReady;
+	bool                           m_bShowImagesEnabled;
+	bool                           m_bAutoISPFrofileLoaded;
 };
 
 #endif // CELEX5_H

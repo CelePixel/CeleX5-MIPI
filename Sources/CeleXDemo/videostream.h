@@ -16,7 +16,7 @@ extern "C"
 }
 
 #define DATASIZE 800*1280
-#define FPS 25
+#define FPS 30
 using namespace std;
 
 

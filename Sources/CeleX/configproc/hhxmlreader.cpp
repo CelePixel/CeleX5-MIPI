@@ -42,7 +42,6 @@ bool HHXmlReader::parse(const string &filename, TiXmlDocument *pDom)
     filePath += "\\";
 #endif
     filePath += filename;
-	cout << filePath << endl;
     bool loadOk = pDom->LoadFile(filePath.c_str());
     if (!loadOk)
     {

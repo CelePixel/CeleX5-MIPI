@@ -8,20 +8,24 @@
 #include <iostream>
 #include <chrono>
 
-#define MAX_IMAGE_BUFFER_NUMBER    50
+#define USING_IMU_CALLBACK
+
+#define MAX_IMAGE_BUFFER_NUMBER    200
 CPackage  image_list[MAX_IMAGE_BUFFER_NUMBER];
 static CPackage*  current_package = nullptr;
 
-static bool      bRunning = false;
-static uint8_t   write_frame_index = 0;
-static uint8_t   read_frame_index = 0;
-static uint32_t  package_count = 0;
+static bool       bRunning = false;
+static uint16_t   write_frame_index = 0;
+static uint16_t   read_frame_index = 0;
+static uint32_t   package_count = 0;
 
 clock_t clock_begin = 0;
 clock_t clock_end = 0;
 bool    g_bIMU_Module_Enabled = true;
 
 bool    g_bTransfer_Error = false;
+
+std::vector<IMU_Raw_Data>    imu_raw_data_list;
 
 #ifdef __linux__
     static sem_t     m_sem;
@@ -75,7 +79,7 @@ void generate_image(uint8_t *buffer, int length)
 	}
 	if (current_package)
 		current_package->Insert(buffer + buffer[0], length - buffer[0]);
-
+#ifndef USING_IMU_CALLBACK
 	if (g_bIMU_Module_Enabled && buffer[7] == 1)
 	{
 		IMU_Raw_Data imu_data;
@@ -84,6 +88,7 @@ void generate_image(uint8_t *buffer, int length)
 
 		current_package->m_vecIMUData.push_back(imu_data);
 	}
+#endif
 	//
 	if (buffer[1] & 0x02)
 	{
@@ -107,6 +112,24 @@ void generate_image(uint8_t *buffer, int length)
 //			SetEvent(m_hEventHandle);
 //#endif // __linux__
 		}
+	}
+}
+
+void generate_imu_data(uint8_t *buffer, int length)
+{
+	if ( buffer[0] == 0x01) //valid imu data
+	{
+		IMU_Raw_Data imu_data;
+		//printf("------ generate_imu_data: valid imu data!\n");
+		memcpy(imu_data.imu_data, buffer + 1, 20);
+		imu_data.time_stamp = getTimeStamp();
+		
+		//cout << "generate_imu_data: " << imu_data.time_stamp << endl;
+		imu_raw_data_list.push_back(imu_data);
+	}
+	else
+	{
+		printf("generate_imu_data: invalid imu data!\n");
 	}
 }
 
@@ -151,7 +174,13 @@ bool GetPicture(std::vector<uint8_t> &Image, std::time_t& time_stamp_end, std::v
 			{
 				image_list[read_frame_index].GetImage(Image);
 				time_stamp_end = image_list[read_frame_index].m_lTime_Stamp_End;
+
+#ifdef USING_IMU_CALLBACK
+				imu_data = imu_raw_data_list;
+				imu_raw_data_list.clear();
+#else
 				imu_data = image_list[read_frame_index].m_vecIMUData;
+#endif 
 				image_list[read_frame_index].m_vecIMUData.clear();
 				//printf("------------- read_frame_index = %d-------------\n", read_frame_index);
 				read_frame_index++;
@@ -221,6 +250,43 @@ void callbackUSBTransferComplete(libusb_transfer *xfr)
     }
 }
 
+void cbUSBInterruptTransferCompleted(libusb_transfer *xfr)
+{
+	switch (xfr->status)
+	{
+	case LIBUSB_TRANSFER_COMPLETED:
+		//printf("xfr->actual_length= %d\r\n", xfr->actual_length);
+		generate_imu_data(xfr->buffer, xfr->actual_length);
+		submit_bulk_transfer(xfr);
+		break;
+
+	case LIBUSB_TRANSFER_TIMED_OUT:
+		printf("LIBUSB_TRANSFER_TIMED_OUT\r\n");
+		break;
+
+	case LIBUSB_TRANSFER_CANCELLED:
+		printf("LIBUSB_TRANSFER_CANCELLED\r\n");
+		break;
+
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		printf("LIBUSB_TRANSFER_NO_DEVICE\r\n");
+		break;
+
+	case LIBUSB_TRANSFER_ERROR:
+		g_bTransfer_Error = true;
+		printf("LIBUSB_TRANSFER_ERROR\r\n");
+		break;
+
+	case LIBUSB_TRANSFER_STALL:
+		printf("LIBUSB_TRANSFER_STALL\r\n");
+		break;
+
+	case LIBUSB_TRANSFER_OVERFLOW:
+		printf("LIBUSB_TRANSFER_OVERFLOW\r\n");
+		break;
+	}
+}
+
 libusb_transfer *alloc_bulk_transfer(libusb_device_handle *device_handle, uint8_t address, uint8_t *buffer)
 {
     if (device_handle)
@@ -242,6 +308,30 @@ libusb_transfer *alloc_bulk_transfer(libusb_device_handle *device_handle, uint8_
         }
     }
     return nullptr;
+}
+
+//
+libusb_transfer *alloc_interrupt_transfer(libusb_device_handle *device_handle, uint8_t address, uint8_t *buffer)
+{
+	if (device_handle)
+	{
+		libusb_transfer *xfr = libusb_alloc_transfer(0);
+		if (xfr)
+		{
+			libusb_fill_interrupt_transfer(xfr,
+				device_handle,
+				address, // Endpoint ID
+				buffer,
+				32,
+				cbUSBInterruptTransferCompleted,
+				nullptr,
+				0
+			);
+			if (submit_bulk_transfer(xfr) == true)
+				return xfr;
+		}
+	}
+	return nullptr;
 }
 
 bool Init(void)
