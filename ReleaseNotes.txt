@@ -1,3 +1,19 @@
+CeleX-5 SDK Version 1.5
+Realeased Date: 2019-07-26
+
+New Features:
+1) Sensor modes have been modified as follow:
+   Event Address-only Mode changed to Event Off-Pixel Timestamp Mode
+   Event Optical-flow Mode changed to Event In-Pixel Timestamp Mode
+   Single Full-frame Optical-flow Mode changed to Optical-Flow Mode
+   Full-frame Picture Mode changed to Full-Picture Mode
+   Multiple Full-frame Optical-flow Mode changed to Multi-Read Optical-Flow Mode
+2) Added support for getting a linearly increased timestamp in Event In-Pixel Timestamp Mode (Event Optical-flow Mode).
+
+Bug Fixed:
+1) Fixed the bug for displaying images in loop mode.
+
+
 CeleX-5 SDK Version 1.4
 Realeased Date: 2019-05-14
 
