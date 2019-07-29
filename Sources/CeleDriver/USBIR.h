@@ -40,7 +40,11 @@ private:
     libusb_device_handle *device_handle;
     libusb_transfer      *bulk_transfer[MAX_URB_NUMBER];
     uint8_t               bulk_buffer[MAX_URB_NUMBER][MAX_ELEMENT_BUFFER_SIZE];
+<<<<<<< HEAD
     std::vector<int>           InterfaceNumberList;
+=======
+    std::vector<int>      InterfaceNumberList;
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     int                   bConfigurationValue;
     int                   video_endpoint_address;
     int                   video_trans_mode;

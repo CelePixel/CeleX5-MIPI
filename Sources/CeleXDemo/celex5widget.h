@@ -57,7 +57,11 @@ public:
 private:
     void updateQImageBuffer(unsigned char* pBuffer1, int loopNum, int colorMode);
     void updateEventImage(unsigned char* pBuffer, CeleX5::emEventPicType type);
+<<<<<<< HEAD
     void processSensorBuffer(CeleX5::CeleX5Mode mode);
+=======
+    void processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum);
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     //
     void saveRecordingImage(unsigned char* pBuffer, int index);
     void savePics(CeleX5ProcessedData* pSensorData);
@@ -79,7 +83,10 @@ private:
     QImage         m_imageEvent1;
     QImage         m_imageEvent2;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     CX5SensorDataServer*    m_pSensorData;
     bool                    m_bLoopModeEnabled;
     int                     m_iPicMode;
@@ -157,7 +164,10 @@ signals:
 
 protected slots:
     void onButtonClicked(QAbstractButton* button);
+<<<<<<< HEAD
     void onRadioButtonClicked();
+=======
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     //
     void onValueChanged(uint32_t value, CfgSlider* slider);
     void onRecordDataTimer();
@@ -170,6 +180,13 @@ protected slots:
     //
     void onShowImagesSwitch(bool state);
     void onShowTimestampSwitch(bool state);
+<<<<<<< HEAD
+=======
+    void onJPGFormatClicked(bool state);
+    void onBMPFormatClicked(bool state);
+    //
+    void onShowMoreParameters();
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 
     //------- for playback -------
     void onReadBinTimer();

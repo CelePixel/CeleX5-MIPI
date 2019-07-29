@@ -42,6 +42,10 @@ bool HHXmlReader::parse(const string &filename, TiXmlDocument *pDom)
     filePath += "\\";
 #endif
     filePath += filename;
+<<<<<<< HEAD
+=======
+	cout << filePath << endl;
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
     bool loadOk = pDom->LoadFile(filePath.c_str());
     if (!loadOk)
     {
@@ -170,7 +174,11 @@ bool HHXmlReader::importCommands_CeleX5(map<string, vector<HHCommandBase*>> &com
 bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 {
 	TiXmlDocument*  pDom = new TiXmlDocument;
+<<<<<<< HEAD
 	if (parse(FILE_CELEX5_CFG_NEW, pDom))
+=======
+	if (parse(FILE_CELEX5_CFG, pDom))
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 	{
 		TiXmlElement *pRootEle = pDom->RootElement();
 		if (string(pRootEle->Value()) != "commands")
@@ -254,7 +262,24 @@ bool HHXmlReader::saveXML(map<string, vector<CeleX5::CfgInfo>>& mapCfgInfo)
 				}
 			}
 		}
+<<<<<<< HEAD
 		save(FILE_CELEX5_CFG_NEW, pDom);
 	}
 	return true;
 }
+=======
+		save(FILE_CELEX5_CFG, pDom);
+	}
+	return true;
+}
+
+bool HHXmlReader::saveXML(const std::string& filename)
+{
+	TiXmlDocument*  pDom = new TiXmlDocument;
+	if (parse(filename, pDom))
+	{
+		save(FILE_CELEX5_CFG, pDom);
+	}
+	return true;
+}
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea

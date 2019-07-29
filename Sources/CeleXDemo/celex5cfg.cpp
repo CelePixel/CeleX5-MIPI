@@ -25,7 +25,37 @@ CeleX5Cfg::CeleX5Cfg(CeleX5* pCeleX5, QWidget *parent)
     map<std::string, vector<CeleX5::CfgInfo>> mapCfg = m_pCeleX5->getCeleX5Cfg();
     for (auto itr = mapCfg.begin(); itr != mapCfg.end(); itr++)
     {
+<<<<<<< HEAD
         cout << "group name: " << itr->first << endl;
+=======
+        //cout << "group name: " << itr->first << endl;
+        //---------- for test ----------
+//        if (itr->first == "Sensor_Data_Transfer_Parameters")
+//        {
+//            continue;
+//        }
+//        else if (itr->first == "Sensor_Basic_Control_Parameters")
+//        {
+//            continue;
+//        }
+//        else if (itr->first == "MIPI_Parameters")
+//        {
+//            continue;
+//        }
+//        else if (itr->first == "PLL_Parameters")
+//        {
+//            continue;
+//        }
+//        else if (itr->first == "Anti_Flashlight_Parameters")
+//        {
+//            continue;
+//        }
+//        else if (itr->first == "Auto_ISP_Parameters")
+//        {
+//            continue;
+//        }
+        //---------- for test ----------
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
         QWidget *widget = new QWidget();
         QString tapName = QString::fromStdString(itr->first);
         m_csrTypeList << tapName;
@@ -40,6 +70,25 @@ CeleX5Cfg::CeleX5Cfg(CeleX5* pCeleX5, QWidget *parent)
         for (auto itr1 = vecCfg.begin(); itr1 != vecCfg.end(); itr1++)
         {
             CeleX5::CfgInfo cfgInfo = (*itr1);
+<<<<<<< HEAD
+=======
+            cout << "----- Register Name: " << cfgInfo.name << endl;
+            //---------- for test ----------
+//            if (itr->first == "Sensor_Core_Parameters")
+//            {
+//                if (!QString::fromStdString(cfgInfo.name).contains("_T") || !QString::fromStdString(cfgInfo.name).contains("BIAS_"))
+//                {
+//                    if (cfgInfo.name != "BIAS_RAMPN" && cfgInfo.name != "BIAS_RAMPP" && cfgInfo.name != "COL_GAIN")
+//                        continue;
+//                }
+//            }
+//            else if (itr->first == "Sensor_Operation_Mode_Control_Parameters")
+//            {
+//                if (!QString::fromStdString(cfgInfo.name).contains("GAP"))
+//                    continue;
+//            }
+            //---------- for test ----------
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
             bool bVoltage = false;
             if (QString::fromStdString(cfgInfo.name).contains("BIAS_") && itr->first == "Sensor_Core_Parameters")
                 bVoltage = true;
@@ -50,7 +99,10 @@ CeleX5Cfg::CeleX5Cfg(CeleX5* pCeleX5, QWidget *parent)
             pSlider->setObjectName(QString::fromStdString(cfgInfo.name));
             pSlider->setBiasAddr(cfgInfo.high_addr, cfgInfo.middle_addr, cfgInfo.low_addr);
 
+<<<<<<< HEAD
             //cout << "----- Register Name: " << cfgInfo.name << endl;
+=======
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
             row++;
             index++;
             if (col != index/10)

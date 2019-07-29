@@ -32,7 +32,10 @@ public:
 
 	bool isRecording();
 	void startRecording(std::string filePath);
+<<<<<<< HEAD
 	void stopRecording(uint32_t clock, int mode);
+=======
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 	void stopRecording(CeleX5::BinFileAttributes* header);
 	void writeData(unsigned char* pData, long length);
 	bool writeData(vector<uint8_t> vecData);

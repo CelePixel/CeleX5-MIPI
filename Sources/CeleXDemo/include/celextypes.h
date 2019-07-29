@@ -38,6 +38,7 @@
 #define MIRROR_VERTICAL     1
 #define MIRROR_HORIZONTAL   1
 
+<<<<<<< HEAD
 #define FILE_COMMANDS                "commands.xml"
 #define FILE_SEQUENCES               "sequences.xml"
 #define FILE_SLIDERS                 "sliders.xml"
@@ -46,6 +47,11 @@
 #define FILE_CELEX5_CFG_PA           "CeleX5_Commands_PA.xml"
 #define FILE_CELEX5_CFG_MIPI         "CeleX5_Commands_MIPI.xml"
 #define FILE_CELEX5_CFG_MIPI_WRIE    "CeleX5_Commands_MIPI_Wire.xml"
+=======
+#define FILE_CELEX5_CFG              "CeleX5_Commands_MIPI.xml"
+#define FILE_CELEX5_CFG_MIPI         "cfg_mp"
+#define FILE_CELEX5_CFG_MIPI_WRIE    "cfg_mp_wire"
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 
 #define SEQUENCE_LAYOUT_WIDTH 3 //7
 #define SLIDER_LAYOUT_WIDTH   1 //4
@@ -71,7 +77,11 @@ typedef enum EventShowType
 	EventShowByTime = 0,
 	EventShowByCount = 1,
 	EventShowByRowCycle = 2,
+<<<<<<< HEAD
 };
+=======
+}EventShowType;
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 
 typedef enum PlaybackState {
 	NoBinPlaying = 0,
@@ -79,7 +89,11 @@ typedef enum PlaybackState {
 	BinReadFinished,
 	PlayFinished,
 	Replay
+<<<<<<< HEAD
 };
+=======
+}PlaybackState;
+>>>>>>> 72687b79f3b7abd391838d295d21018c85d5c9ea
 
 typedef struct IMUData {
 	double			x_GYROS;
