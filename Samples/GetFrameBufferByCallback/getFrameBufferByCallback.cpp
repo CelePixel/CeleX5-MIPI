@@ -68,14 +68,48 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == sensorMode)
 	{
 		//get buffers when sensor works in EventMode
-		std::time_t time_stamp = 0;
-		pCeleX5->getEventPicBuffer(pImageBuffer, time_stamp, CeleX5::EventBinaryPic);
-		//cout << "--------- E time_stamp = " << time_stamp << endl;
+		//std::time_t time_stamp = 0;
+		//pCeleX5->getEventPicBuffer(pImageBuffer, time_stamp, CeleX5::EventBinaryPic);
+		////cout << "--------- E time_stamp = " << time_stamp << endl;
 
-		//event binary pic
-		cv::Mat matEventPic(800, 1280, CV_8UC1, pImageBuffer);
-		cv::imshow("Event Binary Pic", matEventPic);
-		cvWaitKey(1);
+		////event binary pic
+		//cv::Mat matEventPic(800, 1280, CV_8UC1, pImageBuffer);
+		//cv::imshow("Event Binary Pic", matEventPic);
+		//cvWaitKey(1);
+
+		std::vector<EventData> vecEvent;
+		pCeleX5->getEventDataVector(vecEvent);
+		int dataSize = vecEvent.size();
+		//cout << "data size = " << dataSize << endl;
+		cv::Mat mat = cv::Mat::zeros(cv::Size(1280, 800), CV_8UC1);
+		for (int i = 0; i < dataSize; i++)
+		{
+			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = 255;
+			//cout << vecEvent[i].row << ", " << vecEvent[i].col << endl;
+		}
+		if (dataSize > 0)
+		{
+			cv::imshow("show", mat);
+			cv::waitKey(1);
+		}
+	}
+	else if (CeleX5::Event_In_Pixel_Timestamp_Mode == sensorMode)
+	{
+		std::vector<EventData> vecEvent;
+		pCeleX5->getEventDataVector(vecEvent);
+		int dataSize = vecEvent.size();
+		//cout << "data size = " << dataSize << endl;
+		cv::Mat mat = cv::Mat::zeros(cv::Size(1280, 800), CV_8UC1);
+		for (int i = 0; i < dataSize; i++)
+		{
+			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = 255;
+			//cout << vecEvent[i].row << ", " << vecEvent[i].col << endl;
+		}
+		if (dataSize > 0)
+		{
+			cv::imshow("show", mat);
+			cv::waitKey(1);
+		}
 	}
 	else if (CeleX5::Optical_Flow_Mode == sensorMode)
 	{
@@ -177,7 +211,7 @@ int main()
 	pCeleX5->setFpnFile(FPN_PATH);
 	pCeleX5->setLoopModeEnabled(true);
 	pCeleX5->setSensorLoopMode(CeleX5::Full_Picture_Mode, 1);
-	pCeleX5->setSensorLoopMode(CeleX5::Event_Off_Pixel_Timestamp_Mode, 2);
+	pCeleX5->setSensorLoopMode(CeleX5::Event_In_Pixel_Timestamp_Mode, 2);
 	pCeleX5->setSensorLoopMode(CeleX5::Optical_Flow_Mode, 3);
 
 	SensorDataObserver* pSensorData = new SensorDataObserver(pCeleX5->getSensorDataServer());

@@ -58,6 +58,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		return;
 
 	if (CeleX5::Event_Off_Pixel_Timestamp_Mode == pSensorData->getSensorMode() ||
+		CeleX5::Event_In_Pixel_Timestamp_Mode == pSensorData->getSensorMode() ||
 		CeleX5::Event_Intensity_Mode == pSensorData->getSensorMode())
 	{
 		cout << "--------------------- event mode --------------------- " << endl;
@@ -71,9 +72,9 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 			for (int i = 0; i < imu.size(); i++)
 			{
 				cout << "---------- imu time_stamp = " << imu[i].time_stamp << endl;
-				cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
+				/*cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
 					 << ", x_ACC = " << imu[i].x_ACC << ", y_ACC = " << imu[i].y_ACC << ", z_ACC = " << imu[i].z_ACC
-					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;
+					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/
 			}
 		}
 	}

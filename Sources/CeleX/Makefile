@@ -29,7 +29,7 @@ TAR           = tar -cf
 COMPRESS      = gzip -9f
 LINK          = g++
 LFLAGS        = -Wl,-O1 -Wl,-rpath, -shared -Wl,-soname,libCeleX.so
-LIBS          = $(SUBLIBS) -lpthread `pkg-config --cflags --libs opencv`
+LIBS          = $(SUBLIBS) -lpthread -L/usr/lib/x86_64-linux-gnu/ -lusb-1.0 `pkg-config --cflags --libs opencv`
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -58,7 +58,12 @@ SOURCES       = ./base/xthread.cpp \
 		./configproc/hhxmlreader.cpp \
 		./configproc/hhwireincommand.cpp \
 		./configproc/hhsequencemgr.cpp \
-		./configproc/hhcommand.cpp 
+		./configproc/hhcommand.cpp \
+		./cx3driver/USBIR.cpp \
+		./cx3driver/Package.cpp \
+		./cx3driver/Cypress.cpp \
+		./cx3driver/CeleDriver.cpp \
+		./cx3driver/BulkTransfer.cpp 
 OBJECTS       = xthread.o \
 		xbase.o \
 		dataqueue.o \
@@ -75,7 +80,12 @@ OBJECTS       = xthread.o \
 		hhxmlreader.o \
 		hhwireincommand.o \
 		hhsequencemgr.o \
-		hhcommand.o
+		hhcommand.o \
+		USBIR.o \
+		Package.o \
+		Cypress.o \
+		CeleDriver.o \
+		BulkTransfer.o
 
 TARGET        = libCeleX.so
 TARGETA       = libCeleX.a
@@ -174,7 +184,7 @@ celex5dataprocessor.o: ./eventproc/celex5dataprocessor.cpp ./eventproc/celex5dat
 celex5.o: ./eventproc/celex5.cpp ./include/celex5/celex5.h \
 		./include/celextypes.h \
 		./base/xbase.h \
-		./cx3driver/include/CeleDriver.h \
+		./cx3driver/CeleDriver.h \
 		./configproc/hhsequencemgr.h \
 		./configproc/hhwireincommand.h \
 		./configproc/hhcommand.h \
@@ -215,5 +225,36 @@ hhsequencemgr.o: ./configproc/hhsequencemgr.cpp ./configproc/hhsequencemgr.h \
 hhcommand.o: ./configproc/hhcommand.cpp ./configproc/hhcommand.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hhcommand.o ./configproc/hhcommand.cpp
 
+USBIR.o: ./cx3driver/USBIR.cpp ./cx3driver/USBIR.h \
+		./cx3driver/BulkTransfer.h \
+		./cx3driver/include/libusb.h \
+		./cx3driver/Package.h \
+		./cx3driver/CeleDriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o USBIR.o ./cx3driver/USBIR.cpp
 
+Package.o: ./cx3driver/Package.cpp ./cx3driver/Package.h \
+		./cx3driver/CeleDriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Package.o ./cx3driver/Package.cpp
+
+Cypress.o: ./cx3driver/Cypress.cpp ./cx3driver/Cypress.h \
+		./cx3driver/USBIR.h \
+		./cx3driver/BulkTransfer.h \
+		./cx3driver/include/libusb.h \
+		./cx3driver/Package.h \
+		./cx3driver/CeleDriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Cypress.o ./cx3driver/Cypress.cpp
+
+CeleDriver.o: ./cx3driver/CeleDriver.cpp ./cx3driver/CeleDriver.h \
+		./cx3driver/Cypress.h \
+		./cx3driver/USBIR.h \
+		./cx3driver/BulkTransfer.h \
+		./cx3driver/include/libusb.h \
+		./cx3driver/Package.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CeleDriver.o ./cx3driver/CeleDriver.cpp
+
+BulkTransfer.o: ./cx3driver/BulkTransfer.cpp ./cx3driver/BulkTransfer.h \
+		./cx3driver/include/libusb.h \
+		./cx3driver/Package.h \
+		./cx3driver/CeleDriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o BulkTransfer.o ./cx3driver/BulkTransfer.cpp
 

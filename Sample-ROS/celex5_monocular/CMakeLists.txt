@@ -207,7 +207,6 @@ include_directories(include ${OpenCV_INCLUDE_DIRS})
 
 set(CeleX ./celex5dependencies/monocular)
 set(CeleX_LIB CeleX)
-set(CeleX_Driver_LIB CeleDriver)
 
 include_directories(${CeleX}/include)
 link_directories(${CeleX}/lib/Linux/x64)
@@ -218,7 +217,6 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${CeleX_LIB}
-  ${CeleX_Driver_LIB}
 )
 
 add_executable(${PROJECT_NAME}_node nodes/celex5_ros_node.cpp)
@@ -227,7 +225,6 @@ target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES} 
   ${CeleX_LIB}
-  ${CeleX_Driver_LIB}
 )
 
 add_executable(${PROJECT_NAME}_callback_node nodes/celex5_ros_callback_node.cpp)
@@ -236,5 +233,4 @@ target_link_libraries(${PROJECT_NAME}_callback_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES} 
   ${CeleX_LIB}
-  ${CeleX_Driver_LIB}
 )

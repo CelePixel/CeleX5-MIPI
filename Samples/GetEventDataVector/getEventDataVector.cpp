@@ -30,7 +30,6 @@
 #endif
 
 CeleX5 *pCeleX5 = new CeleX5;
-vector<uint8_t> sensor_buffer;
 
 using namespace std;
 using namespace cv;
@@ -64,19 +63,12 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		int dataSize = vecEvent.size();
 		for (int i = 0; i < dataSize; i++)
 		{
-			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = vecEvent[i].adc;
-			/*if (vecEvent[i].polarity == 1)
-			count1++;
-			else if (vecEvent[i].polarity == -1)
-			count2++;
-			else
-			count3++;*/
+			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = (vecEvent[i].adc >> 4);
 		}
 		if (dataSize > 0)
 		{
 			//cout << "size = " << dataSize << ", t = " << vecEvent[dataSize - 1].t - vecEvent[0].t << endl;
-			//cout << "count1 = " << count1 << ", count2 = " << count2 << ", count3 = " << count3 << endl;
-			cv::imshow("show", mat);
+			cv::imshow("Event Gray Pic", mat);
 			cv::waitKey(1);
 		}
 	}
@@ -92,7 +84,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		}
 		if (dataSize > 0)
 		{
-			cv::imshow("show", mat);
+			cv::imshow("Event Binary Pic", mat);
 			cv::waitKey(1);
 		}
 	}

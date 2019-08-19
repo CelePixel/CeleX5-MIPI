@@ -15,7 +15,7 @@
 */
 
 #include "../include/celex5/celex5.h"
-#include "../cx3driver/include/CeleDriver.h"
+#include "../cx3driver/CeleDriver.h"
 #include "../configproc/hhsequencemgr.h"
 #include "../configproc/hhwireincommand.h"
 #include "../base/xbase.h"
@@ -307,7 +307,8 @@ void CeleX5::getMIPIData(vector<uint8_t> &buffer, std::time_t& time_stamp_end, v
 
 void CeleX5::parseMIPIData(uint8_t* pData, int dataSize)
 {
-	m_pDataProcessor->processMIPIData(pData, dataSize, 0, vector<IMURawData>());
+	std::vector<IMURawData> imu_data;
+	m_pDataProcessor->processMIPIData(pData, dataSize, 0, imu_data);
 }
 
 void CeleX5::parseMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData> imu_data)
@@ -328,6 +329,21 @@ void CeleX5::enableFrameModule()
 bool CeleX5::isFrameModuleEnabled()
 {
 	return m_pDataProcessor->isFrameModuleEnabled();
+}
+
+void CeleX5::disableEventStreamModule()
+{
+	m_pDataProcessor->disableEventStreamModule();
+}
+
+void CeleX5::enableEventStreamModule()
+{
+	m_pDataProcessor->enableEventStreamModule();
+}
+
+bool CeleX5::isEventStreamEnabled()
+{
+	return m_pDataProcessor->isEventStreamEnabled();
 }
 
 void CeleX5::disableIMUModule()
@@ -1148,10 +1164,6 @@ void CeleX5::setAutoISPEnabled(bool enable)
 			writeCSRDefaults("Sensor_Core_Parameters"); //Load Sensor Core Parameters
 			writeRegister(22, -1, 23, m_arrayBrightness[1]);
 
-			//wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR
-			//writeCSRDefaults("Sensor_Core_Parameters"); //Load Sensor Core Parameters
-			//writeRegister(22, -1, 23, m_uiBrightness);
-
 			//wireIn(221, 0, 0xFF); //AUTOISP_BRT_EN, disable auto ISP
 			//wireIn(222, 0, 0xFF); //AUTOISP_TEM_EN
 			//wireIn(223, 0, 0xFF); //AUTOISP_TRIGGER
@@ -1191,14 +1203,9 @@ void CeleX5::setAutoISPEnabled(bool enable)
 
 		//Disable brightness adjustment (auto isp), always load sensor core parameters from profile0
 		wireIn(221, 0, 0xFF); //AUTOISP_BRT_EN, disable auto ISP
-		if (isLoopModeEnabled())
-			wireIn(223, 1, 0xFF); //AUTOISP_TRIGGER
-		else
-			wireIn(223, 0, 0xFF); //AUTOISP_TRIGGER
-
 		wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
-		writeRegister(233, -1, 232, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
-		writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0	
+		writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
+
 		enterStartMode();
 	}
 }
@@ -1636,6 +1643,7 @@ void CeleX5::modifyCSRParameter(string csrType, string cmdName, uint32_t value)
 			}
 		}
 	}
+	m_pSequenceMgr->saveCeleX5XML(m_mapCfgModified);
 }
 
 bool CeleX5::configureSettings(CeleX5::DeviceType type)

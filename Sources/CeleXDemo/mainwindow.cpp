@@ -26,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     txt->setGeometry(QRect(250, 50, 250, 250));
 
     m_pVersionInfo = new QLineEdit(this);
-    m_pVersionInfo->setText("Version 1.5.0");
+    m_pVersionInfo->setText("Version 1.6.0");
     m_pVersionInfo->setGeometry(QRect(30, 320, 200, 20));
     m_pVersionInfo->setStyleSheet("font: 20px Calibri; color: #FFFFFF;background:transparent;border-width:0;border-style:outset");
 

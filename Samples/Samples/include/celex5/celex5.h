@@ -134,11 +134,19 @@ public:
 
 	/* 
 	* Enable/Disable the Create Image Frame module
-	* If you just want to obtain (x,y,A,t) array (don't obtain frame data), you cound disable this function to imporve performance.
+	* If you just want to obtain (x,y,A,t) array (don't need frame data), you cound disable this function to imporve performance.
 	*/
 	void disableFrameModule(); 
 	void enableFrameModule();
 	bool isFrameModuleEnabled();
+
+	/*
+	* Enable/Disable the Event Stream module
+	* If you just want to event frame (don't need (x,y,A,t) stream), you cound disable this function to imporve performance.
+	*/
+	void disableEventStreamModule();
+	void enableEventStreamModule();
+	bool isEventStreamEnabled();
 
 	/*
 	* Disable/Enable the IMU module

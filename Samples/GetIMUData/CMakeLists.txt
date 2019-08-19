@@ -7,7 +7,6 @@ find_package(OpenCV REQUIRED)
 
 set(CeleX ../Samples)
 set(CeleX_LIB CeleX)
-set(CeleX_CeleDriver_LIB CeleDriver)
 
 include_directories(${CeleX}/include)
 link_directories(${CeleX}/lib/Linux/x64)
@@ -26,4 +25,3 @@ set_target_properties(samples PROPERTIES OUTPUT_NAME ../build/getIMUData)
 # Link your application with OpenCV libraries
 target_link_libraries(samples ${OpenCV_LIBS})
 target_link_libraries(samples ${CeleX_LIB})
-target_link_libraries(samples ${CeleX_CeleDriver_LIB})

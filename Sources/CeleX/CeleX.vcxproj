@@ -77,7 +77,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>D:\Program Files\opencv\build\include;D:\Program Files\opencv\build\include\opencv;D:\Program Files\opencv\build\include\opencv2;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\cx3driver\lib\x64\debug;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\cx3driver\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,7 +87,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\Program Files\opencv\build\include;D:\Program Files\opencv\build\include\opencv;D:\Program Files\opencv\build\include\opencv2;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\cx3driver\lib\x64\release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\Program Files\opencv\build\x64\vc14\lib;.\cx3driver\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -118,9 +118,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opencv_world330d.lib;CeleDriver.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>./build/Windows/x64/debug/CeleX.dll</OutputFile>
-      <ImportLibrary>./build/Windows/x64/debug/CeleX.lib</ImportLibrary>
+      <AdditionalDependencies>opencv_world330d.lib;libusb-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>../CeleXDemo/lib/Windows/x64/debug/CeleX.dll</OutputFile>
+      <ImportLibrary>../CeleXDemo/lib/Windows/x64/debug/CeleX.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -161,9 +161,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opencv_world330.lib;CeleDriver.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary>./build/Windows/x64/release/CeleX.lib</ImportLibrary>
-      <OutputFile>./build/Windows/x64/release/CeleX.dll</OutputFile>
+      <AdditionalDependencies>opencv_world330.lib;libusb-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImportLibrary>../CeleXDemo/lib/Windows/x64/release/CeleX.lib</ImportLibrary>
+      <OutputFile>../CeleXDemo/lib/Windows/x64/release/CeleX.dll</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -178,6 +178,11 @@
     <ClCompile Include="configproc\tinyxml\tinyxml.cpp" />
     <ClCompile Include="configproc\tinyxml\tinyxmlerror.cpp" />
     <ClCompile Include="configproc\tinyxml\tinyxmlparser.cpp" />
+    <ClCompile Include="cx3driver\BulkTransfer.cpp" />
+    <ClCompile Include="cx3driver\CeleDriver.cpp" />
+    <ClCompile Include="cx3driver\Cypress.cpp" />
+    <ClCompile Include="cx3driver\Package.cpp" />
+    <ClCompile Include="cx3driver\USBIR.cpp" />
     <ClCompile Include="eventproc\celex5.cpp" />
     <ClCompile Include="eventproc\celex5dataprocessor.cpp" />
     <ClCompile Include="eventproc\celex5processeddata.cpp" />
@@ -195,6 +200,11 @@
     <ClInclude Include="configproc\hhxmlreader.h" />
     <ClInclude Include="configproc\tinyxml\tinystr.h" />
     <ClInclude Include="configproc\tinyxml\tinyxml.h" />
+    <ClInclude Include="cx3driver\BulkTransfer.h" />
+    <ClInclude Include="cx3driver\CeleDriver.h" />
+    <ClInclude Include="cx3driver\Cypress.h" />
+    <ClInclude Include="cx3driver\Package.h" />
+    <ClInclude Include="cx3driver\USBIR.h" />
     <ClInclude Include="eventproc\celex5dataprocessor.h" />
     <ClInclude Include="eventproc\dataprocessthread.h" />
     <ClInclude Include="eventproc\datarecorder.h" />

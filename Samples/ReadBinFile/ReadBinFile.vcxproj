@@ -96,6 +96,7 @@ copy "$(SolutionDir)Samples\lib\Windows\x64\debug\*.dll" "$(SolutionDir)x64\debu
     </PostBuildEvent>
     <Link>
       <AdditionalDependencies>opencv_world330d.lib;celex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
