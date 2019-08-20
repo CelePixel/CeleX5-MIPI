@@ -2,6 +2,8 @@
 <!-- parameter changes:
   SWITCH_RESET_GAP1: 120 (old value = 200)
   BIAS_C2: 880 (old value = 819)
+  BIAS_RAMPN: 365 (old value = 345)
+  BIAS_RAMPN: 735 (old value = 755)
 -->
 <?xml version="1.0" ?>
 <commands>
@@ -66,7 +68,7 @@
             <address_high>14</address_high>
             <value_high>1</value_high>
             <address_low>15</address_low>
-            <value_low>89</value_low>
+            <value_low>109</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_RAMPN>
@@ -74,7 +76,7 @@
             <address_high>16</address_high>
             <value_high>2</value_high>
             <address_low>17</address_low>
-            <value_low>243</value_low>
+            <value_low>223</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_RAMPP>

@@ -44,9 +44,9 @@ win32 {
 }
 linux-g++ {
     contains(QT_ARCH, i386) {
-        LIBS += -L$$PWD/lib/Linux/x86 -lCeleX -lCeleDriver}
+        LIBS += -L$$PWD/lib/Linux/x86 -lCeleX}
     else {
-        LIBS += -L$$PWD/lib/Linux/x64 -lCeleX -lCeleDriver}
+        LIBS += -L$$PWD/lib/Linux/x64 -lCeleX}
 }
 
 SOURCES += main.cpp\

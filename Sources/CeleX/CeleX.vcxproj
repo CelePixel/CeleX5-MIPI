@@ -119,8 +119,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>opencv_world330d.lib;libusb-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>../CeleXDemo/lib/Windows/x64/debug/CeleX.dll</OutputFile>
-      <ImportLibrary>../CeleXDemo/lib/Windows/x64/debug/CeleX.lib</ImportLibrary>
+      <OutputFile>./build/Windows/x64/debug/CeleX.dll</OutputFile>
+      <ImportLibrary>./build/Windows/x64/debug/CeleX.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -162,8 +162,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>opencv_world330.lib;libusb-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary>../CeleXDemo/lib/Windows/x64/release/CeleX.lib</ImportLibrary>
-      <OutputFile>../CeleXDemo/lib/Windows/x64/release/CeleX.dll</OutputFile>
+      <ImportLibrary>./build/Windows/x64/release/CeleX.lib</ImportLibrary>
+      <OutputFile>./build/Windows/x64/release/CeleX.dll</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

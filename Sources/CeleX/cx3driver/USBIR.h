@@ -3,7 +3,6 @@
 
 #ifdef __linux__
 #include <pthread.h>
-//#include "libusb.h"//libusb-0.1.12库的头文件
 #include "BulkTransfer.h"
 #else
 #include <windows.h>

@@ -1,0 +1,19 @@
+Firmware Version 2.3
+Released Date: 2019-08-20
+
+New Features:
+1) Added support for getting IMU data @500Hz.
+2) Added support for getting ALS data.
+
+*****************************************************************************************************
+
+Firmware Version 2.2
+Released Date: 2019-07-04
+
+New Features:
+1) Added support for getting IMU data @100Hz.
+
+*****************************************************************************************************
+
+
+
