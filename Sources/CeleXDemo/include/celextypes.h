@@ -59,6 +59,7 @@ typedef struct EventData
 	int16_t     polarity; //-1: intensity weakened; 1: intensity is increased; 0 intensity unchanged
 	uint32_t    t_off_pixel; //it will be reset after the end of a frame
 	uint64_t    t_off_pixel_increasing; //it won't be reset, it's a monotonically increasing value
+	uint32_t    t_in_pixel_ramp_no;
 	uint64_t    t_in_pixel_increasing;
 } EventData;
 
