@@ -21,9 +21,6 @@
 #include "../include/celex5/celex5processeddata.h"
 #include "../include/celex5/celex5datamanager.h"
 
-#define FORMAT1_T_MAX    65536 // 2^16
-#define FORMAT2_T_MAX    4096  // 2^12
-
 class CeleX5DataProcessor
 {
 public:
@@ -43,11 +40,15 @@ public:
 	bool getEventDataVector(std::vector<EventData> &vecData, uint64_t& frameNo);
 	bool getEventDataVectorEx(std::vector<EventData> &vecData, std::time_t& time_stamp, bool bDenoised);
 
-	void processMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData> imu_data);
+	void processMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData>& imu_data);
 
 	void disableFrameModule();
 	void enableFrameModule();
 	bool isFrameModuleEnabled();
+
+	void disableEventStreamModule();
+	void enableEventStreamModule();
+	bool isEventStreamEnabled();
 
 	void disableIMUModule();
 	void enableIMUModule();
@@ -93,7 +94,6 @@ private:
 
 	void checkIfShowImage(); //only for mipi
 	bool createImage(std::time_t time_stamp_end);
-	unsigned int normalizeADC(unsigned int adc);
 	void generateFPNimpl();
 	int calculateDenoiseScore(unsigned char* pBuffer, unsigned int pos);
 	int calMean(unsigned char* pBuffer, unsigned int pos);
@@ -103,54 +103,13 @@ private:
 
 	bool findModeInLoopGroup(CeleX5::CeleX5Mode mode);
 
-	inline void processMIPIEventTimeStamp() 
-	{
-		if (m_bFirstEventTimestamp)
-		{
-			m_uiEventTCounter_Total = m_iRowTimeStamp;
-			m_bFirstEventTimestamp = false;
-		}
-		//cout << "m_iRowTimeStamp = " << m_iRowTimeStamp << ", m_iLastRowTimeStamp = " << m_iLastRowTimeStamp << endl;
-		int diffT = m_iRowTimeStamp - m_iLastRowTimeStamp;
-		if (diffT < 0)
-		{
-			if (1 == m_iMIPIDataFormat)
-				diffT += FORMAT1_T_MAX;
-			else
-				diffT += FORMAT2_T_MAX;
-		}	
-		/*if (diffT > 1)
-			cout << __FUNCTION__ << ": T is not continuous!" << endl;*/
-		if (m_iLastRowTimeStamp != -1 && diffT < 5)
-		{
-			m_uiEventTCounter += diffT;
-			m_uiEventTCounter_Total += diffT;
-			m_uiEventTCounter_EPS += diffT;
-			m_uiPackageTCounter += diffT;
-			//cout << "m_uiEventTCounter_Total = " << m_uiEventTCounter_Total << endl;
-		}
+	void processMIPIEventTimestamp();
+	void saveIntensityEvent(int col, int adc_12bit, int adc_8bit);
+	void saveOpticalFlowEvent(int col, int adc_12bit, int adc_8bit);
+	void saveFormat2Event(int col, int adc); //save event into buffer and event vector.
+	int  getCurrentIndex(int initIndex);
 
-		if (m_emCurrentSensorMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
-		{
-			if (m_iRowTimeStamp % 1024 == 0 && diffT != 0)
-			{
-				m_uiEOTrampNo++;
-				//cout << "m_uiEOTrampNo = " << m_uiEOTrampNo << ", m_iRowTimeStamp = "<< m_iRowTimeStamp << endl;
-			}
-		}
-
-		if (!m_bLoopModeEnabled)
-		{
-			checkIfShowImage();
-		}
-		if (m_uiEventTCounter_EPS > m_uiEventTCountForEPS)
-		{
-			//cout << "m_uiPixelCountForEPS = " << m_uiPixelCountForEPS << endl;
-			m_uiEventNumberEPS = m_uiPixelCountForEPS;
-			m_uiPixelCountForEPS = 0;
-			m_uiEventTCounter_EPS = 0;
-		}
-	}
+	void denoisedPerRow();
 
 private:
 	CeleX5ProcessedData*     m_pCX5ProcessedData;
@@ -240,6 +199,7 @@ private:
 	uint32_t                 m_uiCurrentEventTUnit;
 	//
 	bool                     m_bFrameModuleEnabled;
+	bool                     m_bEventStreamEnabled;
 	bool                     m_bIMUModuleEnabled;
 	//
 	std::time_t              m_lFullFrameTimeStamp_ForUser;
