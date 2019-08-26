@@ -732,10 +732,10 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             dir.mkdir("image_fullpic");
         }
         QString qsNum = QString("%1").arg(m_lFullFrameCount, 6, 10, QChar('0'));
-        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + ".jpg";
+        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + qsFormat;
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, "JPG");
+        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
         m_lFullFrameCount++;
     }
     else if (pSensorData->getSensorMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode ||
@@ -774,12 +774,12 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             {
                 dir.mkdir(folderNameList[i]);
             }
-            QString picName = QCoreApplication::applicationDirPath() + "/" + folderNameList[i] + "/" + m_qsBinFileName + "_" + qsNum + ".jpg";
+            QString picName = QCoreApplication::applicationDirPath() + "/" + folderNameList[i] + "/" + m_qsBinFileName + "_" + qsNum + qsFormat;
             char file_path[256] = {0};
             memcpy(file_path, picName.toStdString().c_str(), picName.size());
 
             updateEventImage(pSensorData->getEventPicBuffer((CeleX5::emEventPicType)picTypeList[i]), (CeleX5::emEventPicType)picTypeList[i]);
-            m_imageForSavePic.save(file_path, "JPG");
+            m_imageForSavePic.save(file_path, g_qsPicFormat.toStdString().data());
         }
         m_lEventFrameCount++;
     }
@@ -798,10 +798,10 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
 
         QString qsNum = QString("%1").arg(m_lOpticalFrameCount, 6, 10, QChar('0'));
 
-        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + ".jpg";
+        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + qsFormat;
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, "JPG");
+        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
 
         m_lOpticalFrameCount++;
     }
@@ -811,7 +811,7 @@ void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode, CeleX5Proce
 {
     std::vector<EventData> vecEvent;
     m_pCeleX5->getEventDataVector(vecEvent);
-    int dataSize = vecEvent.size();
+    size_t dataSize = vecEvent.size();
     if (sensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
     {
         if (g_bIncreasingTimestamp)
