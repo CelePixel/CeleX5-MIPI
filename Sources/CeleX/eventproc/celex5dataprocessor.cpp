@@ -132,21 +132,23 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 
 	XBase base;
 	std::string filePath = base.getApplicationDirPath();
-	filePath += "\FPN_OpticalFlow.txt";
+#ifdef _WIN32
+	filePath += "/FPN_OpticalFlow.txt";
+#else
+	filePath += "FPN_OpticalFlow.txt";
+#endif
 
 	int index = 0;
 	std::ifstream in;
 	in.open(filePath.c_str());
-	if (!in.is_open())
+	if (in.is_open())
 	{
-		cout << filePath << endl;
-
 		std::string line;
 		while (!in.eof() && index < CELEX5_PIXELS_NUMBER)
 		{
 			in >> line;
 			m_pFpnBuffer_OF[index] = atoi(line.c_str());
-			//cout << index << ", " << m_pEOFpnBuffer[index] << endl;
+			//cout << index << ", " << m_pFpnBuffer_OF[index] << endl;
 			index++;
 		}
 		cout << "Load Optical-flow fpn successfully!" << endl;
@@ -1266,7 +1268,7 @@ bool CeleX5DataProcessor::createImage(std::time_t time_stamp_end)
 			}
 			if (m_pEventADCBuffer[i] > 0)
 			{
-				value = m_pEventADCBuffer[i] - m_pFpnBuffer_OF[i];
+				value = m_pEventADCBuffer[i];
 				if (value < 0)
 					value = 0;
 				if (value > 255)
