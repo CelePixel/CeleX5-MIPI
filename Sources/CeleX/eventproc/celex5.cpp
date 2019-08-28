@@ -1261,6 +1261,7 @@ void CeleX5::setISPBrightness(uint32_t value, int num)
 void CeleX5::startRecording(std::string filePath)
 {
 	m_pDataRecorder->startRecording(filePath);
+	m_pDataProcessThread->setRecordState(true);
 }
 
 void CeleX5::stopRecording()
@@ -1285,6 +1286,7 @@ void CeleX5::stopRecording()
 		header.event_data_format = m_iEventDataFormat;
 		m_pDataRecorder->stopRecording(&header);
 	}
+	m_pDataProcessThread->setRecordState(false);
 }
 
 bool CeleX5::openBinFile(std::string filePath)

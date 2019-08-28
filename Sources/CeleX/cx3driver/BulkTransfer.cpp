@@ -10,7 +10,7 @@
 
 #define USING_IMU_CALLBACK
 
-#define MAX_IMAGE_BUFFER_NUMBER    200
+#define MAX_IMAGE_BUFFER_NUMBER    100
 CPackage  image_list[MAX_IMAGE_BUFFER_NUMBER];
 static CPackage*  current_package = nullptr;
 

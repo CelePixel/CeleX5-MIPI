@@ -1,4 +1,5 @@
 ﻿#include "celex5widget.h"
+
 #include <QTimer>
 #include <QFileDialog>
 #include <QCoreApplication>
@@ -12,7 +13,8 @@
 #include <QDebug>
 #include <QTextCodec>
 #include <QThread>
-#include <QMutex>
+#include <QScrollArea>
+#include <QDesktopWidget>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -22,62 +24,20 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-bool    m_bRecordingData = false;
-bool    m_bShowImageEndabled = true;
-
-CeleX5* m_pCeleX5 = new CeleX5;
-
-/*class MyThread : public QThread
-{
-public:
-    MyThread();
-    void closeThread();
-protected:
-    virtual void run();
-private:
-    volatile bool isStop;
-};
-
-MyThread::MyThread()
-{
-    isStop = false;
-}
-void MyThread::closeThread()
-{
-    isStop = true;
-}
-
-vector<uint8_t> sensor_buffer;
-void MyThread::run()
-{
-    while (1)
-    {
-        if(isStop)
-            return;
-
-        std::time_t time_stamp_end = 0;
-        vector<IMURawData> imu_data;
-        m_pCeleX5->getMIPIData(sensor_buffer, time_stamp_end, imu_data);
-        if (sensor_buffer.size() > 0)
-        {
-            if (!m_bRecordingData || (m_bRecordingData && m_bShowImageEndabled))
-                m_pCeleX5->parseMIPIData(sensor_buffer.data(), sensor_buffer.size(), time_stamp_end, imu_data);
-        }
-        sensor_buffer.clear();
-
-        //qDebug() << tr("currentThreadId = ") << QThread::currentThreadId();
-        //sleep(1);
-    }
-}*/
 
 #define READ_BIN_TIME            1
 #define UPDATE_PLAY_INFO_TIME    30
 
+bool               g_bRecordingData = false;
+bool               g_bShowImageEndabled = true;
 cv::VideoWriter    m_writer,m_writer1;
 VideoStream*       m_pVideoStream = new VideoStream;
 std::ofstream      g_ofWriteMat;
 bool               g_bIncreasingTimestamp = false;
 QString            g_qsPicFormat = "JPG";
+QString            g_qsBinFileName;
+
+CeleX5* m_pCeleX5 = new CeleX5;
 
 SensorDataObserver::SensorDataObserver(CX5SensorDataServer *sensorData, QWidget *parent)
     : QWidget(parent)
@@ -808,10 +768,24 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
 }
 
 void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode, CeleX5ProcessedData* pSensorData)
-{
+{    
     std::vector<EventData> vecEvent;
-    m_pCeleX5->getEventDataVector(vecEvent);
+    uint64_t frameNo = 0;
+    m_pCeleX5->getEventDataVector(vecEvent, frameNo);
     size_t dataSize = vecEvent.size();
+
+    //for test
+    if (0)
+    {
+        QString csvFileName = g_qsBinFileName.left(g_qsBinFileName.size() - 4);
+        csvFileName += "_";
+        csvFileName += QString::number(m_pCeleX5->getEventFrameTime()/1000);
+        csvFileName += "ms_";
+        csvFileName += QString::number(frameNo);
+        csvFileName += ".csv";
+        g_ofWriteMat.open(csvFileName.toLocal8Bit().data());
+    }
+
     if (sensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
     {
         if (g_bIncreasingTimestamp)
@@ -873,6 +847,11 @@ void SensorDataObserver::writeCSVData(CeleX5::CeleX5Mode sensorMode, CeleX5Proce
                              << vecEvent[i].t_off_pixel << endl;
             }
         }
+    }
+    //for test
+    if (0)
+    {
+        g_ofWriteMat.close();
     }
 }
 
@@ -1065,15 +1044,12 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     , m_iCurrCbBoxLoopImageType(0)
 {
     m_pCeleX5->openSensor(m_emDeviceType);
-    //m_pCeleX5->disableEventStreamModule();
+    m_pCeleX5->disableEventStreamModule();
 
     m_pCeleX5->getCeleX5Cfg();
     m_mapCfgDefault = m_pCeleX5->getCeleX5Cfg();
 
     this->setGeometry(10, 50, 1850, 950);
-
-    //    MyThread* mythread = new MyThread;
-    //    mythread->start();
 
     m_pReadBinTimer = new QTimer(this);
     connect(m_pReadBinTimer, SIGNAL(timeout()), this, SLOT(onReadBinTimer()));
@@ -1084,17 +1060,29 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pRecordDataTimer = new QTimer(this);
     connect(m_pRecordDataTimer, SIGNAL(timeout()), this, SLOT(onRecordDataTimer()));
 
+    QDesktopWidget* desktopWidget = QApplication::desktop();
+    QRect screenRect = desktopWidget->screenGeometry();
+    //scroll area
+    QScrollArea* pScrollArea = new QScrollArea(this);
+    pScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    pScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    pScrollArea->setGeometry(0, 0, screenRect.width(), screenRect.height()-70);
+    //set m_pScrollWidger to m_pScrollArea
+    m_pScrollWidget = new QWidget(pScrollArea);
+    m_pScrollWidget->setGeometry(0, 0, 1900, 950);
+    pScrollArea->setWidget(m_pScrollWidget);
+
     QGridLayout* layoutBtn = new QGridLayout;
     //layoutBtn->setContentsMargins(0, 0, 0, 880);
     createButtons(layoutBtn);
 
-    m_pSensorDataObserver = new SensorDataObserver(m_pCeleX5->getSensorDataServer(), this);
+    m_pSensorDataObserver = new SensorDataObserver(m_pCeleX5->getSensorDataServer(), m_pScrollWidget);
     m_pSensorDataObserver->show();
     //m_pSensorDataObserver->setGeometry(40, 130, 1280, 1000);
 
     //--- create comboBox to select image type
     int comboTop = 110;
-    m_pCbBoxImageType = new QComboBox(this);
+    m_pCbBoxImageType = new QComboBox(m_pScrollWidget);
     QString style1 = "QComboBox {font: 18px Calibri; color: #FFFF00; border: 2px solid darkgrey; "
                      "border-radius: 5px; background: green;}";
     QString style2 = "QComboBox:editable {background: green;}";
@@ -1109,7 +1097,7 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pCbBoxImageType->setCurrentIndex(0);
     connect(m_pCbBoxImageType, SIGNAL(currentIndexChanged(int)), this, SLOT(onImageTypeChanged(int)));
 
-    m_pCbBoxLoopEventType = new QComboBox(this);
+    m_pCbBoxLoopEventType = new QComboBox(m_pScrollWidget);
     m_pCbBoxLoopEventType->setGeometry(1085, comboTop, 250, 30);
     m_pCbBoxLoopEventType->show();
     m_pCbBoxLoopEventType->setStyleSheet(style1 + style2);
@@ -1123,17 +1111,17 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
 
     //--- create comboBox to select sensor mode
     //Fixed Mode
-    m_pCbBoxFixedMode = createModeComboBox("Fixed", QRect(40, comboTop, 300, 30), this, false, 0);
+    m_pCbBoxFixedMode = createModeComboBox("Fixed", QRect(40, comboTop, 300, 30), m_pScrollWidget, false, 0);
     m_pCbBoxFixedMode->setCurrentText("Fixed - Event_Off_Pixel_Timestamp_Mode ");
     m_pCbBoxFixedMode->show();
     //Loop A
-    m_pCbBoxLoopAMode = createModeComboBox("LoopA", QRect(40, comboTop, 300, 30), this, true, 1);
+    m_pCbBoxLoopAMode = createModeComboBox("LoopA", QRect(40, comboTop, 300, 30), m_pScrollWidget, true, 1);
     //Loop B
-    m_pCbBoxLoopBMode = createModeComboBox("LoopB", QRect(40+660, comboTop, 300, 30), this, true, 2);
+    m_pCbBoxLoopBMode = createModeComboBox("LoopB", QRect(40+660, comboTop, 300, 30), m_pScrollWidget, true, 2);
     //Loop C
-    m_pCbBoxLoopCMode = createModeComboBox("LoopC", QRect(40, comboTop+440, 300, 30), this, true, 3);
+    m_pCbBoxLoopCMode = createModeComboBox("LoopC", QRect(40, comboTop+440, 300, 30), m_pScrollWidget, true, 3);
 
-    m_pBtnShowStyle = createButton("Show Multiple Windows", QRect(350, comboTop, 220, 30), this);
+    m_pBtnShowStyle = createButton("Show Multiple Windows", QRect(350, comboTop, 220, 30), m_pScrollWidget);
     connect(m_pBtnShowStyle, SIGNAL(released()), this, SLOT(onShowMultipleWindows()));
 
     QHBoxLayout* layoutSensorImage = new QHBoxLayout;
@@ -1145,10 +1133,10 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     pMainLayout->addSpacing(65);
     //pMainLayout->addLayout(layoutComboBox);
     pMainLayout->addLayout(layoutSensorImage);
-    this->setLayout(pMainLayout);
+    m_pScrollWidget->setLayout(pMainLayout);
 
     //--- create comboBox to select show type ---
-    QComboBox* pEventShowType = new QComboBox(this);
+    QComboBox* pEventShowType = new QComboBox(m_pScrollWidget);
     pEventShowType->setGeometry(1350, comboTop, 250, 30);
     pEventShowType->show();
     pEventShowType->setStyleSheet(style1 + style2);
@@ -1158,20 +1146,20 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     pEventShowType->setCurrentIndex(0);
     connect(pEventShowType, SIGNAL(currentIndexChanged(int)), this, SLOT(onEventShowTypeChanged(int)));
     //--- show by time: frame time
-    m_pFrameSlider = new CfgSlider(this, 100, 1000000, 1, 30000, this);
+    m_pFrameSlider = new CfgSlider(m_pScrollWidget, 100, 1000000, 1, 30000, this);
     m_pFrameSlider->setGeometry(1350, 150, 500, 70);
     m_pFrameSlider->setBiasType("Frame Time");
     m_pFrameSlider->setDisplayName("   Frame Time (us)");
     m_pFrameSlider->setObjectName("Frame Time");
     //--- show by row cycle: row cycle count
-    m_pRowCycleSlider = new CfgSlider(this, 1, 100, 1, 6, this);
+    m_pRowCycleSlider = new CfgSlider(m_pScrollWidget, 1, 100, 1, 6, this);
     m_pRowCycleSlider->setGeometry(1350, 150, 500, 70);
     m_pRowCycleSlider->setBiasType("Row Cycle Count");
     m_pRowCycleSlider->setDisplayName("Row Cycle Count");
     m_pRowCycleSlider->setObjectName("Row Cycle Count");
     m_pRowCycleSlider->hide();
     //--- show by count: event count
-    m_pEventCountSlider = new CfgSlider(this, 10000, 1000000, 1, 100000, this);
+    m_pEventCountSlider = new CfgSlider(m_pScrollWidget, 10000, 1000000, 1, 100000, this);
     m_pEventCountSlider->setGeometry(1350, 150, 500, 70);
     m_pEventCountSlider->setBiasType("Event Count");
     m_pEventCountSlider->setDisplayName("Event Count");
@@ -1179,21 +1167,21 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pEventCountSlider->hide();
 
     //--- Display FPS ---
-    m_pFPSSlider = new CfgSlider(this, 1, 1000, 1, 30, this);
+    m_pFPSSlider = new CfgSlider(m_pScrollWidget, 1, 1000, 1, 30, this);
     m_pFPSSlider->setGeometry(1350, 250, 500, 70);
     m_pFPSSlider->setBiasType("Display FPS");
     m_pFPSSlider->setDisplayName("   Display FPS (f/s)");
     m_pFPSSlider->setObjectName("Display FPS");
 
     //--- Event Count Step ---
-    CfgSlider* pSlider3 = new CfgSlider(this, 1, 255, 1, 30, this);
+    CfgSlider* pSlider3 = new CfgSlider(m_pScrollWidget, 1, 255, 1, 30, this);
     pSlider3->setGeometry(1350, 350, 500, 70);
     pSlider3->setBiasType("Event Count Step");
     pSlider3->setDisplayName("Event Count Step");
     pSlider3->setObjectName("Event Count Step");
 
     //--- Event Start Pos ---
-    m_pEventStartPosSlider = new CfgSlider(this, 0, 100, 1, 0, this);
+    m_pEventStartPosSlider = new CfgSlider(m_pScrollWidget, 0, 100, 1, 0, this);
     m_pEventStartPosSlider->setGeometry(1350, 500, 500, 70);
     m_pEventStartPosSlider->setBiasType("Event Start Pos");
     m_pEventStartPosSlider->setDisplayName("Event Start Pos (ms)");
@@ -1412,7 +1400,7 @@ void CeleX5Widget::record(QPushButton* pButton)
 {
     if ("Start Recording Bin" == pButton->text())
     {
-        m_bRecordingData = true;
+        g_bRecordingData = true;
         pButton->setText("Stop Recording Bin");
         setButtonEnable(pButton);
         //
@@ -1445,7 +1433,7 @@ void CeleX5Widget::record(QPushButton* pButton)
     }
     else
     {
-        m_bRecordingData = false;
+        g_bRecordingData = false;
         pButton->setText("Start Recording Bin");
         setButtonNormal(pButton);
         m_pCeleX5->stopRecording();
@@ -1603,7 +1591,27 @@ void CeleX5Widget::showAdvancedSetting()
     {
         m_pAdSettingWidget = new QWidget;
         m_pAdSettingWidget->setWindowTitle("Advanced Settings");
-        m_pAdSettingWidget->setGeometry(300, 50, 1100, 780);
+        m_pAdSettingWidget->setGeometry(200, 50, 1100, 780);
+
+        QDesktopWidget* desktopWidget = QApplication::desktop();
+        QRect screenRect = desktopWidget->screenGeometry();
+        int scrollWidth = screenRect.width() - 100;
+        int scrollHeight = screenRect.height() - 100;
+        if (scrollWidth > m_pAdSettingWidget->width())
+            scrollWidth = m_pAdSettingWidget->width();
+        if (scrollHeight > m_pAdSettingWidget->height())
+            scrollHeight = m_pAdSettingWidget->height();
+
+        //scroll area
+        QScrollArea* pScrollArea = new QScrollArea(m_pAdSettingWidget);
+        pScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        pScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        pScrollArea->setGeometry(0, 0, scrollWidth, scrollHeight);
+
+        //set m_pScrollWidger to m_pScrollArea
+        QWidget* pScrollWidget = new QWidget(pScrollArea);
+        pScrollWidget->setGeometry(0, 0, m_pAdSettingWidget->width(), m_pAdSettingWidget->height());
+        pScrollArea->setWidget(pScrollWidget);
 
         QString style1 = "QGroupBox {"
                          "border: 2px solid #990000;"
@@ -1618,15 +1626,15 @@ void CeleX5Widget::showAdvancedSetting()
                          "padding: 0 3px 0 3px;"
                          "}";
 
-        QGroupBox* recordGroup = new QGroupBox("Data Record && Playback Parameters: ", m_pAdSettingWidget);
+        QGroupBox* recordGroup = new QGroupBox("Data Record && Playback Parameters: ", pScrollWidget);
         recordGroup->setGeometry(50, 20, 700, 440);
         recordGroup->setStyleSheet(style1 + style2);
         //
-        QLabel* pLabel = new QLabel(tr("Whether to display the images while recording"), m_pAdSettingWidget);
+        QLabel* pLabel = new QLabel(tr("Whether to display the images while recording"), pScrollWidget);
         pLabel->setGeometry(100, 50, 600, 50);
         pLabel->setStyleSheet("QLabel {background: transparent; font: 20px Calibri; }");
 
-        QRadioButton *pRadioBtn = new QRadioButton(tr(" open"), m_pAdSettingWidget);
+        QRadioButton *pRadioBtn = new QRadioButton(tr(" open"), pScrollWidget);
         pRadioBtn->setGeometry(120, 90, 600, 50);
         pRadioBtn->setStyleSheet("QRadioButton {background: transparent; color: #990000; font: 20px Calibri; }");
         pRadioBtn->setChecked(1);
@@ -1644,18 +1652,18 @@ void CeleX5Widget::showAdvancedSetting()
         int value1[4] = {300, 0};
         for (int i = 0; i < cfgList1.size(); i++)
         {
-            CfgSlider* pSlider = new CfgSlider(m_pAdSettingWidget, min1[i], max1[i], 1, value1[i], this);
+            CfgSlider* pSlider = new CfgSlider(pScrollWidget, min1[i], max1[i], 1, value1[i], this);
             pSlider->setGeometry(90, 180+i*90, 600, 70);
             pSlider->setBiasType(QString(cfgObj1.at(i)).toStdString());
             pSlider->setDisplayName(cfgList1.at(i));
             pSlider->setObjectName(cfgObj1.at(i));
         }
 
-        QLabel* pLabelPicFormat = new QLabel(tr("The picture format for saving: "), m_pAdSettingWidget);
+        QLabel* pLabelPicFormat = new QLabel(tr("The picture format for saving: "), pScrollWidget);
         pLabelPicFormat->setGeometry(100, 360, 600, 50);
         pLabelPicFormat->setStyleSheet("QLabel {background: transparent; font: 20px Calibri; }");
 
-        QWidget* pWidget = new QWidget(m_pAdSettingWidget);
+        QWidget* pWidget = new QWidget(pScrollWidget);
         pWidget->setGeometry(100, 400, 600, 50);
 
         QRadioButton *pRadioBtnJPG = new QRadioButton(tr(" JPG"), pWidget);
@@ -1676,7 +1684,7 @@ void CeleX5Widget::showAdvancedSetting()
         pRadioBtnBMP->setObjectName("BMP");
         //pRadioBtnBMP->setAutoExclusive(false);
 
-        QGroupBox* otherGroup = new QGroupBox("Other Parameters: ", m_pAdSettingWidget);
+        QGroupBox* otherGroup = new QGroupBox("Other Parameters: ", pScrollWidget);
         otherGroup->setGeometry(50, 500, 700, 250);
         otherGroup->setStyleSheet(style1 + style2);
         //
@@ -1689,7 +1697,7 @@ void CeleX5Widget::showAdvancedSetting()
         int value2[1] = {0};
         for (int i = 0; i < cfgList2.size(); i++)
         {
-            CfgSlider* pSlider = new CfgSlider(m_pAdSettingWidget, min2[i], max2[i], 1, value2[i], this);
+            CfgSlider* pSlider = new CfgSlider(pScrollWidget, min2[i], max2[i], 1, value2[i], this);
             pSlider->setGeometry(90, 550+i*100, 600, 70);
             pSlider->setBiasType(QString(cfgObj2.at(i)).toStdString());
             pSlider->setDisplayName(cfgList2.at(i));
@@ -1697,11 +1705,11 @@ void CeleX5Widget::showAdvancedSetting()
         }
 
         //--- Timestamp Type ---
-        QLabel* pLabe2 = new QLabel(tr("Whether to save a increasing timestamp when Bin converts to CSV"), m_pAdSettingWidget);
+        QLabel* pLabe2 = new QLabel(tr("Whether to save a increasing timestamp when Bin converts to CSV"), pScrollWidget);
         pLabe2->setGeometry(100, 650, 600, 50);
         pLabe2->setStyleSheet("QLabel {background: transparent; font: 20px Calibri; }");
         //
-        QRadioButton *pRadioBtnTs = new QRadioButton(tr(" close"), m_pAdSettingWidget);
+        QRadioButton *pRadioBtnTs = new QRadioButton(tr(" close"), pScrollWidget);
         pRadioBtnTs->setGeometry(120, 700, 600, 50);
         pRadioBtnTs->setStyleSheet("QRadioButton {background: transparent; color: gray; font: 20px Calibri; }");
         pRadioBtnTs->setChecked(0);
@@ -1758,7 +1766,7 @@ void CeleX5Widget::showPlaybackBoard(bool show)
 {
     if (!m_pPlaybackBg)
     {
-        m_pPlaybackBg = new QWidget(this);
+        m_pPlaybackBg = new QWidget(m_pScrollWidget);
         m_pPlaybackBg->setStyleSheet("background-color: lightgray; ");
         m_pPlaybackBg->setGeometry(1350, 500, 550, 300);
 
@@ -1851,6 +1859,8 @@ void CeleX5Widget::convertBin2Video(QPushButton* pButton)
 
 void CeleX5Widget::convertBin2CSV(QPushButton *pButton)
 {
+    m_pCeleX5->enableEventStreamModule();
+
     m_qstBinfilePathList.clear();
     m_qstBinfilePathList = QFileDialog::getOpenFileNames(this, "Open a bin file", QCoreApplication::applicationDirPath(), "Bin Files (*.bin)");
     //qDebug() << __FUNCTION__ << m_qstBinfilePathList << endl;
@@ -1860,6 +1870,8 @@ void CeleX5Widget::convertBin2CSV(QPushButton *pButton)
     if (filePath.isEmpty())
         return;
     //qDebug() << __FUNCTION__ << m_qstBinfilePathList << endl;
+
+    g_qsBinFileName = filePath;
 
     showPlaybackBoard(true);
     m_pSensorDataObserver->setDisplayType(ConvertBin2CSV);
@@ -2258,6 +2270,8 @@ void CeleX5Widget::onUpdatePlayInfo()
                                          "font: 20px Calibri; }"
                                          "QPushButton:pressed {background: #992F6F;}");
                 QMessageBox::information(NULL, "convertBin2CSV", "Convert Bin to CSV completely!", QMessageBox::Yes, QMessageBox::Yes);
+
+                m_pCeleX5->disableEventStreamModule();
             }
             else
             {
@@ -2597,7 +2611,7 @@ void CeleX5Widget::onEventShowTypeChanged(int index)
 void CeleX5Widget::onShowImagesSwitch(bool state)
 {
     cout << "CeleX5Widget::onShowImagesSwitch: state = " << state << endl;
-    m_bShowImageEndabled = state;
+    g_bShowImageEndabled = state;
     m_pCeleX5->setShowImagesEnabled(state);
     QList<QRadioButton*> radio1 = m_pAdSettingWidget->findChildren<QRadioButton *>("Display Switch");
     if (state)
