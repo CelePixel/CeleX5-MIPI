@@ -5,6 +5,9 @@
 #include <QVBoxLayout>
 #include <iostream>
 #include <QDebug>
+#include <QScrollArea>
+#include <QDesktopWidget>
+#include <QApplication>
 
 using namespace std;
 
@@ -13,8 +16,22 @@ CeleX5Cfg::CeleX5Cfg(CeleX5* pCeleX5, QWidget *parent)
     , m_pCeleX5(pCeleX5)
 {
     this->setWindowTitle("CeleX5 Configuration");
-    this->setGeometry(10, 40, 1900, 900);
+    this->setGeometry(10, 40, 2500, 900);
     this->setStyleSheet("background-color: lightgray; ");
+
+    QDesktopWidget* desktopWidget = QApplication::desktop();
+    QRect screenRect = desktopWidget->screenGeometry();
+
+    //scroll area
+    QScrollArea* pScrollArea = new QScrollArea(this);
+    pScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    pScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    pScrollArea->setGeometry(0, 0, screenRect.width(), screenRect.height()-70);
+
+    //set m_pScrollWidger to m_pScrollArea
+    QWidget* pScrollWidget = new QWidget(pScrollArea);
+    pScrollWidget->setGeometry(0, 0, this->width(), this->height());
+    pScrollArea->setWidget(pScrollWidget);
 
     m_pTabWidget = new QTabWidget;
     m_pTabWidget->setStyleSheet("QTabWidget::pane {border-width: 1px; border-color: rgb(48, 104, 151);\
@@ -64,7 +81,10 @@ CeleX5Cfg::CeleX5Cfg(CeleX5* pCeleX5, QWidget *parent)
     QHBoxLayout *layout = new QHBoxLayout();
     layout->addWidget(m_pTabWidget);
 
-    this->setLayout(layout);
+    //this->setLayout(layout);
+    pScrollWidget->setLayout(layout);
+
+    this->showMaximized();
 }
 
 void CeleX5Cfg::setCurrentIndex(int index)

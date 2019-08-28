@@ -182,6 +182,7 @@ protected slots:
     void onBtnSavePicExReleased();
 
 private:
+    QWidget*            m_pScrollWidget;
     QWidget*            m_pAdSettingWidget;
     SettingsWidget*     m_pSettingsWidget;
     QButtonGroup*       m_pButtonGroup;
