@@ -374,6 +374,21 @@ bool CeleX5::isIMUModuleEnabled()
 	return m_pDataProcessor->isIMUModuleEnabled();
 }
 
+void CeleX5::disableEventDenoising()
+{
+	m_pDataProcessor->disableEventDenoising();
+}
+
+void CeleX5::enableEventDenoising()
+{
+	m_pDataProcessor->enableEventDenoising();
+}
+
+bool CeleX5::isEventDenoisingEnabled()
+{
+	return m_pDataProcessor->isEventDenoisingEnabled();
+}
+
 void CeleX5::getFullPicBuffer(unsigned char* buffer)
 {
 	m_pDataProcessor->getFullPicBuffer(buffer);

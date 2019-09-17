@@ -23,7 +23,6 @@ const uint32_t g_uiMPDataFormat1MaxLen = 65536; // 2^16
 const uint32_t g_uiMPDataFormat2MaxLen = 4096; // 2^12
 
 //#define _ENABLE_LOG_FILE_
-//#define _EO_ROW_DENOISED_
 
 using namespace std;
 
@@ -69,6 +68,7 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_bFrameModuleEnabled(true)
 	, m_bEventStreamEnabled(true)
 	, m_bIMUModuleEnabled(true)
+	, m_bEventDenoisingEnabled(false)
 	, m_lFullFrameTimeStamp_ForUser(0)
 	, m_lEventFrameTimeStamp_ForUser(0)
 	, m_lOpticalFrameTimeStamp_ForUser(0)
@@ -353,6 +353,21 @@ bool CeleX5DataProcessor::isIMUModuleEnabled()
 	return m_bIMUModuleEnabled;
 }
 
+void CeleX5DataProcessor::disableEventDenoising()
+{
+	m_bEventDenoisingEnabled = false;
+}
+
+void CeleX5DataProcessor::enableEventDenoising()
+{
+	m_bEventDenoisingEnabled = true;
+}
+
+bool CeleX5DataProcessor::isEventDenoisingEnabled()
+{
+	return m_bEventDenoisingEnabled;
+}
+
 void CeleX5DataProcessor::processFullPicData(uint8_t* pData, int dataSize, std::time_t time_stamp_end)
 {
 	m_uiPixelCount = 0;
@@ -576,9 +591,10 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 				//cout << "currentRow = " << m_iCurrentRow << ", lastRow = " << m_iLastRow << endl;
 				m_uiEventRowCycleCount++;
 			}
-#ifdef _EO_ROW_DENOISED_
-			denoisedPerRow();
-#endif
+			if (m_bEventDenoisingEnabled)
+			{
+				denoisedPerRow();
+			}
 			//-------- event time stamp --------
 			m_iLastRowTimeStamp = m_iRowTimeStamp;
 			//row_time_stamp[15:0] = data_28_1[17:2] = value6[1:0] + value5[7:6] + value1[7:0] + value5[5:2]
@@ -636,10 +652,10 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 				//cout << "currentRow = " << m_iCurrentRow << ", lastRow = " << m_iLastRow << endl;
 				m_uiEventRowCycleCount++;
 			}
-
-#ifdef _EO_ROW_DENOISED_
-			denoisedPerRow();
-#endif
+			if (m_bEventDenoisingEnabled)
+			{
+				denoisedPerRow();
+			}
 			//-------- event time stamp --------
 			m_iLastRowTimeStamp = m_iRowTimeStamp;
 			//row_time_stamp[15:0] = data_28_1[17:2] = value7[5:2] + value3[7:0] + value7[1:0] + value6[7:6]
@@ -2034,14 +2050,13 @@ void CeleX5DataProcessor::processMIPIEventTimestamp()
 void CeleX5DataProcessor::saveIntensityEvent(int col, int adc_12bit, int adc_8bit)
 {
 	int index = m_iCurrentRow * CELEX5_COL + col;
-
-#ifndef _EO_ROW_DENOISED_
-	m_pEventCountBuffer[index] += 1;
-	m_pEventADCBuffer[index] = adc_8bit;
-	m_uiPixelCount++;
-	m_uiPixelCountForEPS++;
-#endif
-
+	if (!m_bEventDenoisingEnabled)
+	{
+		m_pEventCountBuffer[index] += 1;
+		m_pEventADCBuffer[index] = adc_8bit;
+		m_uiPixelCount++;
+		m_uiPixelCountForEPS++;
+	}
 	if (m_bEventStreamEnabled)
 	{
 		EventData eventData;
@@ -2061,11 +2076,14 @@ void CeleX5DataProcessor::saveIntensityEvent(int col, int adc_12bit, int adc_8bi
 			eventData.polarity = 0;
 		m_pLastADC[index] = adc_12bit;
 
-#ifdef _EO_ROW_DENOISED_
-		m_vecEventDataPerRow.push_back(eventData);
-#else
-		m_vecEventData.push_back(eventData);
-#endif
+		if (m_bEventDenoisingEnabled)
+		{
+			m_vecEventDataPerRow.push_back(eventData);
+		}
+		else
+		{
+			m_vecEventData.push_back(eventData);
+		}
 	}
 }
 
@@ -2079,13 +2097,13 @@ void CeleX5DataProcessor::saveOpticalFlowEvent(int col, int adc_12bit, int adc_8
 	else if (adc_fpn > 4095)
 		adc_fpn = 4095;
 
-#ifndef _EO_ROW_DENOISED_
-	m_pEventCountBuffer[index] += 1;
-	m_pEventADCBuffer[index] = (adc_fpn >> 4);
-	m_uiPixelCount++;
-	m_uiPixelCountForEPS++;
-#endif
-
+	if (!m_bEventDenoisingEnabled)
+	{
+		m_pEventCountBuffer[index] += 1;
+		m_pEventADCBuffer[index] = (adc_fpn >> 4);
+		m_uiPixelCount++;
+		m_uiPixelCountForEPS++;
+	}
 	if (m_bEventStreamEnabled)
 	{
 		EventData eventData;
@@ -2107,11 +2125,14 @@ void CeleX5DataProcessor::saveOpticalFlowEvent(int col, int adc_12bit, int adc_8
 		eventData.t_in_pixel_ramp_no = t_ramp_no;
 		eventData.t_in_pixel_increasing = adc_fpn + t_ramp_no * 4096;
 
-#ifdef _EO_ROW_DENOISED_
-		m_vecEventDataPerRow.push_back(eventData);
-#else
-		m_vecEventData.push_back(eventData);
-#endif
+		if (m_bEventDenoisingEnabled)
+		{
+			m_vecEventDataPerRow.push_back(eventData);
+		}
+		else
+		{
+			m_vecEventData.push_back(eventData);
+		}
 	}
 }
 
