@@ -54,6 +54,10 @@ public:
 	void enableIMUModule();
 	bool isIMUModuleEnabled();
 
+	void disableEventDenoising();
+	void enableEventDenoising();
+	bool isEventDenoisingEnabled();
+
 	CX5SensorDataServer *getSensorDataServer();
 	CeleX5ProcessedData *getProcessedData();
 
@@ -201,6 +205,7 @@ private:
 	bool                     m_bFrameModuleEnabled;
 	bool                     m_bEventStreamEnabled;
 	bool                     m_bIMUModuleEnabled;
+	bool                     m_bEventDenoisingEnabled;
 	//
 	std::time_t              m_lFullFrameTimeStamp_ForUser;
 	std::time_t              m_lEventFrameTimeStamp_ForUser;

@@ -157,6 +157,13 @@ public:
 	bool isIMUModuleEnabled();
 
 	/*
+	* Enable/Disable the Event Denoising
+	*/
+	void disableEventDenoising();
+	void enableEventDenoising();
+	bool isEventDenoisingEnabled();
+
+	/*
 	* Get Full-frame pic buffer or mat
 	*/
 	void getFullPicBuffer(unsigned char* buffer);

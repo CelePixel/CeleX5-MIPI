@@ -24,7 +24,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-
 #define READ_BIN_TIME            1
 #define UPDATE_PLAY_INFO_TIME    30
 
