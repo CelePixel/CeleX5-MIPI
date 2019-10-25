@@ -137,6 +137,7 @@ bool USBIR::usb_check_device(libusb_device *dev, int usb_vid, int usb_pid, int t
 										//return true;
 										printf("------------------- find imu!\n");
 										bFindIMU = true;
+										g_bUsingIMUCallback = true;
 									}
                                 }
 								if (bFindVideo/* && bFindIMU*/)
@@ -325,13 +326,16 @@ bool USBIR::start(void)
                 //return true;
             }
 			//added by xiaoqin @2019.06.11 for receiving IMU data
-			if (usb_alloc_interrupt_transfer() == true)
+			if (g_bUsingIMUCallback)
 			{
-				bSucceed2 = true;
-				printf("usb_alloc_interrupt_transfer was successful!\n");
-				//return true;
+				if (usb_alloc_interrupt_transfer() == true)
+				{
+					bSucceed2 = true;
+					printf("usb_alloc_interrupt_transfer was successful!\n");
+					//return true;
+				}
 			}
-			if (bSucceed1 && bSucceed2)
+			if (bSucceed1)
 			{
 				return true;
 			}
@@ -348,9 +352,12 @@ void USBIR::stop(void)
     {
         cancel_bulk_transfer(bulk_transfer[i]);
     }
-	for (int i = 0; i < MAX_URB_NUMBER_IMU; i++)
+	if (g_bUsingIMUCallback)
 	{
-		libusb_cancel_transfer(interrupt_transfer[i]);
+		for (int i = 0; i < MAX_URB_NUMBER_IMU; i++)
+		{
+			libusb_cancel_transfer(interrupt_transfer[i]);
+		}
 	}
     video_stop();
     Exit();

@@ -5,6 +5,7 @@
 #include "Package.h"
 
 extern bool    g_bTransfer_Error;
+extern bool    g_bUsingIMUCallback;
 
 bool Init(void);
 void Exit(void);

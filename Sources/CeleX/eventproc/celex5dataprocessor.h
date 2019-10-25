@@ -58,6 +58,13 @@ public:
 	void enableEventDenoising();
 	bool isEventDenoisingEnabled();
 
+	/*
+	* Enable/Disable the Event Count Slice
+	*/
+	void disableEventCountSlice();
+	void enableEventCountSlice();
+	bool isEventCountSliceEnabled();
+
 	CX5SensorDataServer *getSensorDataServer();
 	CeleX5ProcessedData *getProcessedData();
 
@@ -75,6 +82,10 @@ public:
 
 	void setEventFrameTime(uint32_t value, uint32_t clock);
 	uint32_t getEventFrameTime();
+
+	void setEventCountSliceNum(uint32_t value);
+	uint32_t getEventCountSliceNum();
+
 	void setEventShowMethod(EventShowType type, int value);
 	EventShowType getEventShowMethod();
 	void setEventFrameStartPos(uint32_t value);
@@ -99,8 +110,8 @@ private:
 	void checkIfShowImage(); //only for mipi
 	bool createImage(std::time_t time_stamp_end);
 	void generateFPNimpl();
-	int calculateDenoiseScore(unsigned char* pBuffer, unsigned int pos);
-	int calMean(unsigned char* pBuffer, unsigned int pos);
+	int  calculateDenoiseScore(unsigned char* pBuffer, unsigned int pos);
+	int  calMean(unsigned char* pBuffer, unsigned int pos);
 	void calDirectionAndSpeed(int i, int j, uint16_t* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer);
 
 	void saveFullPicRawData(uint8_t* pData);
@@ -113,7 +124,8 @@ private:
 	void saveFormat2Event(int col, int adc); //save event into buffer and event vector.
 	int  getCurrentIndex(int initIndex);
 
-	void denoisedPerRow();
+	void denoisedPerRow(bool bHasADC);
+	void calEventCountSlice(int i, int index);
 
 private:
 	CeleX5ProcessedData*     m_pCX5ProcessedData;
@@ -137,10 +149,14 @@ private:
 	unsigned char*           m_pEventFrameBuffer5_ForUser;
 	unsigned char*           m_pEventFrameBuffer6_ForUser;
 	unsigned char*           m_pEventFrameBuffer7_ForUser;
+	unsigned char*           m_pEventFrameBuffer8_ForUser;
 
 	unsigned char*           m_pOpticalFrameBuffer1_ForUser;
 	unsigned char*           m_pOpticalFrameBuffer2_ForUser;
 	unsigned char*           m_pOpticalFrameBuffer3_ForUser;
+
+    uint8_t*                 m_pEventSliceBuffer;
+	uint8_t*                 m_pEventCountSlice[10];
 	//
 	CeleX5::CeleX5Mode       m_emCurrentSensorMode;
 	CeleX5::CeleX5Mode       m_emSensorFixedMode;
@@ -173,6 +189,7 @@ private:
 	int32_t                  m_iLastRow;
 	int32_t                  m_iCurrentRow;
 	uint32_t                 m_uiRowCount;
+	uint32_t                 m_uiEventCountSliceNum;
 
 	int                      m_iFpnCalculationTimes;
 	uint32_t                 m_uiEventFrameTime;
@@ -206,6 +223,7 @@ private:
 	bool                     m_bEventStreamEnabled;
 	bool                     m_bIMUModuleEnabled;
 	bool                     m_bEventDenoisingEnabled;
+	bool                     m_bEventCountSliceEnabled;
 	//
 	std::time_t              m_lFullFrameTimeStamp_ForUser;
 	std::time_t              m_lEventFrameTimeStamp_ForUser;

@@ -51,22 +51,22 @@ CeleX5::CeleX5()
 	, m_uiClockRate(100)
 	, m_uiLastClockRate(100)
 	, m_iEventDataFormat(2)
-	, m_pDataToRead(NULL)
+	, m_pDataToRead(nullptr)
 	, m_uiPackageCount(0)
 	, m_uiTotalPackageCount(0)
 	, m_bFirstReadFinished(false)
-	, m_pReadBuffer(NULL)
+	, m_pReadBuffer(nullptr)
 	, m_emDeviceType(CeleX5::Unknown_Devive)
-	, m_pCeleDriver(NULL)
-	, m_pDataProcessor(NULL)
+	, m_pCeleDriver(nullptr)
+	, m_pDataProcessor(nullptr)
 	, m_uiPackageCounter(0)
 	, m_uiPackageTDiff(0)
 	, m_uiPackageBeginT(0)
 	, m_bAutoISPEnabled(false)
 	, m_uiBrightness(100)
 	, m_uiThreshold(171)
-	, m_arrayISPThreshold{ 60, 500, 2500 }
-	, m_arrayBrightness{ 100, 110, 120, 130 }
+	, m_arrayISPThreshold{ 10, 20, 80 }
+	, m_arrayBrightness{ 95, 150, 190, 200 }
 	, m_uiAutoISPRefreshTime(80)
 	, m_uiISOLevel(2)
 	, m_uiOpticalFlowFrameTime(30)
@@ -95,7 +95,7 @@ CeleX5::~CeleX5()
 		if (m_pDataProcessThread->isRunning())
 			m_pDataProcessThread->terminate();
 		delete m_pDataProcessThread;
-		m_pDataProcessThread = NULL;
+		m_pDataProcessThread = nullptr;
 	}
 	if (m_pCeleDriver)
 	{
@@ -104,7 +104,7 @@ CeleX5::~CeleX5()
 		m_pCeleDriver->closeStream();
 		m_pCeleDriver->closeUSB();
 		delete m_pCeleDriver;
-		m_pCeleDriver = NULL;
+		m_pCeleDriver = nullptr;
 	}
 	if (m_pSequenceMgr) delete m_pSequenceMgr;
 	//
@@ -125,6 +125,13 @@ CeleX5::~CeleX5()
 	}
 }
 
+/*
+*  @function :  openSensor
+*  @brief    :	open the celex sensor
+*  @input    :  type : type of celex device
+*  @output   :
+*  @return   :	bool : true for open sucessfully; false for failed
+*/
 bool CeleX5::openSensor(DeviceType type)
 {
 	m_emDeviceType = type;
@@ -202,6 +209,13 @@ bool CeleX5::openSensor(DeviceType type)
 	return true;
 }
 
+/*
+*  @function :  isSensorReady
+*  @brief    :	the state of the celex sensor
+*  @input    :
+*  @output   :
+*  @return   :	bool : true for open sucessfully; false for failed
+*/
 bool CeleX5::isSensorReady()
 {
 	return m_bSensorReady;
@@ -316,36 +330,85 @@ void CeleX5::parseMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_
 	m_pDataProcessor->processMIPIData(pData, dataSize, time_stamp_end, imu_data);
 }
 
+/*
+*  @function :  disableFrameModule
+*  @brief    :	disable the frame creating module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::disableFrameModule()
 {
 	m_pDataProcessor->disableFrameModule();
 }
 
+/*
+*  @function :  enableFrameModule
+*  @brief    :	enable the frame creating module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enableFrameModule()
 {
 	m_pDataProcessor->enableFrameModule();
 }
 
+/*
+*  @function :  isFrameModuleEnabled
+*  @brief    :	get the state of frame module
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for frame module enable; false for disabled
+*/
 bool CeleX5::isFrameModuleEnabled()
 {
 	return m_pDataProcessor->isFrameModuleEnabled();
 }
 
+/*
+*  @function :  disableEventStreamModule
+*  @brief    :	disable the event stream module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::disableEventStreamModule()
 {
 	m_pDataProcessor->disableEventStreamModule();
 }
 
+/*
+*  @function :  enableEventStreamModule
+*  @brief    :	enable the event stream module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enableEventStreamModule()
 {
 	m_pDataProcessor->enableEventStreamModule();
 }
 
+/*
+*  @function :  isEventStreamEnabled
+*  @brief    :	get the state of event stream module
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for event stream module enable; false for disabled
+*/
 bool CeleX5::isEventStreamEnabled()
 {
 	return m_pDataProcessor->isEventStreamEnabled();
 }
 
+/*
+*  @function :  disableIMUModule
+*  @brief    :	disable the IMU module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::disableIMUModule()
 {
 	//imu_enable: bit[8], hard_reset: bit[3:2], als_enable: bit[1]
@@ -358,6 +421,13 @@ void CeleX5::disableIMUModule()
 	m_pDataProcessor->disableIMUModule();
 }
 
+/*
+*  @function :  enableIMUModule
+*  @brief    :	enable the IMU module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enableIMUModule()
 {
 	//imu_enable: bit[8], hard_reset: bit[3:2], als_enable: bit[1]
@@ -369,36 +439,122 @@ void CeleX5::enableIMUModule()
 	m_pDataProcessor->enableIMUModule();
 }
 
+/*
+*  @function :  isIMUModuleEnabled
+*  @brief    :	get the state of IMU module
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for IMU module enable; false for disabled
+*/
 bool CeleX5::isIMUModuleEnabled()
 {
 	return m_pDataProcessor->isIMUModuleEnabled();
 }
 
+/*
+*  @function :  disableEventDenoising
+*  @brief    :	disable the event denoise module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::disableEventDenoising()
 {
 	m_pDataProcessor->disableEventDenoising();
 }
 
+/*
+*  @function :  enableEventDenoising
+*  @brief    :	enable the event denoise module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enableEventDenoising()
 {
 	m_pDataProcessor->enableEventDenoising();
 }
 
+/*
+*  @function :  isEventDenoisingEnabled
+*  @brief    :	get the state of event denoise module
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for event denoise module enable; false for disabled
+*/
 bool CeleX5::isEventDenoisingEnabled()
 {
 	return m_pDataProcessor->isEventDenoisingEnabled();
 }
 
+/*
+*  @function :  disableEventCountSlice
+*  @brief    :	disable the event count slice module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
+void CeleX5::disableEventCountSlice()
+{
+	m_pDataProcessor->disableEventCountSlice();
+}
+
+/*
+*  @function :  enableEventCountSlice
+*  @brief    :	enable the event count slice module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
+void CeleX5::enableEventCountSlice()
+{
+	m_pDataProcessor->enableEventCountSlice();;
+}
+
+/*
+*  @function :  isEventCountSliceEnabled
+*  @brief    :	get the state of event count slice module
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for event count slice module enable; false for disabled
+*/
+bool CeleX5::isEventCountSliceEnabled()
+{
+	return m_pDataProcessor->isEventCountSliceEnabled();
+}
+
+/*
+*  @function :  getFullPicBuffer
+*  @brief    :	get the full buffer of sensor
+*  @input    :
+*  @output   :	buffer : the buffer pointer for full frame
+*  @return   :
+*/
 void CeleX5::getFullPicBuffer(unsigned char* buffer)
 {
 	m_pDataProcessor->getFullPicBuffer(buffer);
 }
 
+/*
+*  @function :  getFullPicBuffer
+*  @brief    :	get the full buffer of sensor
+*  @input    :
+*  @output   :	buffer : the buffer pointer for full frame
+*				timeStamp : the time stamp of the full frame
+*  @return   :
+*/
 void CeleX5::getFullPicBuffer(unsigned char* buffer, std::time_t& time_stamp)
 {
 	m_pDataProcessor->getFullPicBuffer(buffer, time_stamp);
 }
 
+/*
+*  @function :  getFullPicMat
+*  @brief    :	get the full pic mat of sensor
+*  @input    :
+*  @output   :	
+*  @return   :	the mat format full pic
+*/
 cv::Mat CeleX5::getFullPicMat()
 {
 	//CeleX5ProcessedData* pSensorData = m_pDataProcessor->getProcessedData();
@@ -413,16 +569,40 @@ cv::Mat CeleX5::getFullPicMat()
 	return matPic;
 }
 
+/*
+*  @function :  getEventPicBuffer
+*  @brief    :	get the event buffer of sensor
+*  @input    :
+*  @output   :	buffer : the buffer pointer for event frame
+*				type : the type the event frame
+*  @return   :
+*/
 void CeleX5::getEventPicBuffer(unsigned char* buffer, emEventPicType type)
 {
 	m_pDataProcessor->getEventPicBuffer(buffer, type);
 }
 
+/*
+*  @function :  getEventPicBuffer
+*  @brief    :	get the event buffer of sensor
+*  @input    :
+*  @output   :	buffer : the buffer pointer for event frame
+*				timeStamp : the time stamp of the event frame
+*				type : the type the event frame
+*  @return   :
+*/
 void CeleX5::getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emEventPicType type)
 {
 	m_pDataProcessor->getEventPicBuffer(buffer, time_stamp, type);
 }
 
+/*
+*  @function :  getEventPicMat
+*  @brief    :	get the event mat of sensor
+*  @input    :
+*  @output   :	type : the type the event frame
+*  @return   :	the mat format event pic
+*/
 cv::Mat CeleX5::getEventPicMat(emEventPicType type)
 {
 	//CeleX5ProcessedData* pSensorData = m_pDataProcessor->getProcessedData();
@@ -437,6 +617,14 @@ cv::Mat CeleX5::getEventPicMat(emEventPicType type)
 	return matPic;
 }
 
+/*
+*  @function :  getOpticalFlowPicBuffer
+*  @brief    :	get the optical flow buffer of sensor
+*  @input    :
+*  @output   :	buffer : the buffer pointer for optical flow frame
+*				type : the type the optical flow frame
+*  @return   :
+*/
 void CeleX5::getOpticalFlowPicBuffer(unsigned char* buffer, emFullPicType type)
 {
 	m_pDataProcessor->getOpticalFlowPicBuffer(buffer, type);
@@ -447,6 +635,13 @@ void CeleX5::getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_st
 	m_pDataProcessor->getOpticalFlowPicBuffer(buffer, time_stamp, type);
 }
 
+/*
+*  @function :  getOpticalFlowPicMat
+*  @brief    :	get the event mat of sensor
+*  @input    :
+*  @output   :	type : the type the optical flow frame
+*  @return   :	the mat format optical flow pic
+*/
 cv::Mat CeleX5::getOpticalFlowPicMat(emFullPicType type)
 {
 	//CeleX5ProcessedData* pSensorData = m_pDataProcessor->getProcessedData();
@@ -461,21 +656,51 @@ cv::Mat CeleX5::getOpticalFlowPicMat(emFullPicType type)
 	return matPic;
 }
 
+/*
+*  @function :  getEventDataVector
+*  @brief    :	get the vector of the event data
+*  @input    :
+*  @output   :	vector : the vector of the event data
+*  @return   :	bool : true for non-empty vector; false for empty vector
+*/
 bool CeleX5::getEventDataVector(std::vector<EventData> &vector)
 {
 	return m_pDataProcessor->getEventDataVector(vector);
 }
 
+/*
+*  @function :  getEventDataVector
+*  @brief    :	get the vector of the event data
+*  @input    :
+*  @output   :	vector : the vector of the event data
+*				frameNo : the frame number of the event vector
+*  @return   :	bool : true for non-empty vector; false for empty vector
+*/
 bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint64_t& frameNo)
 {
 	return m_pDataProcessor->getEventDataVector(vector, frameNo);
 }
 
+/*
+*  @function :  getEventDataVectorEx
+*  @brief    :	get the vector of the event data
+*  @input    :
+*  @output   :	vector : the vector of the event data
+*				frameNo : the frame number of the event vector
+*  @return   :	bool : true for non-empty vector; false for empty vector
+*/
 bool CeleX5::getEventDataVectorEx(std::vector<EventData> &vector, std::time_t& time_stamp, bool bDenoised)
 {
 	return m_pDataProcessor->getEventDataVectorEx(vector, time_stamp, bDenoised);
 }
 
+/*
+*  @function :  getIMUData
+*  @brief    :	get the vector of the IMU data
+*  @input    :
+*  @output   :	data : the vector of the IMU data
+*  @return   :	The number of IMU data packets actually obtained.
+*/
 int CeleX5::getIMUData(std::vector<IMUData>& data)
 {
 	return m_pDataProcessor->getIMUData(data);
@@ -603,6 +828,13 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 	m_pDataProcessor->setSensorFixedMode(mode);
 }
 
+/*
+*  @function :  getSensorFixedMode
+*  @brief    :	get the sensor operation mode in fixed mode
+*  @input    :
+*  @output   :
+*  @return   :	the fixed working mode of CeleX-5 sensor
+*/
 CeleX5::CeleX5Mode CeleX5::getSensorFixedMode()
 {
 	return m_pDataProcessor->getSensorFixedMode();
@@ -692,6 +924,13 @@ void CeleX5::setSensorLoopMode(CeleX5Mode mode, int loopNum)
 	m_pDataProcessor->setSensorLoopMode(mode, loopNum);
 }
 
+/*
+*  @function :  getSensorLoopMode
+*  @brief    :	get the sensor operation mode in loop mode
+*  @input    :	loopNum : the number of the loop
+*  @output   :
+*  @return   :	the loop working mode of CeleX-5 sensor
+*/
 CeleX5::CeleX5Mode CeleX5::getSensorLoopMode(int loopNum)
 {
 	return m_pDataProcessor->getSensorLoopMode(loopNum);
@@ -762,21 +1001,49 @@ void CeleX5::setLoopModeEnabled(bool enable)
 	m_pDataProcessor->setLoopModeEnabled(enable);
 }
 
+/*
+*  @function :  isLoopModeEnabled
+*  @brief    :	the state whether the Loop Mode is enabled.
+*  @input    :
+*  @output   :
+*  @return   :	the state whether the Loop Mode is enabled.
+*/
 bool CeleX5::isLoopModeEnabled()
 {
 	return m_bLoopModeEnabled;
 }
 
+/*
+*  @function :  setFpnFile
+*  @brief    :	set the FPN path
+*  @input    :	fpnFile : the directory path and file name of FPN file required
+*  @output   :
+*  @return   :	bool : true for openning fpn file successfully ; false for failed
+*/
 bool CeleX5::setFpnFile(const std::string& fpnFile)
 {
 	return m_pDataProcessor->setFpnFile(fpnFile);
 }
 
+/*
+*  @function :  generateFPN
+*  @brief    :	generate the FPN path
+*  @input    :	fpnFile : the directory path and file name of FPN file to be saved
+*  @output   :
+*  @return   :
+*/
 void CeleX5::generateFPN(std::string fpnFile)
 {
 	m_pDataProcessor->generateFPN(fpnFile);
 }
 
+/*
+*  @function :  setClockRate
+*  @brief    :	set the clock rate of the sensor
+*  @input    :	value : the clock rate of the CeleX-5 sensor, unit is MHz
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setClockRate(uint32_t value)
 {
 	if (value > 100 || value < 20)
@@ -840,14 +1107,25 @@ void CeleX5::setClockRate(uint32_t value)
 	}
 }
 
+/*
+*  @function :  getClockRate
+*  @brief    :	get the clock rate of the sensor
+*  @input    :
+*  @output   :
+*  @return   :	the clock rate of the CeleX-5 sensor, unit is MHz
+*/
 uint32_t CeleX5::getClockRate()
 {
 	return m_uiClockRate;
 }
 
-// BIAS_EVT_VL : 341 address(2/3)
-// BIAS_EVT_DC : 512 address(4/5)
-// BIAS_EVT_VH : 683 address(6/7)
+/*
+*  @function :  setThreshold
+*  @brief    :	set the threshold of the sensor
+*  @input    :	value : threshold value
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setThreshold(uint32_t value)
 {
 	m_uiThreshold = value;
@@ -867,6 +1145,13 @@ void CeleX5::setThreshold(uint32_t value)
 	enterStartMode();
 }
 
+/*
+*  @function :  getThreshold
+*  @brief    :	get the threshold of the sensor
+*  @input    :
+*  @output   :
+*  @return   :	the threshold of the CeleX-5 sensor
+*/
 uint32_t CeleX5::getThreshold()
 {
 	return m_uiThreshold;
@@ -885,11 +1170,25 @@ void CeleX5::setBrightness(uint32_t value)
 	enterStartMode();
 }
 
+/*
+*  @function :  getBrightness
+*  @brief    :	get the brightness of the sensor
+*  @input    :
+*  @output   :
+*  @return   :	the brightness of the CeleX-5 sensor
+*/
 uint32_t CeleX5::getBrightness()
 {
 	return m_uiBrightness;
 }
 
+/*
+*  @function :  setISOLevel
+*  @brief    :	set the ISO level of the sensor
+*  @input    :	value : ISO level, 1-6 for sensor with jumper wire, 1-4 for sensor without jumper wire
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setISOLevel(uint32_t value)
 {
 	if (6 == m_uiISOLevelCount)
@@ -954,11 +1253,25 @@ void CeleX5::setISOLevel(uint32_t value)
 	}
 }
 
+/*
+*  @function :  getISOLevel
+*  @brief    :	get the ISO level of the sensor
+*  @input    :
+*  @output   :
+*  @return   :	the ISO level of the sensor
+*/
 uint32_t CeleX5::getISOLevel()
 {
 	return m_uiISOLevel;
 }
 
+/*
+*  @function :  getISOLevelCount
+*  @brief    :	get the ISO count of the sensor
+*  @input    :
+*  @output   :
+*  @return   :	ISO count, 6 for sensor with jumper wire, 4 for sensor without jumper wire
+*/
 uint32_t CeleX5::getISOLevelCount()
 {
 	return m_uiISOLevelCount;
@@ -975,6 +1288,14 @@ void CeleX5::setEventFrameTime(uint32_t value)
 {
 	m_pDataProcessor->setEventFrameTime(value, m_uiClockRate);
 }
+
+/*
+*  @function :  getEventFrameTime
+*  @brief    :	get the event frame time in Event mode
+*  @input    :
+*  @output   :
+*  @return   :	the frame time of Event Mode, unit is ms
+*/
 uint32_t CeleX5::getEventFrameTime()
 {
 	return m_pDataProcessor->getEventFrameTime();
@@ -994,9 +1315,27 @@ void CeleX5::setOpticalFlowFrameTime(uint32_t value)
 	wireIn(169, (value - 10) * 3 / 2, 0xFF);
 	enterStartMode();
 }
+
+/*
+*  @function :  getOpticalFlowFrameTime
+*  @brief    :	get the frame time in optical flow mode
+*  @input    :
+*  @output   :
+*  @return   :	the frame time of optical flow Mode, unit is ms
+*/
 uint32_t CeleX5::getOpticalFlowFrameTime()
 {
 	return m_uiOpticalFlowFrameTime;
+}
+
+void CeleX5::setEventCountSliceNum(uint32_t value)
+{
+	m_pDataProcessor->setEventCountSliceNum(value);
+}
+
+uint32_t CeleX5::getEventCountSliceNum()
+{
+	return m_pDataProcessor->getEventCountSliceNum();
 }
 
 // Set the duration of event mode (Mode_A/B/C) when sensor operates in loop mode
@@ -1037,6 +1376,13 @@ void CeleX5::setPictureNumber(uint32_t num, CeleX5Mode mode)
 	enterStartMode();
 }
 
+/*
+*  @function :  reset
+*  @brief    :	reset the sensor and clear the data in the FIFO buffer
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::reset()
 {
 	if (m_emDeviceType == CeleX5::CeleX5_MIPI)
@@ -1047,40 +1393,90 @@ void CeleX5::reset()
 	}
 }
 
+/*
+*  @function :  pauseSensor
+*  @brief    :	pause the sensor
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::pauseSensor()
 {
 	enterCFGMode();
 }
 
+/*
+*  @function :  restartSensor
+*  @brief    :	restart the sensor
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::restartSensor()
 {
 	enterStartMode();
 }
 
+/*
+*  @function :  stopSensor
+*  @brief    :	stop the sensor and do hadware reset
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::stopSensor()
 {
 	//hard_reset: bit[3:2], als_enable: bit[1]
 	m_pCeleDriver->i2c_set(254, 10); //1010
 }
 
+/*
+*  @function :  getSerialNumber
+*  @brief    :	get the serial number of sensor
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 std::string CeleX5::getSerialNumber()
 {
 	//cout << "------------- Serial Number: " << m_pCeleDriver->getSerialNumber() << endl;
 	return m_pCeleDriver->getSerialNumber();
 }
 
+/*
+*  @function :  getFirmwareVersion
+*  @brief    :	get the firmware version of sensor
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 std::string CeleX5::getFirmwareVersion()
 {
 	//cout << "------------- Firmware Version: " << m_pCeleDriver->getFirmwareVersion() << endl;
 	return m_pCeleDriver->getFirmwareVersion();
 }
 
+/*
+*  @function :  getFirmwareDate
+*  @brief    :	get the firmware data of sensor
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 std::string CeleX5::getFirmwareDate()
 {
 	//cout << "------------- Firmware Date: " << m_pCeleDriver->getFirmwareDate() << endl;
 	return m_pCeleDriver->getFirmwareDate();
 }
 
+/*
+*  @function :  setEventShowMethod
+*  @brief    :	set the method to show the event data
+*  @input    :	type : the type for creating frame
+*				value : the value related to the type
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setEventShowMethod(EventShowType type, int value)
 {
 	m_pDataProcessor->setEventShowMethod(type, value);
@@ -1088,11 +1484,26 @@ void CeleX5::setEventShowMethod(EventShowType type, int value)
 		setEventFrameTime(value);
 }
 
+/*
+*  @function :  getEventShowMethod
+*  @brief    :	get current event show method
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 EventShowType CeleX5::getEventShowMethod()
 {
 	return m_pDataProcessor->getEventShowMethod();
 }
 
+/*
+*  @function :  setRotateType
+*  @brief    :	set rotate type
+*  @input    :	type : rotate parameter
+*					   1 for up and down flip, 2 for left and right flip, 3 for up and down left and right flip
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setRotateType(int type)
 {
 	//cout << __FUNCTION__ << ": type = " << type << endl;
@@ -1100,21 +1511,49 @@ void CeleX5::setRotateType(int type)
 	m_pDataProcessor->setRotateType(m_iRotateType);
 }
 
+/*
+*  @function :  getRotateType
+*  @brief    :	get current rotate type
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 int CeleX5::getRotateType()
 {
 	return m_iRotateType;
 }
 
+/*
+*  @function :  setEventCountStepSize
+*  @brief    :	set the step size of event count picture
+*  @input    :	size : the step size
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setEventCountStepSize(uint32_t size)
 {
 	m_pDataProcessor->setEventCountStep(size);
 }
 
+/*
+*  @function :  getEventCountStepSize
+*  @brief    :	get the step size of event count picture
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 uint32_t CeleX5::getEventCountStepSize()
 {
 	return m_pDataProcessor->getEventCountStep();
 }
 
+/*
+*  @function :  setRowDisabled
+*  @brief    :	modify the resolution of the image output by CeleX-5 Sensor
+*  @input    :	rowMask : bit parameters for the specified rows
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setRowDisabled(uint8_t rowMask)
 {
 	enterCFGMode();
@@ -1122,13 +1561,26 @@ void CeleX5::setRowDisabled(uint8_t rowMask)
 	enterStartMode();
 }
 
+/*
+*  @function :  setShowImagesEnabled
+*  @brief    :	enable or disable image show
+*  @input    :	enable : enable or disable
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setShowImagesEnabled(bool enable)
 {
 	m_bShowImagesEnabled = enable;
 	m_pDataProcessThread->setShowImagesEnabled(enable);
 }
 
-//0: format 0; 1: format 1; 2: format 2
+/*
+*  @function :  setEventDataFormat
+*  @brief    :	set the event data format to be used
+*  @input    :	format : the event data format 0: format 0, 1: format 1, 2: format 2
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setEventDataFormat(int format)
 {
 	m_iEventDataFormat = format;
@@ -1136,11 +1588,25 @@ void CeleX5::setEventDataFormat(int format)
 	m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 }
 
+/*
+*  @function :  getEventDataFormat
+*  @brief    :	get the event data format have been used
+*  @input    :
+*  @output   :
+*  @return   :  the event data format to be used
+*/
 int CeleX5::getEventDataFormat()
 {
 	return m_iEventDataFormat;
 }
 
+/*
+*  @function :  setEventFrameStartPos
+*  @brief    :	set the start pos of the event data in the loop mode
+*  @input    :	value : start position
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setEventFrameStartPos(uint32_t value)
 {
 	m_pDataProcessor->setEventFrameStartPos(value);
@@ -1158,6 +1624,13 @@ void CeleX5::setAntiFlashlightEnabled(bool enabled)
 	enterStartMode();
 }
 
+/*
+*  @function :  setAutoISPEnabled
+*  @brief    :	enable or disable the ISP function
+*  @input    :	enable : enable select: 1:enable / 0:disable
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setAutoISPEnabled(bool enable)
 {
 	if (enable)
@@ -1225,11 +1698,25 @@ void CeleX5::setAutoISPEnabled(bool enable)
 	}
 }
 
+/*
+*  @function :  isAutoISPEnabled
+*  @brief    :	get the auto ISP state
+*  @input    :
+*  @output   :
+*  @return   :	bool : true for enabled, false for diabled
+*/
 bool CeleX5::isAutoISPEnabled()
 {
 	return m_bAutoISPEnabled;
 }
 
+/*
+*  @function :  setALSEnabled
+*  @brief    :	enable or disable the ALS function
+*  @input    :	enable : enable select: 1:enable / 0:disable
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setALSEnabled(bool enable)
 {
 	//als: bit[1] = 1 menas disabled; bit[1] = 0 means enabled
@@ -1250,11 +1737,26 @@ void CeleX5::setALSEnabled(bool enable)
 	m_bALSEnabled = enable;
 }
 
+/*
+*  @function :  isALSEnabled
+*  @brief    :	get the ALS state
+*  @input    :
+*  @output   :
+*  @return   :	bool : true for enabled, false for diabled
+*/
 bool CeleX5::isALSEnabled()
 {
 	return m_bALSEnabled;
 }
 
+/*
+*  @function :  setISPThreshold
+*  @brief    :	set the threshold of ISP
+*  @input    :	value : threshold
+*				num : there are 3 sets of threshold, num is the index of sets
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setISPThreshold(uint32_t value, int num)
 {
 	m_arrayISPThreshold[num - 1] = value;
@@ -1266,6 +1768,14 @@ void CeleX5::setISPThreshold(uint32_t value, int num)
 		writeRegister(239, -1, 238, m_arrayISPThreshold[2]); //AUTOISP_BRT_THRES3
 }
 
+/*
+*  @function :  setISPBrightness
+*  @brief    :	set the brightness of ISP
+*  @input    :	value : brightness
+*				num : there are 3 sets of brightness, num is the index of sets
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setISPBrightness(uint32_t value, int num)
 {
 	m_arrayBrightness[num - 1] = value;
@@ -1273,12 +1783,26 @@ void CeleX5::setISPBrightness(uint32_t value, int num)
 	writeRegister(22, -1, 23, m_arrayBrightness[num - 1]);
 }
 
+/*
+*  @function :  startRecording
+*  @brief    :	start recording the raw data of the sensor and save it as a bin file
+*  @input    :	filePath : the directory path to save the bin file
+*  @output   :
+*  @return   :
+*/
 void CeleX5::startRecording(std::string filePath)
 {
 	m_pDataRecorder->startRecording(filePath);
 	m_pDataProcessThread->setRecordState(true);
 }
 
+/*
+*  @function :  stopRecording
+*  @brief    :	stop recording the raw data of the sensor
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::stopRecording()
 {
 	if (CeleX5::CeleX5_MIPI == m_emDeviceType)
@@ -1350,6 +1874,13 @@ bool CeleX5::openBinFile(std::string filePath)
 	return true;
 }
 
+/*
+*  @function :  readBinFileData
+*  @brief    :	read data from the opened bin file
+*  @input    :
+*  @output   :
+*  @return   :	bool value whether the bin is read over
+*/
 bool CeleX5::readBinFileData()
 {
 	//cout << __FUNCTION__ << endl;
@@ -1420,17 +1951,38 @@ bool CeleX5::readBinFileData()
 	return eof;
 }
 
+/*
+*  @function :  getTotalPackageCount
+*  @brief    :	get total package count of data
+*  @input    :
+*  @output   :
+*  @return   :	package count
+*/
 uint32_t CeleX5::getTotalPackageCount()
 {
 	return m_uiTotalPackageCount;
 }
 
+/*
+*  @function :  getCurrentPackageNo
+*  @brief    :	get current package number of data
+*  @input    :
+*  @output   :
+*  @return   :	package number
+*/
 uint32_t CeleX5::getCurrentPackageNo()
 {
 	//cout << "getCurrentPackageNo: " << m_pDataProcessThread->getPackageNo() << endl;
 	return m_pDataProcessThread->getPackageNo();
 }
 
+/*
+*  @function :  setCurrentPackageNo
+*  @brief    :	set current package number of data
+*  @input    :	value : package number
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setCurrentPackageNo(uint32_t value)
 {
 	setPlaybackState(Replay);

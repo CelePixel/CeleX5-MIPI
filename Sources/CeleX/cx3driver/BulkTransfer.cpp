@@ -8,8 +8,6 @@
 #include <iostream>
 #include <chrono>
 
-#define USING_IMU_CALLBACK
-
 #define MAX_IMAGE_BUFFER_NUMBER    100
 CPackage  image_list[MAX_IMAGE_BUFFER_NUMBER];
 static CPackage*  current_package = nullptr;
@@ -21,9 +19,9 @@ static uint32_t   package_count = 0;
 
 clock_t clock_begin = 0;
 clock_t clock_end = 0;
-bool    g_bIMU_Module_Enabled = true;
 
 bool    g_bTransfer_Error = false;
+bool    g_bUsingIMUCallback = false;
 
 std::vector<IMU_Raw_Data>    imu_raw_data_list;
 
@@ -85,16 +83,18 @@ void generate_image(uint8_t *buffer, int length)
 	}
 	if (current_package)
 		current_package->Insert(buffer + buffer[0], length - buffer[0]);
-#ifndef USING_IMU_CALLBACK
-	if (g_bIMU_Module_Enabled && buffer[7] == 1)
+	//
+	if (!g_bUsingIMUCallback)
 	{
-		IMU_Raw_Data imu_data;
-		memcpy(imu_data.imu_data, buffer + 8, 20);
-		imu_data.time_stamp = getTimeStamp();
+		if (buffer[7] == 1)
+		{
+			IMU_Raw_Data imu_data;
+			memcpy(imu_data.imu_data, buffer + 8, 20);
+			imu_data.time_stamp = getTimeStamp();
 
-		current_package->m_vecIMUData.push_back(imu_data);
+			current_package->m_vecIMUData.push_back(imu_data);
+		}
 	}
-#endif
 	//
 	if (buffer[1] & 0x02)
 	{
@@ -110,13 +110,6 @@ void generate_image(uint8_t *buffer, int length)
 			if (write_frame_index >= MAX_IMAGE_BUFFER_NUMBER)
 				write_frame_index = 0;
 			package_count++;
-
-			//printf("--- package_count = %d\n", package_count);
-//#ifdef __linux__
-//			sem_post(&m_sem);
-//#else
-//			SetEvent(m_hEventHandle);
-//#endif // __linux__
 		}
 	}
 }
@@ -177,12 +170,6 @@ bool GetPicture(std::vector<uint8_t> &Image, std::time_t& time_stamp_end, std::v
 {
 	if (bRunning == true)
 	{
-//#ifdef __linux__
-//		int Ret = sem_wait(&m_sem);
-//#else
-//		DWORD Ret = WaitForSingleObject(m_hEventHandle, INFINITE);
-//#endif // __linux__
-//if (Ret == 0)
 		if (package_count > 0)
 		{
 			if (read_frame_index != write_frame_index)
@@ -190,20 +177,21 @@ bool GetPicture(std::vector<uint8_t> &Image, std::time_t& time_stamp_end, std::v
 				image_list[read_frame_index].GetImage(Image);
 				time_stamp_end = image_list[read_frame_index].m_lTime_Stamp_End;
 
-#ifdef USING_IMU_CALLBACK
-
+				if (g_bUsingIMUCallback)
+				{
 #ifdef _WIN32
-				EnterCriticalSection(&g_csIMUData);
+					EnterCriticalSection(&g_csIMUData);
 #endif
-				imu_data = imu_raw_data_list;
-				imu_raw_data_list.clear();
+					imu_data = imu_raw_data_list;
+					imu_raw_data_list.clear();
 #ifdef _WIN32
-				LeaveCriticalSection(&g_csIMUData);
+					LeaveCriticalSection(&g_csIMUData);
 #endif
-
-#else
-				imu_data = image_list[read_frame_index].m_vecIMUData;
-#endif
+				}
+				else
+				{
+					imu_data = image_list[read_frame_index].m_vecIMUData;
+				}
 				image_list[read_frame_index].m_vecIMUData.clear();
 				//printf("------------- read_frame_index = %d-------------\n", read_frame_index);
 				read_frame_index++;
