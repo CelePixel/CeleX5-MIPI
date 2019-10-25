@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 #QMAKE_CXXFLAGS += -std=c++11
 #CONFIG += console
@@ -56,7 +56,8 @@ SOURCES += main.cpp\
     celex5widget.cpp \
     celex5cfg.cpp \
     videostream.cpp \
-    settingswidget.cpp
+    settingswidget.cpp \
+    qcustomplot.cpp
 
 HEADERS  += mainwindow.h \
     sliderwidget.h \
@@ -65,7 +66,8 @@ HEADERS  += mainwindow.h \
     include/celex5/celex5.h \
     celex5cfg.h \
     videostream.h \
-    settingswidget.h
+    settingswidget.h \
+    qcustomplot.h
 
 FORMS    += mainwindow.ui
 

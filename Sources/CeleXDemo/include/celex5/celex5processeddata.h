@@ -19,6 +19,10 @@
 
 #include "celex5.h"
 
+/*
+*  This class is used to get the sensor data includes image 
+*  buffer, raw event data and some setting parameters.
+*/
 class CeleX5ProcessedData
 {
 public:

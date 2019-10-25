@@ -200,7 +200,7 @@ void SettingsWidget::createTapWidget1(QWidget *widget, QWidget *slotWidget)
              << "BRT Threshold 1" << "BRT Threshold 2" << "BRT Threshold 3";
     int min4[7] = {0};
     int max4[7] = {1023, 1023, 1023, 1023, 4095, 4095, 4095};
-    int value4[7] = {100, 110, 120, 130, 60, 500, 2500};
+    int value4[7] = {95, 130, 170, 200, 10, 20, 80};
     for (int i = 0; i < cfgList3.size(); i++)
     {
         CfgSlider* pSlider = new CfgSlider(widget, min4[i], max4[i], 1, value4[i], slotWidget);

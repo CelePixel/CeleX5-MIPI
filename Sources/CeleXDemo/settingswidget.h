@@ -25,7 +25,7 @@ private:
     void createTapWidget3(QWidget* widget);
 
 signals:
-    void valueChanged(string cmdName, int value);
+    void valueChanged(std::string cmdName, int value);
 
 public slots:
     void onValueChanged(uint32_t value, CfgSlider* slider);

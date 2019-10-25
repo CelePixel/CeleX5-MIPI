@@ -19,7 +19,7 @@ private:
     void updateCfgParameters(int index);
 
 signals:
-    void valueChanged(string cmdName, int value);
+    void valueChanged(std::string cmdName, int value);
 
 public slots:
     void onValueChanged(uint32_t value, SliderWidget* slider);

@@ -45,6 +45,7 @@ public:
     void setDisplayFPS(int count);
     void setFullFrameFPS(uint16_t value);
     void setMultipleShowEnabled(bool enable);
+    bool getMultipleShowEnable();
     void setDisplayType(DisplayType type);
     DisplayType getDisplayType() { return m_emDisplayType; }
     void setSaveBmp(bool save);
@@ -61,7 +62,7 @@ private:
     //
     void saveRecordingImage(unsigned char* pBuffer, int index);
     void savePics(CeleX5ProcessedData* pSensorData);
-    void writeCSVData(CeleX5::CeleX5Mode sensorMode, CeleX5ProcessedData* pSensorData);
+    void writeCSVData(CeleX5::CeleX5Mode sensorMode);
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -108,6 +109,8 @@ class QGridLayout;
 class QAbstractButton;
 class QPushButton;
 class QButtonGroup;
+class QCustomPlot;
+class QGraphicsView;
 class CeleX5Widget : public QWidget
 {
     Q_OBJECT
@@ -180,6 +183,8 @@ protected slots:
     void onBtnReplayRelease();
     void onBtnSavePicReleased();
     void onBtnSavePicExReleased();
+    //
+    void onUpdateEventCountPlot();
 
 private:
     QWidget*            m_pScrollWidget;
@@ -204,6 +209,8 @@ private:
     CfgSlider*          m_pFrameSlider;
     CfgSlider*          m_pEventCountSlider;
     CfgSlider*          m_pEventStartPosSlider;
+    CfgSlider*          m_pEventCountSliceSlider;
+    CfgSlider*          m_pEventCountThresholdSlider;
     CfgSlider*          m_pRowCycleSlider;
     QPushButton*        m_pBtnSavePic;
     QPushButton*        m_pBtnSavePicEx;
@@ -213,9 +220,14 @@ private:
     QWidget*            m_pVersionWidget;
     QPushButton*        m_pBtnPlayPause;
     //
+    QCustomPlot*        m_pColPlotWidget;
+    QCustomPlot*        m_pRowPlotWidget;
+    QGraphicsView*      m_pPlotGraphicsView;
+    //
     QTimer*             m_pReadBinTimer;
     QTimer*             m_pUpdatePlayInfoTimer;
     QTimer*             m_pRecordDataTimer;
+    QTimer*             m_pUpdateSlotTimer;
 
     SensorDataObserver* m_pSensorDataObserver;
     map<string, vector<CeleX5::CfgInfo>> m_mapCfgDefault;
