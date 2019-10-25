@@ -76,7 +76,8 @@ public:
 		EventCountPic = 3,
 		EventDenoisedBinaryPic = 4,
 		EventSuperimposedPic = 5,
-		EventDenoisedCountPic = 6
+		EventDenoisedCountPic = 6,
+		EventCountSlicePic = 7
 	};
 
 	enum emFullPicType {
@@ -155,6 +156,20 @@ public:
 	void disableIMUModule();
 	void enableIMUModule();
 	bool isIMUModuleEnabled();
+
+	/*
+	* Enable/Disable the Event Denoising
+	*/
+	void disableEventDenoising();
+	void enableEventDenoising();
+	bool isEventDenoisingEnabled();
+
+	/*
+	* Enable/Disable the Event Count Slice
+	*/
+	void disableEventCountSlice();
+	void enableEventCountSlice();
+	bool isEventCountSliceEnabled();
 
 	/*
 	* Get Full-frame pic buffer or mat
@@ -260,6 +275,12 @@ public:
 	*/
 	void setOpticalFlowFrameTime(uint32_t value); //hardware parameter, unit: microsecond
 	uint32_t getOpticalFlowFrameTime();
+
+	/*
+	* Set Event Count Slice Number
+	*/
+	void setEventCountSliceNum(uint32_t value);
+	uint32_t getEventCountSliceNum();
 
 	/* 
 	* Loop mode: mode duration

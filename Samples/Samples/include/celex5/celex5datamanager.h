@@ -19,6 +19,9 @@
 
 #include "celex5processeddata.h"
 
+/*
+*  This is an abstract observer class.
+*/
 class CeleX5DataManager
 {
 public:
@@ -33,6 +36,9 @@ public:
 	virtual void onFrameDataUpdated(CeleX5ProcessedData* data) = 0;
 };
 
+/*
+*  This is an abstract subject class. 
+*/
 class CX5Subject
 {
 public:
@@ -41,6 +47,9 @@ public:
 	virtual void notify(CeleX5DataManager::emDataType dataType) = 0;
 };
 
+/*
+*  This is a concrete subject class(be observed by observer).
+*/
 class CX5SensorDataServer : public CX5Subject
 {
 public:
@@ -50,13 +59,18 @@ public:
 	virtual ~CX5SensorDataServer()
 	{
 	}
-
+	/*
+	*  add observer
+	*/
 	void registerData(CeleX5DataManager* observer, CeleX5DataManager::emDataType type)
 	{
 		m_pObserver = observer;
 		m_listDataType.push_back(type);
 	}
 
+	/*
+	*  delete observer
+	*/
 	void unregisterData(CeleX5DataManager* observer, CeleX5DataManager::emDataType type)
 	{
 		if (observer == m_pObserver)
@@ -65,6 +79,9 @@ public:
 		}
 	}
 
+	/*
+	*  notify the observers to update
+	*/
 	void notify(CeleX5DataManager::emDataType dataType)
 	{
 		if (m_pObserver)
@@ -74,7 +91,6 @@ public:
 		}
 	}
 	inline void setCX5SensorData(CeleX5ProcessedData* data) { m_pCX5ProcessedData = data; }
-	inline CeleX5ProcessedData* getCX4SensorData() { return m_pCX5ProcessedData; }
 
 private:
 	std::list<CeleX5DataManager::emDataType> m_listDataType;
