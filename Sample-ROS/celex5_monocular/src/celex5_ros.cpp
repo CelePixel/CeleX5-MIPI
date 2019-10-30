@@ -27,6 +27,7 @@ void CelexRos::grabEventData(
       event_.x = vecEvent[i].row;
       event_.y = vecEvent[i].col;
       event_.brightness = 255;
+	  event_.timestamp = vecEvent[i].t_off_pixel;
       msg.events.push_back(event_);
     }
   } else {
