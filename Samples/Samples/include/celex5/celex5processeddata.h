@@ -82,6 +82,8 @@ public:
 	inline uint16_t getTemperature() { return m_uiTemperature; }
 	inline void setFullFrameFPS(uint16_t fps) { m_uiFullFrameFPS = fps; }
 	inline uint16_t getFullFrameFPS() { return m_uiFullFrameFPS; }
+	inline void updateFPNProgress(int value) { m_iFPNProgressValue = value; }
+	inline int  getFPNProgress() { return m_iFPNProgressValue; }
 
 private:
 	unsigned char*        m_pFullPic;
@@ -99,7 +101,8 @@ private:
 	int                   m_iLoopNum;
 	uint16_t              m_uiTemperature;
 	uint16_t              m_uiFullFrameFPS;
-	std::vector<EventData> m_vectorEventData;       
+	std::vector<EventData> m_vectorEventData;
+	int                   m_iFPNProgressValue;
 };
 
 #endif // CELEX5_PROCESSED_DATA_H
