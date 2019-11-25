@@ -19,6 +19,7 @@
 CeleX5ProcessedData::CeleX5ProcessedData()
 	: m_iLoopNum(-1)
 	, m_uiTemperature(0)
+	, m_iFPNProgressValue(0)
 {
 	m_pFullPic = new unsigned char[CELEX5_PIXELS_NUMBER];
 	m_pEventBinaryPic = new unsigned char[CELEX5_PIXELS_NUMBER];

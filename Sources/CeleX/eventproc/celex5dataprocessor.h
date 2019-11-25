@@ -233,6 +233,9 @@ private:
 	int                      m_iLastLoopNum;
 	CeleX5::CeleX5Mode       m_emLastLoopMode;
 	int                      m_iFPNIndexForAdjustPic;
+	//
+	bool                      m_bStartGenerateOFFPN;
+	uint16_t*                 m_pOFFPNEventLatestValue;
 };
 
 #endif // CELEX5DATAPROCESSOR_H

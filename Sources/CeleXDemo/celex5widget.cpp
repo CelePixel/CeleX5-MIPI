@@ -39,6 +39,8 @@ QString            g_qsBinFileName;
 QString            g_qsCurrentRecordPath;
 int                g_iEventCountThreshold = 10;
 int                g_iEventCountMean = 0;
+bool               g_bStartGenerateOFFPN = false;
+double             g_dFPNProgessValue = 0;
 
 CeleX5* m_pCeleX5 = new CeleX5;
 
@@ -101,6 +103,17 @@ SensorDataObserver::~SensorDataObserver()
 //This function is only for playback
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
+    if (g_bStartGenerateOFFPN)
+    {
+        g_dFPNProgessValue = double(pSensorData->getFPNProgress())*100/CELEX5_PIXELS_NUMBER;
+        //cout << g_dFPNProgessValue << endl;
+        if (pSensorData->getFPNProgress() >= CELEX5_PIXELS_NUMBER-10)
+        {
+            m_pCeleX5->stopGenerateFPN();
+            g_bStartGenerateOFFPN = false;
+            pSensorData->updateFPNProgress(0);
+        }
+    }
     //cout << __FUNCTION__ << endl;
     if (m_emDisplayType == Realtime)
     {
@@ -509,6 +522,27 @@ void SensorDataObserver::updateEventImage(unsigned char *pBuffer, CeleX5::emEven
     }
 }
 
+void SensorDataObserver::updateImage(unsigned char *pBuffer)
+{
+    if (NULL == pBuffer)
+    {
+        return;
+    }
+    uchar* pImage = pImage = m_imageForSavePic.bits();
+    int value = 0;
+    for (int i = 0; i < CELEX5_ROW; ++i)
+    {
+        for (int j = 0; j < CELEX5_COL; ++j)
+        {
+            value = pBuffer[i*CELEX5_COL+j];
+            *pImage = value;
+            *(pImage+1) = value;
+            *(pImage+2) = value;
+            pImage+= 3;
+        }
+    }
+}
+
 void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum)
 {
     int colorMode = 0;
@@ -797,9 +831,10 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             dir.mkdir("image_fullpic");
         }
         QString qsNum = QString("%1").arg(m_lFullFrameCount, 6, 10, QChar('0'));
-        QString picName = QCoreApplication::applicationDirPath() + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + qsFormat;
+        QString picName = g_qsCurrentRecordPath + "/image_fullpic/" + m_qsBinFileName + "_" + qsNum + qsFormat;
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
+
         m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
         m_lFullFrameCount++;
     }
@@ -836,8 +871,7 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
         }
         else if (pSensorData->getSensorMode() == CeleX5::Event_In_Pixel_Timestamp_Mode)
         {
-            folderNameList << "image_event_count";
-
+            //folderNameList << "image_event_count";
             picTypeList[0] = 3; //CeleX5::EventCountPic
         }
         for (int i = 0; i < folderNameList.size(); i++)
@@ -853,6 +887,16 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
             updateEventImage(pSensorData->getEventPicBuffer((CeleX5::emEventPicType)picTypeList[i]), (CeleX5::emEventPicType)picTypeList[i]);
             m_imageForSavePic.save(file_path, g_qsPicFormat.toStdString().data());
         }
+        if (!dir.exists("image_event_optical"))
+        {
+            dir.mkdir("image_event_optical");
+        }
+        QString picName = g_qsCurrentRecordPath + "/image_event_optical/" + m_qsBinFileName + "_" + qsNum + qsFormat;
+        char file_path[256] = {0};
+        memcpy(file_path, picName.toStdString().c_str(), picName.size());
+        updateImage(pSensorData->getOpticalFlowPicBuffer(CeleX5::Full_Optical_Flow_Pic));
+        m_imageForSavePic.save(file_path, g_qsPicFormat.toStdString().data());
+
         m_lEventFrameCount++;
     }
     else if (pSensorData->getSensorMode() == CeleX5::Optical_Flow_Mode ||
@@ -869,11 +913,11 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
 
         QString qsNum = QString("%1").arg(m_lOpticalFrameCount, 6, 10, QChar('0'));
 
-        QString picName = QCoreApplication::applicationDirPath() + "/image_optical/" + m_qsBinFileName + "_" + qsNum + qsFormat;
+        QString picName = g_qsCurrentRecordPath + "/image_optical/" + m_qsBinFileName + "_" + qsNum + qsFormat;
         char file_path[256] = {0};
         memcpy(file_path, picName.toStdString().c_str(), picName.size());
-        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
 
+        m_imageMode1.save(file_path, g_qsPicFormat.toStdString().data());
         m_lOpticalFrameCount++;
     }
 }
@@ -1047,6 +1091,10 @@ void SensorDataObserver::paintEvent(QPaintEvent *event)
             {
                 painter.fillRect(QRect(10, 10, 280, 30), QBrush(Qt::blue));
                 painter.drawText(QRect(14, 14, 280, 30), "Event Rate: " + QString::number(m_pCeleX5->getEventRate()) + " eps");
+                if (g_bStartGenerateOFFPN)
+                {
+                    painter.drawText(QRect(550, 400, 280, 30), "Fpn Progress: " + QString::number(g_dFPNProgessValue) + "%");
+                }
             }
             else
             {
@@ -1246,7 +1294,7 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     pEventShowType->setCurrentIndex(0);
     connect(pEventShowType, SIGNAL(currentIndexChanged(int)), this, SLOT(onEventShowTypeChanged(int)));
     //--- show by time: frame time
-    m_pFrameSlider = new CfgSlider(m_pScrollWidget, 100, 1000000, 1, 20000, this);
+    m_pFrameSlider = new CfgSlider(m_pScrollWidget, 100, 1000000, 1, 30000, this);
     m_pFrameSlider->setGeometry(1350, 150, 500, 70);
     m_pFrameSlider->setBiasType("Frame Time");
     m_pFrameSlider->setDisplayName("   Frame Time (μs)");
@@ -1301,8 +1349,6 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pEventCountThresholdSlider->setBiasType("Event Count Threshold");
     m_pEventCountThresholdSlider->setDisplayName("Event Count Threshold");
     m_pEventCountThresholdSlider->setObjectName("Event Count Threshold");
-
-    m_pCeleX5->setEventFrameTime(20000);
     //
     m_pRowPlotWidget = new QCustomPlot;
     m_pRowPlotWidget->resize(800, 200);
@@ -1485,7 +1531,7 @@ QComboBox *CeleX5Widget::createModeComboBox(QString text, QRect rect, QWidget *p
     else
     {
         modeList << "Event_Off_Pixel_Timestamp Mode" << "Event_In_Pixel_Timestamp Mode" << "Event_Intensity Mode"
-                 << "Full_Picture Mode" << "Optical_Flow Mode" << "Optical_Flow_FPN Mode";
+                 << "Full_Picture Mode" << "Optical_Flow Mode"/* << "Optical_Flow_FPN Mode"*/;
     }
 
     for (int i = 0; i < modeList.size(); i++)
@@ -2141,6 +2187,8 @@ void CeleX5Widget::onButtonClicked(QAbstractButton *button)
     else if ("Generate FPN" == button->objectName())
     {
         m_pCeleX5->generateFPN("");
+        if (m_emSensorFixedMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
+            g_bStartGenerateOFFPN = true;
     }
     else if ("Change FPN" == button->objectName())
     {

@@ -56,7 +56,8 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_uiEventFrameTime(30000)
 	, m_uiEventRowCycleCount(0)
 	, m_emEventShowType(EventShowByTime)
-	, m_uiEventTUnitList{ 10, 25, 22, 25, 20, 17, 14, 25, 22, 20, 10, 10, 10, 10, 10, 10 }
+	//, m_uiEventTUnitList{ 10, 25, 22, 25, 20, 17, 14, 25, 22, 20, 10, 10, 10, 10, 10, 10 }
+	, m_uiEventTUnitList{ 5, 13, 13, 11, 10, 9, 7, 13, 11, 10, 10, 10, 10, 10, 10, 10 }
 	, m_uiCurrentEventTUnit(20)
 	, m_uiEventFrameNo(0)
 	, m_uiEOTrampNo(1)
@@ -74,6 +75,7 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_lEventFrameTimeStamp_ForUser(0)
 	, m_lOpticalFrameTimeStamp_ForUser(0)
 	, m_bFirstEventTimestamp(true)
+	, m_bStartGenerateOFFPN(false)
 	, m_iLastLoopNum(3)
 	, m_emLastLoopMode(CeleX5::Unknown_Mode)
 	, m_iFPNIndexForAdjustPic(1)
@@ -168,6 +170,9 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 		m_pEventCountSlice[i] = new uint8_t[CELEX5_PIXELS_NUMBER];
 		memset(m_pEventCountSlice[i], 0, CELEX5_PIXELS_NUMBER);
 	}
+
+	m_pOFFPNEventLatestValue = new uint16_t[CELEX5_PIXELS_NUMBER];
+	memset(m_pOFFPNEventLatestValue, 0, CELEX5_PIXELS_NUMBER * 2);
 }
 
 CeleX5DataProcessor::~CeleX5DataProcessor()
@@ -1360,6 +1365,61 @@ void CeleX5DataProcessor::checkIfShowImage()
 		{
 			m_pCX5ProcessedData->setSensorMode(m_emCurrentSensorMode);
 		}
+		//
+		if (m_bStartGenerateOFFPN)
+		{
+			int pixelCount = 0;
+			for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
+			{
+				if (m_pOFFPNEventLatestValue[i] > 0)
+				{
+					pixelCount++;
+				}
+			}
+			//cout << "-------- " << CELEX5_PIXELS_NUMBER - pixelCount << endl;
+			m_pCX5ProcessedData->updateFPNProgress(pixelCount);
+			//if (CELEX5_PIXELS_NUMBER - pixelCount == 1)
+			//{
+			//	for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
+			//	{
+			//		if (m_pOFFPNEventLatestValue[i] == 0)
+			//		{
+			//			cout << "index = " << i << endl;
+			//			break;
+			//		}
+			//	}
+			//}
+			if (pixelCount == CELEX5_PIXELS_NUMBER-10)
+			{
+				m_bStartGenerateOFFPN = false;
+				XBase base;
+				std::string filePath = base.getApplicationDirPath();
+#ifdef _WIN32
+				filePath += "/FPN_OpticalFlow.txt";
+#else
+				filePath += "FPN_OpticalFlow.txt";
+#endif 
+				std::ofstream ofFPNFile;
+				ofFPNFile.open(filePath.c_str());
+				uint64_t totalValue = 0;
+				for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
+				{
+					totalValue += m_pOFFPNEventLatestValue[i];
+				}
+				int meanValue = totalValue / CELEX5_PIXELS_NUMBER;
+				//cout << "---------- meanValue =  ----------" << meanValue << endl;
+				for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
+				{
+					ofFPNFile << m_pOFFPNEventLatestValue[i] - meanValue << "  ";
+					if ((i + 1) % 1280 == 0)
+						ofFPNFile << endl;
+				}
+				ofFPNFile.close();
+				memset(m_pOFFPNEventLatestValue, 0, CELEX5_PIXELS_NUMBER * 2);
+				cout << "---------- save optical-flow fpn successfully! ----------" << endl;
+			}
+		}
+		//
 		m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
 	}
 }
@@ -1926,9 +1986,16 @@ bool CeleX5DataProcessor::setFpnFile(const std::string& fpnFile)
 */
 void CeleX5DataProcessor::generateFPN(std::string filePath)
 {
-	m_bIsGeneratingFPN = true;
-	m_iFpnCalculationTimes = FPN_CALCULATION_TIMES;
-	m_strFpnFilePath = filePath;
+	if (getSensorFixedMode() == CeleX5::Event_In_Pixel_Timestamp_Mode)
+	{
+		m_bStartGenerateOFFPN = true;
+	}
+	else
+	{
+		m_bIsGeneratingFPN = true;
+		m_iFpnCalculationTimes = FPN_CALCULATION_TIMES;
+		m_strFpnFilePath = filePath;
+	}
 }
 
 /*
@@ -2461,7 +2528,7 @@ void CeleX5DataProcessor::processMIPIEventTimestamp()
 	}
 	/*if (diffT > 1)
 	cout << __FUNCTION__ << ": T is not continuous!" << endl;*/
-	if (m_iLastRowTimeStamp != -1 && diffT < 5)
+	if (m_iLastRowTimeStamp != -1/* && diffT < 5*/)
 	{
 		m_uiEventTCounter += diffT;
 		m_uiEventTCounter_Total += diffT;
@@ -2579,12 +2646,12 @@ void CeleX5DataProcessor::saveOpticalFlowEvent(int col, int adc_12bit, int adc_8
 		uint32_t t_ramp_no = m_uiEOTrampNo;
 		int It = adc_fpn >> 2;
 		int Et = m_iRowTimeStamp % 1024;
-		if (It - Et > 500)
+		if (It - Et > 200) //500
 			t_ramp_no = m_uiEOTrampNo - 1;
 		else
 			t_ramp_no = m_uiEOTrampNo;
 		eventData.t_in_pixel_ramp_no = t_ramp_no;
-		eventData.t_in_pixel_increasing = adc_fpn + t_ramp_no * 4096;
+		eventData.t_in_pixel_increasing = adc_fpn + t_ramp_no * 3310; //4096
 
 		if (m_bEventDenoisingEnabled)
 		{
@@ -2594,6 +2661,10 @@ void CeleX5DataProcessor::saveOpticalFlowEvent(int col, int adc_12bit, int adc_8
 		{
 			m_vecEventData.push_back(eventData);
 		}
+	}
+	if (m_bStartGenerateOFFPN)
+	{
+		m_pOFFPNEventLatestValue[index] = adc_12bit;
 	}
 }
 

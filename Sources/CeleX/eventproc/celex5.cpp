@@ -1034,7 +1034,25 @@ bool CeleX5::setFpnFile(const std::string& fpnFile)
 */
 void CeleX5::generateFPN(std::string fpnFile)
 {
+	if (getSensorFixedMode() == CeleX5::Event_In_Pixel_Timestamp_Mode)
+	{
+		enterCFGMode();
+		writeRegister(14, -1, 15, 680);
+		writeRegister(16, -1, 17, 680);
+		enterStartMode();
+	}
 	m_pDataProcessor->generateFPN(fpnFile);
+}
+
+void CeleX5::stopGenerateFPN()
+{
+	enterCFGMode();
+	vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
+	CfgInfo cfg_bias_rampn = cfgSensorCoreParameters.at(7);
+	CfgInfo cfg_bias_rampp = cfgSensorCoreParameters.at(8);	
+	writeRegister(14, -1, 15, cfg_bias_rampn.value);
+	writeRegister(16, -1, 17, cfg_bias_rampp.value);
+	enterStartMode();
 }
 
 /*

@@ -227,6 +227,7 @@ public:
 	* Generate fpn file
 	*/
 	void generateFPN(std::string fpnFile);
+	void stopGenerateFPN();
 
 	/*
 	* Clock

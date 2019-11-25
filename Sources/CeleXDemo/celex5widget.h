@@ -58,6 +58,7 @@ public:
 private:
     void updateQImageBuffer(unsigned char* pBuffer1, int loopNum, int colorMode);
     void updateEventImage(unsigned char* pBuffer, CeleX5::emEventPicType type);
+    void updateImage(unsigned char* pBuffer);
     void processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum);
     //
     void saveRecordingImage(unsigned char* pBuffer, int index);
