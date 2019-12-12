@@ -5,5 +5,9 @@
         <file>images/player_play.png</file>
         <file>images/player_stop.png</file>
         <file>images/background.png</file>
+        <file>images/arrow_down.png</file>
+        <file>images/arrow_left.png</file>
+        <file>images/arrow_right.png</file>
+        <file>images/arrow_up.png</file>
     </qresource>
 </RCC>

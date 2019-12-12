@@ -64,6 +64,13 @@ void SettingsWidget::setCurrentIndex(int index)
     m_pTabWidget->setCurrentIndex(index);
 }
 
+void SettingsWidget::updateCfgs()
+{
+    QList<CfgSlider*> slider1 = this->findChildren<CfgSlider *>("Clock");
+    if (slider1.size() > 0)
+        slider1[0]->updateValue(m_pCeleX5->getClockRate());
+}
+
 void SettingsWidget::resizeEvent(QResizeEvent *)
 {
     //cout << "SettingsWidget::resizeEvent: width = " << this->width() << ", height = " << this->height() << endl;
@@ -210,9 +217,9 @@ void SettingsWidget::createTapWidget1(QWidget *widget, QWidget *slotWidget)
     }
     widget->setFocus();
 
-    QList<CfgSlider*> slider1 = widget->findChildren<CfgSlider *>("Clock");
-    if (slider1.size() > 0)
-        slider1[0]->updateValue(m_pCeleX5->getClockRate());
+//    QList<CfgSlider*> slider1 = widget->findChildren<CfgSlider *>("Clock");
+//    if (slider1.size() > 0)
+//        slider1[0]->updateValue(m_pCeleX5->getClockRate());
 }
 
 void SettingsWidget::createTapWidget2(QWidget *widget)

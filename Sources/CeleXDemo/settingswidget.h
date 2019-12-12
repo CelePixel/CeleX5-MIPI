@@ -14,6 +14,7 @@ class SettingsWidget : public QWidget
 public:
     explicit SettingsWidget(CeleX5* pCeleX5, QWidget *parent = 0);
     void setCurrentIndex(int index);
+    void updateCfgs();
 
 protected:
     void resizeEvent(QResizeEvent *event);

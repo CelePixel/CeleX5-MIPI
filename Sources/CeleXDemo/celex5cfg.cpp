@@ -65,7 +65,7 @@ CeleX5Cfg::CeleX5Cfg(CeleX5* pCeleX5, QWidget *parent)
             pSlider->setBiasType(cfgInfo.name);
             pSlider->setDisplayName(QString::fromStdString(cfgInfo.name));
             pSlider->setObjectName(QString::fromStdString(cfgInfo.name));
-            pSlider->setBiasAddr(cfgInfo.high_addr, cfgInfo.middle_addr, cfgInfo.low_addr);
+            pSlider->setBiasAddr(cfgInfo.highAddr, cfgInfo.middleAddr, cfgInfo.lowAddr);
 
             //cout << "----- Register Name: " << cfgInfo.name << endl;
             row++;

@@ -9,7 +9,7 @@ QT       += core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 #QMAKE_CXXFLAGS += -std=c++11
-CONFIG += console
+#CONFIG += console
 
 TARGET = CeleXDemo
 TEMPLATE = app
@@ -42,7 +42,7 @@ win32 {
         else:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/Windows/x64/debug/ -lCeleX -lopencv_world330d
     }
 }
-linux-g++ {
+else {
     contains(QT_ARCH, i386) {
         LIBS += -L$$PWD/lib/Linux/x86 -lCeleX}
     else {
@@ -85,7 +85,7 @@ win32 {
         QMAKE_POST_LINK += copy $$shell_path($$PWD)\*.txt $$shell_path($$OUT_PWD)\debug\
     }
 }
-linux-g++ {
+else {
     QMAKE_POST_LINK += cp $$shell_path($$PWD)/cfg_mp $$shell_path($$OUT_PWD)/ &
     QMAKE_POST_LINK += cp $$shell_path($$PWD)/cfg_mp_wire $$shell_path($$OUT_PWD)/ &
     QMAKE_POST_LINK += cp $$shell_path($$PWD)/*.txt $$shell_path($$OUT_PWD)/
@@ -95,8 +95,12 @@ RESOURCES += \
     images.qrc
 
 
-win32: LIBS += -L$$PWD/ffmpeg/lib/Windows/ -lavcodec -lavformat -lavutil -lswresample
-unix:!macx: LIBS += -L$$PWD/ffmpeg/lib/Linux/ -lavcodec -lavformat -lavutil -lswresample
+win32 {
+    LIBS += -L$$PWD/ffmpeg/lib/Windows/ -lavcodec -lavformat -lavutil -lswresample
+}
+else {
+    LIBS += -L$$PWD/ffmpeg/lib/Linux/ -lavcodec -lavformat -lavutil -lswresample
+}
 
 INCLUDEPATH += $$PWD/ffmpeg/include
 DEPENDPATH += $$PWD/ffmpeg/include

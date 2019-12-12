@@ -57,8 +57,8 @@ public:
 
 private:
     void updateQImageBuffer(unsigned char* pBuffer1, int loopNum, int colorMode);
-    void updateEventImage(unsigned char* pBuffer, CeleX5::emEventPicType type);
-    void updateImage(unsigned char* pBuffer);
+    void updateOPDirection(unsigned char *pBuffer1);
+    void updateEventImage(CeleX5::EventPicType type);
     void processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNum);
     //
     void saveRecordingImage(unsigned char* pBuffer, int index);
@@ -80,6 +80,7 @@ private:
     QImage         m_imageForSavePic;
     QImage         m_imageEvent1;
     QImage         m_imageEvent2;
+    uint8_t*       m_pEventBuffer;
 
     CX5SensorDataServer*    m_pSensorData;
     bool                    m_bLoopModeEnabled;
@@ -171,7 +172,6 @@ protected slots:
     void onEventShowTypeChanged(int index);
     //
     void onShowImagesSwitch(bool state);
-    void onShowTimestampSwitch(bool state);
     void onJPGFormatClicked(bool state);
     void onBMPFormatClicked(bool state);
     //
@@ -186,6 +186,10 @@ protected slots:
     void onBtnSavePicExReleased();
     //
     void onUpdateEventCountPlot();
+    //
+    void onBtnSaveBinReleased();
+    void onBinBeginFinished();
+    void onBinEndFinished();
 
 private:
     QWidget*            m_pScrollWidget;
@@ -240,6 +244,9 @@ private:
     bool                m_bPlaybackPaused;
     //
     QStringList         m_qstBinfilePathList;
+
+    int                 m_iPackageCountBegin;
+    int                 m_iPackageCountEnd;
 };
 
 #endif // CELEX5WIDGET_H
