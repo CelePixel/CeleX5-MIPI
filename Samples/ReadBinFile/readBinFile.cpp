@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 #include<unistd.h>
 #endif
 
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 #define BIN_FILE    "YOUR_BIN_FILE_PATH.bin"	//your bin file path
 
 CeleX5 *pCeleX5 = new CeleX5;
@@ -47,6 +47,7 @@ public:
 	CX5SensorDataServer* m_pServer;
 };
 
+uint8_t * pImageBuffer = new uint8_t[CELEX5_PIXELS_NUMBER];
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
 	if (NULL == pSensorData)
@@ -55,25 +56,24 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 	if (CeleX5::Full_Picture_Mode == sensorMode)
 	{
 		//full-frame picture
-		cv::Mat matFullPic(800, 1280, CV_8UC1, pSensorData->getFullPicBuffer());
+		pCeleX5->getFullPicBuffer(pImageBuffer);
+		cv::Mat matFullPic(800, 1280, CV_8UC1, pImageBuffer);
 		cv::imshow("FullPic", matFullPic);
 		cv::waitKey(1);
 	}
 	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == sensorMode)
 	{
 		//get buffers when sensor works in EventMode
-		if (pSensorData->getEventPicBuffer(CeleX5::EventBinaryPic))
-		{
-			//event binary pic
-			cv::Mat matEventPic(800, 1280, CV_8UC1, pSensorData->getEventPicBuffer(CeleX5::EventBinaryPic));
-			cv::imshow("Event Binary Pic", matEventPic);
-			cvWaitKey(1);
-		}
+		pCeleX5->getEventPicBuffer(pImageBuffer, CeleX5::EventBinaryPic);
+		cv::Mat matEventPic(800, 1280, CV_8UC1, pImageBuffer);
+		cv::imshow("Event Binary Pic", matEventPic);
+		cvWaitKey(1);
 	}
 	else if (CeleX5::Optical_Flow_Mode == sensorMode)
 	{
 		//full-frame optical-flow pic
-		cv::Mat matOpticalFlow(800, 1280, CV_8UC1, pSensorData->getOpticalFlowPicBuffer(CeleX5::Full_Optical_Flow_Pic));
+		pCeleX5->getOpticalFlowPicBuffer(pImageBuffer, CeleX5::OpticalFlowPic);
+		cv::Mat matOpticalFlow(800, 1280, CV_8UC1, pImageBuffer);
 		cv::imshow("Optical-Flow Pic", matOpticalFlow);
 		cvWaitKey(1);
 	}
@@ -85,8 +85,7 @@ int main()
 		return 0;
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	bool success = pCeleX5->openBinFile(BIN_FILE);	//open the bin file
-	pCeleX5->setFpnFile(FPN_PATH);
-	CeleX5::CeleX5Mode sensorMode = (CeleX5::CeleX5Mode)pCeleX5->getBinFileAttributes().loopA_mode;
+	CeleX5::CeleX5Mode sensorMode = (CeleX5::CeleX5Mode)pCeleX5->getBinFileAttributes().loopAMode;
 
 	SensorDataObserver* pSensorData = new SensorDataObserver(pCeleX5->getSensorDataServer());
 

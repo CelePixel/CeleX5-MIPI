@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #define MAT_ROWS 800
 #define MAT_COLS 1280
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -64,14 +64,15 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		cout << "--------------------- event mode --------------------- " << endl;
 		std::vector<EventData> vecEvent;
 		std::time_t time_stamp;
-		pCeleX5->getEventDataVectorEx(vecEvent, time_stamp);
+		uint32_t frameNo = 0;
+		pCeleX5->getEventDataVector(vecEvent, frameNo, time_stamp);
 		cout << "---------- event_time_stamp = " << time_stamp << endl;
 		vector<IMUData> imu;
 		if (pCeleX5->getIMUData(imu) > 0)
 		{
 			for (int i = 0; i < imu.size(); i++)
 			{
-				cout << "---------- imu time_stamp = " << imu[i].time_stamp << endl;
+				cout << "---------- imu time_stamp = " << imu[i].timestamp << endl;
 				/*cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
 					 << ", x_ACC = " << imu[i].x_ACC << ", y_ACC = " << imu[i].y_ACC << ", z_ACC = " << imu[i].z_ACC
 					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/
@@ -89,7 +90,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		{
 			for (int i = 0; i < imu.size(); i++)
 			{
-				cout << "---------- imu time_stamp = " << imu[i].time_stamp << endl;
+				cout << "---------- imu time_stamp = " << imu[i].timestamp << endl;
 				/*cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
 					 << ", x_ACC = " << imu[i].x_ACC << ", y_ACC = " << imu[i].y_ACC << ", z_ACC = " << imu[i].z_ACC
 					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/
@@ -107,7 +108,7 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		{
 			for (int i = 0; i < imu.size(); i++)
 			{
-				cout << "---------- imu time_stamp = " << imu[i].time_stamp << endl;
+				cout << "---------- imu time_stamp = " << imu[i].timestamp << endl;
 				/*cout << "x_GYROS = " << imu[i].x_GYROS << ", y_GYROS = " << imu[i].y_GYROS << ", z_GYROS = " << imu[i].z_GYROS
 					 << ", x_ACC = " << imu[i].x_ACC << ", y_ACC = " << imu[i].y_ACC << ", z_ACC = " << imu[i].z_ACC
 					 << ", x_MAG = " << imu[i].x_MAG << ", y_MAG = " << imu[i].y_MAG << ", z_MAG = " << imu[i].z_MAG << endl;*/

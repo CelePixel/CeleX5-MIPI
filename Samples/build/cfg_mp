@@ -1,9 +1,22 @@
+<?xml version="1.3" ?>
+<!-- parameter changes: for event-in-pixel timestamp more precise and uniform 
+  BIAS_C3: 115 (old value = 135)
+  BIAS_RAMPN: 530 (old value = 365)
+  BIAS_RAMPP: 850 (old value = 735)
+  PXL_BUF_TRIM: 63 (old value 23)
+  BIAS_BRT_T: 340 (old value = 225)
+  PLL_FOUT3_POST_DIV: 15 (old value = 30)
+-->
+<?xml version="1.2" ?>
+<!-- parameter changes: for fix black spot in full-pic mode
+  BIAS_C2: 819 (old value = 840) 
+-->
 <?xml version="1.1" ?>
 <!-- parameter changes:
   SWITCH_RESET_GAP1: 120 (old value = 200)
   BIAS_C2: 880 (old value = 819)
   BIAS_RAMPN: 365 (old value = 345)
-  BIAS_RAMPN: 735 (old value = 755)
+  BIAS_RAMPP: 735 (old value = 755)
 -->
 <?xml version="1.0" ?>
 <commands>
@@ -52,7 +65,7 @@
             <address_high>10</address_high>
             <value_high>3</value_high>
             <address_low>11</address_low>
-            <value_low>112</value_low>
+            <value_low>72</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_C2>
@@ -60,37 +73,37 @@
             <address_high>12</address_high>
             <value_high>0</value_high>
             <address_low>13</address_low>
-            <value_low>135</value_low>
+            <value_low>115</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_C3>
         <BIAS_RAMPN>
             <address_high>14</address_high>
-            <value_high>1</value_high>
+            <value_high>2</value_high>
             <address_low>15</address_low>
-            <value_low>109</value_low>
+            <value_low>18</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_RAMPN>
         <BIAS_RAMPP>
             <address_high>16</address_high>
-            <value_high>2</value_high>
+            <value_high>3</value_high>
             <address_low>17</address_low>
-            <value_low>223</value_low>
+            <value_low>82</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_RAMPP>
         <PXL_BUF_TRIM>
             <address_high>18</address_high>
-            <value_high>23</value_high>
+            <value_high>63</value_high>
             <min>0</min>
             <max>255</max>
         </PXL_BUF_TRIM>
         <BIAS_BRT_T>
             <address_high>20</address_high>
-            <value_high>0</value_high>
+            <value_high>1</value_high>
             <address_low>21</address_low>
-            <value_low>225</value_low>
+            <value_low>84</value_low>
             <min>0</min>
             <max>1023</max>
         </BIAS_BRT_T>
@@ -746,7 +759,7 @@
         </PLL_LOCK_EN>
         <PLL_FOUT3_POST_DIV>
             <address_high>169</address_high>
-            <value_high>30</value_high>
+            <value_high>15</value_high>
             <min>0</min>
             <max>255</max>
         </PLL_FOUT3_POST_DIV>

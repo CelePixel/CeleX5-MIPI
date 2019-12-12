@@ -5,7 +5,7 @@
   BIAS_RAMPP: 850 (old value = 735)
   PXL_BUF_TRIM: 63 (old value 23)
   BIAS_BRT_T: 340 (old value = 225)
-  PLL_FOUT3_POST_DIV: 15 (old value = 15)
+  PLL_FOUT3_POST_DIV: 15 (old value = 30)
 -->
 <?xml version="1.2" ?>
 <!-- parameter changes: for fix black spot in full-pic mode

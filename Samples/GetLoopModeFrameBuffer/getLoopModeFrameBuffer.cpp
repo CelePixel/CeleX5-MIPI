@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #include<pthread.h>
 #endif
 
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 CeleX5 *pCeleX5 = new CeleX5;
 
@@ -86,10 +86,9 @@ int main()
 	sigaction(SIGTERM, &sig_action, NULL); // 15
 #endif
 
-	int imgSize = 1280 * 800;
-	unsigned char* pBuffer1 = new unsigned char[imgSize];
-	unsigned char* pBuffer2 = new unsigned char[imgSize];
-	unsigned char* pBuffer3 = new unsigned char[imgSize];
+	uint8_t* pBuffer1 = new uint8_t[CELEX5_PIXELS_NUMBER];
+	uint8_t* pBuffer2 = new uint8_t[CELEX5_PIXELS_NUMBER];
+	uint8_t* pBuffer3 = new uint8_t[CELEX5_PIXELS_NUMBER];
 	while (true)
 	{
 		//get fullpic when sensor works in FullPictureMode
@@ -102,7 +101,7 @@ int main()
 		cv::Mat matEventPic(800, 1280, CV_8UC1, pBuffer2);
 		cv::imshow("Event Binary Pic", matEventPic);
 
-		pCeleX5->getOpticalFlowPicBuffer(pBuffer3, CeleX5::Full_Optical_Flow_Pic);
+		pCeleX5->getOpticalFlowPicBuffer(pBuffer3, CeleX5::OpticalFlowPic);
 		//full-frame optical-flow pic
 		cv::Mat matOpticalRaw(800, 1280, CV_8UC1, pBuffer3);
 

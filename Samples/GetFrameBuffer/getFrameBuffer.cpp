@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ int main()
 		return 0;
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	pCeleX5->setFpnFile(FPN_PATH);
-
+	pCeleX5->disableEventStreamModule();
 	CeleX5::CeleX5Mode sensorMode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
 	pCeleX5->setSensorFixedMode(sensorMode);
 
@@ -84,23 +84,22 @@ int main()
 	sigaction(SIGTERM, &sig_action, NULL); // 15
 #endif
 
-	int imgSize = 1280 * 800;
-	unsigned char* pBuffer1 = new unsigned char[imgSize];
+	uint8_t * pSensorBuffer = new uint8_t[CELEX5_PIXELS_NUMBER];
 	while (true)
 	{
 		if (sensorMode == CeleX5::Full_Picture_Mode)
 		{
 			//get fullpic when sensor works in FullPictureMode
-			pCeleX5->getFullPicBuffer(pBuffer1); //full pic
-			cv::Mat matFullPic(800, 1280, CV_8UC1, pBuffer1);
+			pCeleX5->getFullPicBuffer(pSensorBuffer); //full pic
+			cv::Mat matFullPic(800, 1280, CV_8UC1, pSensorBuffer);
 			cv::imshow("FullPic", matFullPic);
 			cvWaitKey(10);
 		}
 		else if (sensorMode == CeleX5::Event_Off_Pixel_Timestamp_Mode)
 		{
 			//get buffers when sensor works in EventMode
-			pCeleX5->getEventPicBuffer(pBuffer1, CeleX5::EventBinaryPic); //event binary pic
-			cv::Mat matEventPic(800, 1280, CV_8UC1, pBuffer1);
+			pCeleX5->getEventPicBuffer(pSensorBuffer, CeleX5::EventBinaryPic); //event binary pic
+			cv::Mat matEventPic(800, 1280, CV_8UC1, pSensorBuffer);
 			cv::imshow("Event-EventBinaryPic", matEventPic);
 			cvWaitKey(30);
 		}

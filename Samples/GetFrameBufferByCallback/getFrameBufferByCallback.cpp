@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #define MAT_ROWS 800
 #define MAT_COLS 1280
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -48,10 +48,10 @@ public:
 	CX5SensorDataServer* m_pServer;
 };
 
-unsigned char* pImageBuffer = new unsigned char[1024000];
+uint8_t* pImageBuffer = new uint8_t[CELEX5_PIXELS_NUMBER];
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
-	if (NULL == pSensorData)
+	if (nullptr == pSensorData)
 		return;
 	CeleX5::CeleX5Mode sensorMode = pSensorData->getSensorMode();
 	if (CeleX5::Full_Picture_Mode == sensorMode)
@@ -68,30 +68,13 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == sensorMode)
 	{
 		//get buffers when sensor works in EventMode
-		//std::time_t time_stamp = 0;
-		//pCeleX5->getEventPicBuffer(pImageBuffer, time_stamp, CeleX5::EventBinaryPic);
-		////cout << "--------- E time_stamp = " << time_stamp << endl;
+		std::time_t timestamp = 0;
+		pCeleX5->getEventPicBuffer(pImageBuffer, timestamp, CeleX5::EventBinaryPic);
 
-		////event binary pic
-		//cv::Mat matEventPic(800, 1280, CV_8UC1, pImageBuffer);
-		//cv::imshow("Event Binary Pic", matEventPic);
-		//cvWaitKey(1);
-
-		std::vector<EventData> vecEvent;
-		pCeleX5->getEventDataVector(vecEvent);
-		int dataSize = vecEvent.size();
-		//cout << "data size = " << dataSize << endl;
-		cv::Mat mat = cv::Mat::zeros(cv::Size(1280, 800), CV_8UC1);
-		for (int i = 0; i < dataSize; i++)
-		{
-			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = 255;
-			//cout << vecEvent[i].row << ", " << vecEvent[i].col << endl;
-		}
-		if (dataSize > 0)
-		{
-			cv::imshow("show", mat);
-			cv::waitKey(1);
-		}
+		//event binary pic
+		cv::Mat matEventPic(800, 1280, CV_8UC1, pImageBuffer);
+		cv::imshow("Event Binary Pic", matEventPic);
+		cvWaitKey(1);
 	}
 	else if (CeleX5::Event_In_Pixel_Timestamp_Mode == sensorMode)
 	{
@@ -114,62 +97,60 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 	else if (CeleX5::Optical_Flow_Mode == sensorMode)
 	{
 		//get buffers when sensor works in FullPic_Event_Mode
-		if (pSensorData->getOpticalFlowPicBuffer(CeleX5::Full_Optical_Flow_Pic))
-		{
-			//full-frame optical-flow pic
-			cv::Mat matOpticalRaw(800, 1280, CV_8UC1, pSensorData->getOpticalFlowPicBuffer(CeleX5::Full_Optical_Flow_Pic));
-	
-			//optical-flow raw data - display color image
-			cv::Mat matOpticalColor(800, 1280, CV_8UC3);
+		pCeleX5->getOpticalFlowPicBuffer(pImageBuffer, CeleX5::OpticalFlowPic);
+		//full-frame optical-flow pic
+		cv::Mat matOpticalRaw(800, 1280, CV_8UC1, pImageBuffer);
 
-			for (int i = 0; i < matOpticalColor.rows; ++i)
+		//optical-flow raw data - display color image
+		cv::Mat matOpticalColor(800, 1280, CV_8UC3);
+
+		for (int i = 0; i < matOpticalColor.rows; ++i)
+		{
+			cv::Vec3b *p = matOpticalColor.ptr<cv::Vec3b>(i);
+			for (int j = 0; j < matOpticalColor.cols; ++j)
 			{
-				cv::Vec3b *p = matOpticalColor.ptr<cv::Vec3b>(i);
-				for (int j = 0; j < matOpticalColor.cols; ++j)
+				int value = matOpticalRaw.at<uchar>(i, j);
+				//std::cout << value << std::endl;
+				if (value == 0)
 				{
-					int value = matOpticalRaw.at<uchar>(i, j);
-					//std::cout << value << std::endl;
-					if (value == 0)
-					{
-						p[j][0] = 0;
-						p[j][1] = 0;
-						p[j][2] = 0;
-					}
-					else if (value < 50)	//blue
-					{
-						p[j][0] = 255;
-						p[j][1] = 0;
-						p[j][2] = 0;
-					}
-					else if (value < 100)
-					{
-						p[j][0] = 255;
-						p[j][1] = 255;
-						p[j][2] = 0;
-					}
-					else if (value < 150)	//green
-					{
-						p[j][0] = 0;
-						p[j][1] = 255;
-						p[j][2] = 0;
-					}
-					else if (value < 200)
-					{
-						p[j][0] = 0;
-						p[j][1] = 255;
-						p[j][2] = 255;
-					}
-					else	//red
-					{
-						p[j][0] = 0;
-						p[j][1] = 0;
-						p[j][2] = 255;
-					}
+					p[j][0] = 0;
+					p[j][1] = 0;
+					p[j][2] = 0;
+				}
+				else if (value < 50)	//blue
+				{
+					p[j][0] = 255;
+					p[j][1] = 0;
+					p[j][2] = 0;
+				}
+				else if (value < 100)
+				{
+					p[j][0] = 255;
+					p[j][1] = 255;
+					p[j][2] = 0;
+				}
+				else if (value < 150)	//green
+				{
+					p[j][0] = 0;
+					p[j][1] = 255;
+					p[j][2] = 0;
+				}
+				else if (value < 200)
+				{
+					p[j][0] = 0;
+					p[j][1] = 255;
+					p[j][2] = 255;
+				}
+				else	//red
+				{
+					p[j][0] = 0;
+					p[j][1] = 0;
+					p[j][2] = 255;
 				}
 			}
-			cv::imshow("Optical-Flow Buffer - Color", matOpticalColor);
-			cvWaitKey(1);
 		}
+		cv::imshow("Optical-Flow Buffer - Color", matOpticalColor);
+		cvWaitKey(1);
 	}
 }
 

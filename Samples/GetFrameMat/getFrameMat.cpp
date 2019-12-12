@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #include<pthread.h>
 #endif
 
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 CeleX5 *pCeleX5 = new CeleX5;
 
@@ -66,7 +66,7 @@ int main()
 
 	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	pCeleX5->setFpnFile(FPN_PATH);
-
+	pCeleX5->disableEventStreamModule();
 	CeleX5::CeleX5Mode sensorMode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
 	pCeleX5->setSensorFixedMode(sensorMode);
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #define MAT_ROWS 800
 #define MAT_COLS 1280
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -63,8 +63,8 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		int row = 0, col = 0;
 		for (int i = 0; i < dataSize; i++)
 		{
-			row = 800 - vecEvent[i].row - 1;
-			col = vecEvent[i].col;
+			row = 799 - vecEvent[i].row;
+			col = 1279 - vecEvent[i].col;
 			if (vecEvent[i].polarity == 1)
 			{
 				matPolarity.at<uchar>(row, col) = 255;

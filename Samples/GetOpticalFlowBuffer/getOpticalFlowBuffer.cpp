@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #include<pthread.h>
 #endif
 
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 CeleX5 *pCeleX5 = new CeleX5;
 
@@ -81,8 +81,7 @@ int main()
 	sigaction(SIGTERM, &sig_action, NULL); // 15
 #endif
 
-	int imgSize = 1280 * 800;
-	unsigned char* pOpticalFlowBuffer = new unsigned char[imgSize];
+	uint8_t* pOpticalFlowBuffer = new uint8_t[CELEX5_PIXELS_NUMBER];
 	while (true)
 	{
 		pCeleX5->getOpticalFlowPicBuffer(pOpticalFlowBuffer); //optical-flow raw buffer
@@ -90,10 +89,10 @@ int main()
 		//cv::Mat matOpticalRaw = pCeleX5->getOpticalFlowPicMat(CeleX5::Full_Optical_Flow_Pic);	//get optical flow raw data
 		cv::imshow("Optical-Flow Buffer - Gray", matOpticalRaw);
 
-		cv::Mat matOpticalSpeed = pCeleX5->getOpticalFlowPicMat(CeleX5::Full_Optical_Flow_Speed_Pic);	//get optical flow speed buffer
+		cv::Mat matOpticalSpeed = pCeleX5->getOpticalFlowPicMat(CeleX5::OpticalFlowSpeedPic);	//get optical flow speed buffer
 		cv::imshow("Optical-Flow Speed Buffer - Gray", matOpticalSpeed);
 
-		cv::Mat matOpticalDirection = pCeleX5->getOpticalFlowPicMat(CeleX5::Full_Optical_Flow_Direction_Pic);	//get optical flow direction buffer
+		cv::Mat matOpticalDirection = pCeleX5->getOpticalFlowPicMat(CeleX5::OpticalFlowDirectionPic);	//get optical flow direction buffer
 		cv::imshow("Optical-Flow Direction Buffer - Gray", matOpticalDirection);
 
 		//optical-flow raw data - display color image

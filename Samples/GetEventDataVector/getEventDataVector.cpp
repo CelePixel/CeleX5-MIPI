@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018 CelePixel Technology Co. Ltd. All Rights Reserved
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #define MAT_ROWS 800
 #define MAT_COLS 1280
-#define FPN_PATH    "../Samples/config/FPN_3.txt"
+#define FPN_PATH    "../Samples/config/FPN_2.txt"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -54,7 +54,39 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
 	if (NULL == pSensorData)
 		return;
-	if (CeleX5::Event_Intensity_Mode == pSensorData->getSensorMode())
+	if (CeleX5::Event_Off_Pixel_Timestamp_Mode == pSensorData->getSensorMode())
+	{
+		std::vector<EventData> vecEvent;
+		pCeleX5->getEventDataVector(vecEvent);
+		cv::Mat mat = cv::Mat::zeros(cv::Size(1280, 800), CV_8UC1);
+		int dataSize = vecEvent.size();
+		for (int i = 0; i < dataSize; i++)
+		{
+			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = 255;
+		}
+		if (dataSize > 0)
+		{
+			cv::imshow("Event Binary Pic", mat);
+			cv::waitKey(1);
+		}
+	}
+	else if (CeleX5::Event_In_Pixel_Timestamp_Mode == pSensorData->getSensorMode())
+	{
+		std::vector<EventData> vecEvent;
+		pCeleX5->getEventDataVector(vecEvent);
+		cv::Mat mat = cv::Mat::zeros(cv::Size(1280, 800), CV_8UC1);
+		int dataSize = vecEvent.size();
+		for (int i = 0; i < dataSize; i++)
+		{
+			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = 255;
+		}
+		if (dataSize > 0)
+		{
+			cv::imshow("Event Binary Pic", mat);
+			cv::waitKey(1);
+		}
+	}
+	else if (CeleX5::Event_Intensity_Mode == pSensorData->getSensorMode())
 	{
 		int count1 = 0, count2 = 0, count3 = 0;
 		std::vector<EventData> vecEvent;
@@ -69,22 +101,6 @@ void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 		{
 			//cout << "size = " << dataSize << ", t = " << vecEvent[dataSize - 1].t - vecEvent[0].t << endl;
 			cv::imshow("Event Gray Pic", mat);
-			cv::waitKey(1);
-		}
-	}
-	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == pSensorData->getSensorMode())
-	{
-		std::vector<EventData> vecEvent;
-		pCeleX5->getEventDataVector(vecEvent);
-		cv::Mat mat = cv::Mat::zeros(cv::Size(1280, 800), CV_8UC1);
-		int dataSize = vecEvent.size();
-		for (int i = 0; i < dataSize; i++)
-		{
-			mat.at<uchar>(800 - vecEvent[i].row - 1, 1280 - vecEvent[i].col - 1) = 255;
-		}
-		if (dataSize > 0)
-		{
-			cv::imshow("Event Binary Pic", mat);
 			cv::waitKey(1);
 		}
 	}
@@ -128,6 +144,7 @@ int main()
 	pCeleX5->setSensorFixedMode(CeleX5::Event_Off_Pixel_Timestamp_Mode);
 	pCeleX5->disableFrameModule();
 	pCeleX5->disableIMUModule();
+	pCeleX5->disableEventCountSlice();
 	SensorDataObserver* pSensorData = new SensorDataObserver(pCeleX5->getSensorDataServer());
 
 #ifdef _WIN32
