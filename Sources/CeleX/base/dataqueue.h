@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 * limitations under the License.
 */
 
-#ifndef HHDATAQUEUE_H
-#define HHDATAQUEUE_H
+#ifndef DATAQUEUE_H
+#define DATAQUEUE_H
 
 #include <queue>
 #include <stdint.h>
@@ -23,103 +23,40 @@
 #include <vector>
 #include "../include/celextypes.h"
 
+#define ARRAY_SIZE     12
+#define MAX_DATA_LEN   1536001
+
 typedef struct DataInfo
 {
-    unsigned char*     pData;
-    unsigned long      length;
-	time_t             timeStamp;
+	uint8_t*           pData;
+	unsigned long      length;
+	time_t             timestamp;
 	std::vector<IMURawData> vecIMUData;
 } DataInfo;
 
+/* 
+* This class provides a data queue for playing back recorded bin file.
+*/
 class DataQueue
 {
 public:
-    DataQueue();
-    ~DataQueue();
+	DataQueue();
+	~DataQueue();
 
-    void push(unsigned char* pData, long length,time_t timeStamp = 0);
-    void pop(unsigned char*& pData, long* length, time_t* timeStamp);
-	unsigned long size();
-    void clear();
+	bool push(uint8_t* pData, uint32_t length, std::time_t timestamp = 0);
+	bool push(uint8_t* pData, uint32_t length, std::vector<IMURawData> &imuData, std::time_t timestamp);
 
-private:
-    std::queue<DataInfo> m_queue;
-    unsigned long        m_size;
-};
+	bool pop(uint8_t* pData, uint32_t* length, std::time_t* timestamp);
+	bool pop(uint8_t* pData, uint32_t* length, std::vector<IMURawData> &imuData, std::time_t* timestamp);
 
-#define ARRAY_SIZE     12
-#define MAX_DATA_LEN   1536001
-class DataQueueEx
-{
-public:
-	DataQueueEx();
-	~DataQueueEx();
-
-	void push(unsigned char* pData, long length, time_t timeStamp = 0);
-	void push(unsigned char* pData, long length, std::vector<IMURawData> imuData, time_t timeStamp);
-
-	void pop(unsigned char* pData, long* length, time_t* timeStamp);
-	void pop(unsigned char* pData, long* length, std::vector<IMURawData> &imuData, time_t* timeStamp);
-	unsigned long size();
+	uint32_t size();
 	void clear();
 
 private:
-	std::queue<DataInfo> m_queue;
 	std::array<DataInfo, ARRAY_SIZE> m_arrayData;
-	unsigned long        m_size;
+	uint32_t             m_uiSize;
 	int                  m_iHead;
 	int                  m_iTail;
 };
 
-class CirDataQueue
-{
-public:
-    CirDataQueue(int queueCapacity);
-    ~CirDataQueue();
-
-    int getLength(); //get the length of the queue
-    int getCapacity();
-
-    bool enqueue(unsigned char* pData);  //push a element
-    bool dequeue(unsigned char*& pData); //pop a element
-    bool isEmpty();
-    bool isFull();
-    void clear();
-    unsigned char* head();
-
-private:
-    std::vector<DataInfo>  m_queue;
-    int                    m_iHead;
-    int                    m_iTail;
-    int                    m_iQueueLenth;
-    int                    m_iQueueCapacity;
-};
-
-class CirDataQueueEx
-{
-public:
-	CirDataQueueEx();
-	~CirDataQueueEx();
-
-	void allocMemory(uint64_t capacity);
-	void clearMemery();
-	int size(); //get the length of the queue
-	int capacity();
-
-	bool push(unsigned char* pData, uint32_t length);  //push a element
-	bool pop(unsigned char* pData, uint32_t* length); //pop a element
-	bool isEmpty();
-	bool isFull();
-	void clear();
-	unsigned char* head();
-
-private:
-	std::queue<uint32_t>   m_queueSize;
-	unsigned char*         m_pBuffer;
-	int                    m_iHead;
-	int                    m_iTail;
-	int                    m_iLength;
-	uint64_t               m_iCapacity;
-};
-
-#endif // HHDATAQUEUE_H
+#endif // DATAQUEUE_H

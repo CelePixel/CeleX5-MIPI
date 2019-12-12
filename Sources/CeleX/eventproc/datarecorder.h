@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,12 +17,8 @@
 #ifndef DATARECORDER_H
 #define DATARECORDER_H
 
-#include <iostream>
-#include <fstream>
 #include <vector>
 #include "../include/celex5/celex5.h"
-
-using namespace std;
 
 class DataRecorder
 {
@@ -30,17 +26,29 @@ public:
 	DataRecorder();
 	~DataRecorder();
 
-	bool isRecording();
-	void startRecording(std::string filePath);
+	/*
+	*  @function: isRecording
+	*  @brief   : check if it is recording
+	*  @input   :
+	*  @output  :
+	*  @return  : true is recording, false is not recording
+	*/
+	bool isRecording()
+	{
+		return m_bRecording;
+	}
+	bool startRecording(std::string filePath);
 	void stopRecording(CeleX5::BinFileAttributes* header);
-	void writeData(unsigned char* pData, long length);
-	bool writeData(vector<uint8_t> vecData);
-	bool writeData(vector<uint8_t> vecData, time_t time_stamp_end, vector<IMURawData> imuData);
+	bool writeData(uint8_t* pData, uint32_t length);
+	bool writeData(uint8_t* pData, uint32_t length, std::time_t time_stamp_end, std::vector<IMURawData> imuData);
+
+private:
+	int getLocalTimestamp();
 
 private:
 	bool           m_bRecording;
 	int            m_iTimeStampStart;
-	ofstream       m_ofstreamRecord;
+	std::ofstream  m_ofstreamRecord;
 	uint32_t       m_uiPackageCount;
 };
 

@@ -1,41 +1,44 @@
+/*
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #include <stdio.h>
-#include "BulkTransfer.h"
+#include <iostream>
+#include <chrono>
 #ifdef __linux__
 #include <semaphore.h>
 #include <string.h>
 #endif // __linux__
+#include "bulktransfer.h"
 
-#include <iostream>
-#include <chrono>
+//std::ofstream ofTest;
 
-#define MAX_IMAGE_BUFFER_NUMBER    100
-CPackage  image_list[MAX_IMAGE_BUFFER_NUMBER];
 static CPackage*  current_package = nullptr;
-
-static bool       bRunning = false;
-static uint16_t   write_frame_index = 0;
-static uint16_t   read_frame_index = 0;
-static uint32_t   package_count = 0;
-
 clock_t clock_begin = 0;
 clock_t clock_end = 0;
 
-bool    g_bTransfer_Error = false;
-bool    g_bUsingIMUCallback = false;
-
-std::vector<IMU_Raw_Data>    imu_raw_data_list;
-
-#ifdef __linux__
-    static sem_t     m_sem;
-#else
-	static HANDLE m_hEventHandle = nullptr;
-#endif // __linux__
-
-#ifdef _WIN32
-#include <Windows.h>
-	CRITICAL_SECTION    g_csIMUData;
-#else
-#endif
+bool        g_bTransferError = false;
+bool        g_bUsingIMUCallback = false;
+//
+uint16_t    g_uiTailIndex = 0;
+uint16_t    g_uiHeadIndex = 0;
+uint32_t    g_uiPackageCount = 0;
+CPackage    g_PackageList[MAX_IMAGE_BUFFER_NUMBER];
+//
+std::vector<IMURawData>    g_IMURawDataList;
+std::mutex                 g_mtxSensorData;
 
 bool submit_bulk_transfer(libusb_transfer *xfr)
 {
@@ -65,51 +68,53 @@ void generate_image(uint8_t *buffer, int length)
 {
 	if (current_package == nullptr)
 	{
-		current_package = &image_list[write_frame_index];
-		if (package_count >= MAX_IMAGE_BUFFER_NUMBER)
+		current_package = &g_PackageList[g_uiTailIndex];
+		//ofTest << "------- " << g_uiTailIndex << std::endl;
+		current_package->clearData();
+		if (g_uiPackageCount >= MAX_IMAGE_BUFFER_NUMBER)
 		{
-			if (write_frame_index == read_frame_index)
-			{
-				current_package->ClearData();
-				package_count--;
+			g_uiPackageCount--;
 
-				read_frame_index++;
-				if (read_frame_index >= MAX_IMAGE_BUFFER_NUMBER)
-					read_frame_index = 0;
-			}
+			g_uiHeadIndex++;
+			if (g_uiHeadIndex >= MAX_IMAGE_BUFFER_NUMBER)
+				g_uiHeadIndex = 0;
 			printf("------- generate_image: buffer is full! -------\n");
+			//ofTest << "------- generate_image: buffer is full! -------" << std::endl;
 		}
-		//printf("--- package_count = %d, write_frame_index = %d\n", package_count, write_frame_index);
+		//printf("--- g_uiPackageCount = %d, g_uiWriteIndex = %d\n", g_uiPackageCount, g_uiWriteIndex);
 	}
+	//
 	if (current_package)
-		current_package->Insert(buffer + buffer[0], length - buffer[0]);
-	//
-	if (!g_bUsingIMUCallback)
 	{
-		if (buffer[7] == 1)
+		if (!g_bUsingIMUCallback)
 		{
-			IMU_Raw_Data imu_data;
-			memcpy(imu_data.imu_data, buffer + 8, 20);
-			imu_data.time_stamp = getTimeStamp();
+			if (buffer[7] == 1)
+			{
+				IMURawData imu_data;
+				memcpy(imu_data.imuData, buffer + 8, 20);
+				imu_data.timestamp = getTimeStamp();
 
-			current_package->m_vecIMUData.push_back(imu_data);
+				current_package->m_vecIMUData.push_back(imu_data);
+			}
 		}
-	}
-	//
-	if (buffer[1] & 0x02)
-	{
-		current_package->m_lTime_Stamp_End = getTimeStamp();
-		//cout << "------------ image time stamp = " << current_package->m_lTime_Stamp_End << endl;
-		if (current_package)
+		if (buffer[1] & 0x02)
 		{
-			current_package->Insert(buffer + 6, 1);
-			current_package->End();
+			current_package->m_lTimestampEnd = getTimeStamp();
+			//cout << "------------ image time stamp = " << current_package->m_lTime_Stamp_End << endl;
+			buffer[length] = *(buffer + 6);
+			current_package->insert(buffer + buffer[0], length - buffer[0] + 1);
+			//current_package->Insert(buffer + 6, 1);
+			current_package->end();
 			current_package = nullptr;
 
-			write_frame_index++;
-			if (write_frame_index >= MAX_IMAGE_BUFFER_NUMBER)
-				write_frame_index = 0;
-			package_count++;
+			g_uiTailIndex++;
+			if (g_uiTailIndex >= MAX_IMAGE_BUFFER_NUMBER)
+				g_uiTailIndex = 0;
+			g_uiPackageCount++;
+		}
+		else
+		{
+			current_package->insert(buffer + buffer[0], length - buffer[0]);
 		}
 	}
 }
@@ -118,110 +123,22 @@ void generate_imu_data(uint8_t *buffer, int length)
 {
 	if (buffer[0] == 0x01) //valid imu data
 	{
-		IMU_Raw_Data imu_data;
+		IMURawData imu_data;
 		//printf("------ generate_imu_data: valid imu data!\n");
-		memcpy(imu_data.imu_data, buffer + 1, 20);
-		imu_data.time_stamp = getTimeStamp();
+		memcpy(imu_data.imuData, buffer + 1, 20);
+		imu_data.timestamp = getTimeStamp();
 		
 		//cout << "generate_imu_data: " << imu_data.time_stamp << endl;
 
-#ifdef _WIN32
-		EnterCriticalSection(&g_csIMUData);
-#endif
-		imu_raw_data_list.push_back(imu_data);
-#ifdef _WIN32
-		LeaveCriticalSection(&g_csIMUData);
-#endif
-
-		//cout << imu_data.time_stamp << endl;
+		g_mtxSensorData.lock();
+		g_IMURawDataList.push_back(imu_data);
+		g_mtxSensorData.unlock();
+		//std::cout << imu_data.timestamp << std::endl;
 	}
 	else
 	{
 		printf("generate_imu_data: invalid imu data!\n");
 	}
-}
-
-bool GetPicture(std::vector<uint8_t> &Image)
-{
-	if (bRunning == true)
-	{
-		if (package_count > 0)
-		{
-			if (read_frame_index != write_frame_index)
-			{
-				image_list[read_frame_index].GetImage(Image);
-				//printf("------------- read_frame_index = %d-------------\n", read_frame_index);
-				read_frame_index++;
-				if (read_frame_index >= MAX_IMAGE_BUFFER_NUMBER)
-					read_frame_index = 0;
-				package_count--;
-				//printf("------------- read_frame_index = %d, package_count = %d\n", read_frame_index, package_count);
-				if (Image.size())
-				{
-					return true;
-				}
-			}
-		}
-	}
-	return false;
-}
-
-bool GetPicture(std::vector<uint8_t> &Image, std::time_t& time_stamp_end, std::vector<IMU_Raw_Data>& imu_data)
-{
-	if (bRunning == true)
-	{
-		if (package_count > 0)
-		{
-			if (read_frame_index != write_frame_index)
-			{
-				image_list[read_frame_index].GetImage(Image);
-				time_stamp_end = image_list[read_frame_index].m_lTime_Stamp_End;
-
-				if (g_bUsingIMUCallback)
-				{
-#ifdef _WIN32
-					EnterCriticalSection(&g_csIMUData);
-#endif
-					imu_data = imu_raw_data_list;
-					imu_raw_data_list.clear();
-#ifdef _WIN32
-					LeaveCriticalSection(&g_csIMUData);
-#endif
-				}
-				else
-				{
-					imu_data = image_list[read_frame_index].m_vecIMUData;
-				}
-				image_list[read_frame_index].m_vecIMUData.clear();
-				//printf("------------- read_frame_index = %d-------------\n", read_frame_index);
-				read_frame_index++;
-				if (read_frame_index >= MAX_IMAGE_BUFFER_NUMBER)
-					read_frame_index = 0;
-				package_count--;
-				//printf("------------- read_frame_index = %d, package_count = %d\n", read_frame_index, package_count);
-				if (Image.size())
-				{
-					return true;
-				}
-			}
-			else
-			{
-				//printf("------------- !!!!!!!!!!!!!!!!!!!!!!!!! -------------\n");
-			}
-		}
-	}
-	return false;
-}
-
-void ClearData()
-{
-	for (int i = 0; i < MAX_IMAGE_BUFFER_NUMBER; i++)
-	{
-		image_list[i].ClearData();
-	}
-	package_count = 0;
-	write_frame_index = 0;
-	read_frame_index = 0;
 }
 
 void callbackUSBTransferCompleted(libusb_transfer *xfr)
@@ -247,7 +164,7 @@ void callbackUSBTransferCompleted(libusb_transfer *xfr)
 			break;
 
         case LIBUSB_TRANSFER_ERROR:
-			g_bTransfer_Error = true;
+			g_bTransferError = true;
 			printf("LIBUSB_TRANSFER_ERROR\r\n");
 			break;
 
@@ -284,7 +201,7 @@ void cbUSBInterruptTransferCompleted(libusb_transfer *xfr)
 		break;
 
 	case LIBUSB_TRANSFER_ERROR:
-		g_bTransfer_Error = true;
+		g_bTransferError = true;
 		printf("LIBUSB_TRANSFER_ERROR\r\n");
 		break;
 
@@ -342,42 +259,6 @@ libusb_transfer *alloc_interrupt_transfer(libusb_device_handle *device_handle, u
 		}
 	}
 	return nullptr;
-}
-
-bool Init(void)
-{
-#ifdef _WIN32
-	InitializeCriticalSection(&g_csIMUData);
-#else
-#endif
-
-	//libusb_set_debug(nullptr, LIBUSB_LOG_LEVEL_ERROR);
-#ifdef __linux__
-    if (sem_init(&m_sem,0,0) == 0)
-    {
-#else
-    m_hEventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (m_hEventHandle)
-    {
-#endif
-        bRunning = true;
-        return true;
-    }
-    return false;
-}
-
-void Exit(void)
-{
-    bRunning = false;
-#ifdef __linux__
-    sem_destroy(&m_sem);
-#else
-    if(m_hEventHandle)
-    {
-		CloseHandle(m_hEventHandle);
-		m_hEventHandle = nullptr;
-    }
-#endif
 }
 
 void cancel_bulk_transfer(libusb_transfer *xfr)

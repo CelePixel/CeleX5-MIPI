@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -14,18 +14,21 @@
 * limitations under the License.
 */
 
-#include "../include/celex5/celex5.h"
-#include "../cx3driver/CeleDriver.h"
-#include "../configproc/hhsequencemgr.h"
-#include "../configproc/hhwireincommand.h"
-#include "../base/xbase.h"
-#include "../eventproc/dataprocessthread.h"
-#include "datarecorder.h"
 #include <iostream>
 #include <cstring>
 #include <thread>
+#include <algorithm>
+#include "../include/celex5/celex5.h"
+#include "../cx3driver/celedriver.h"
+#include "../configproc/celex5cfgmgr.h"
+#include "../configproc/wireincommand.h"
+#include "../base/filedirectory.h"
+#include "../eventproc/dataprocessthread.h"
+#include "datarecorder.h"
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <unistd.h>
 #endif
 
@@ -33,17 +36,7 @@
 static HANDLE s_hEventHandle = nullptr;
 #endif
 
-#define CSR_COL_GAIN          45
-
-#define CSR_BIAS_ADVL_I_H     30
-#define CSR_BIAS_ADVL_I_L     31
-#define CSR_BIAS_ADVH_I_H     26
-#define CSR_BIAS_ADVH_I_L     27
-
-#define CSR_BIAS_ADVCL_I_H    38
-#define CSR_BIAS_ADVCL_I_L    39
-#define CSR_BIAS_ADVCH_I_H    34
-#define CSR_BIAS_ADVCH_I_L    35
+using namespace std;
 
 CeleX5::CeleX5()
 	: m_bLoopModeEnabled(false)
@@ -77,9 +70,9 @@ CeleX5::CeleX5()
 	, m_bShowImagesEnabled(true)
 	, m_bAutoISPFrofileLoaded(false)
 {
-	m_pSequenceMgr = new HHSequenceMgr;
+	m_pCeleX5CfgMgr = new CeleX5CfgMgr;
 	//create data process thread
-	m_pDataProcessThread = new DataProcessThreadEx("CeleX5Thread");
+	m_pDataProcessThread = new DataProcessThread("CeleX5Thread");
 	m_pDataProcessThread->setCeleX(this);
 	m_pDataProcessor = new CeleX5DataProcessor;
 	m_pDataProcessThread->setDataProcessor(m_pDataProcessor);
@@ -106,7 +99,7 @@ CeleX5::~CeleX5()
 		delete m_pCeleDriver;
 		m_pCeleDriver = nullptr;
 	}
-	if (m_pSequenceMgr) delete m_pSequenceMgr;
+	if (m_pCeleX5CfgMgr) delete m_pCeleX5CfgMgr;
 	//
 	if (m_pDataProcessor)
 	{
@@ -142,13 +135,13 @@ bool CeleX5::openSensor(DeviceType type)
 			m_pCeleDriver = new CeleDriver;
 			if (!m_pCeleDriver->openUSB())
 			{
-				m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI);
+				m_pCeleX5CfgMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI);
 				m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
 				return false;
 			}
 		}
-		XBase base;
-		string filePath = base.getApplicationDirPath();
+		FileDirectory base;
+		std::string filePath = base.getApplicationDirPath();
 #ifdef _WIN32
 		filePath += "\\";
 #endif
@@ -156,7 +149,7 @@ bool CeleX5::openSensor(DeviceType type)
 		if (base.isFileExists(filePath))
 		{
 			std::string serialNumber = getSerialNumber();
-			m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG);
+			m_pCeleX5CfgMgr->parseCeleX5Cfg(FILE_CELEX5_CFG);
 			if (serialNumber.size() > 4 && serialNumber.at(4) == 'M') //no wire version
 			{
 				m_uiISOLevel = 2;
@@ -173,27 +166,27 @@ bool CeleX5::openSensor(DeviceType type)
 		}
 		else
 		{
-			ofstream out(filePath);
+			std::ofstream out(filePath);
 			out.close();
 			std::string serialNumber = getSerialNumber();
 			if (serialNumber.size() > 4 && serialNumber.at(4) == 'M') //no wire version
 			{
-				m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI);
-				m_pSequenceMgr->saveCeleX5XML(FILE_CELEX5_CFG_MIPI);
+				m_pCeleX5CfgMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI);
+				m_pCeleX5CfgMgr->saveCeleX5XML(FILE_CELEX5_CFG_MIPI);
 				m_uiISOLevel = 2;
 				m_uiISOLevelCount = 4;
 				m_uiBrightness = 130;
 			}
 			else //wire version
 			{
-				m_pSequenceMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI_WRIE);
-				m_pSequenceMgr->saveCeleX5XML(FILE_CELEX5_CFG_MIPI_WRIE);
+				m_pCeleX5CfgMgr->parseCeleX5Cfg(FILE_CELEX5_CFG_MIPI_WRIE);
+				m_pCeleX5CfgMgr->saveCeleX5XML(FILE_CELEX5_CFG_MIPI_WRIE);
 				m_uiISOLevel = 3;
 				m_uiISOLevelCount = 6;
 				m_uiBrightness = 100;
 			}
 			m_mapCfgModified = m_mapCfgDefaults = getCeleX5Cfg();
-			m_pSequenceMgr->saveCeleX5XML(m_mapCfgDefaults);
+			m_pCeleX5CfgMgr->saveCeleX5XML(m_mapCfgDefaults);
 		}
 
 		if (!configureSettings(type))
@@ -221,20 +214,27 @@ bool CeleX5::isSensorReady()
 	return m_bSensorReady;
 }
 
-void CeleX5::getMIPIData(vector<uint8_t> &buffer)
+/*
+*  @function :  getMIPIData
+*  @brief    :	interface for getting MIPI format data from cypress
+*  @input    :	buffer : the vector for saving raw image buffer
+*  @output   :
+*  @return   :
+*/
+void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length)
 {
 	if (CeleX5::CeleX5_MIPI != m_emDeviceType)
 	{
 		return;
 	}
-	if (m_pCeleDriver->getimage(buffer))
+	//if (m_pCeleDriver->getimage(buffer))
 	{
 		//cout << "image buffer size = " << buffer.size() << endl;
 
 		//record sensor data
 		if (m_pDataRecorder->isRecording())
 		{
-			m_pDataRecorder->writeData(buffer);
+			m_pDataRecorder->writeData(pData, length);
 		}
 
 		//process sensor data
@@ -267,27 +267,36 @@ void CeleX5::getMIPIData(vector<uint8_t> &buffer)
 	}
 }
 
-void CeleX5::getMIPIData(vector<uint8_t> &buffer, std::time_t& time_stamp_end, vector<IMURawData>& imu_data)
+/*
+*  @function :  getMIPIData
+*  @brief    :	interface for getting MIPI format data, time stamps and raw IMU data
+*  @input    :	buffer : the vector for saving raw image buffer
+*				timeStampEnd : the end time stamp of the buffer
+*				imuData : the vector for saving raw IMU buffer
+*  @output   :
+*  @return   :
+*/
+void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imu_data)
 {
 	if (CeleX5::CeleX5_MIPI != m_emDeviceType)
 	{
 		return;
 	}
-	vector<IMU_Raw_Data> imu_raw_data;
-	if (m_pCeleDriver->getSensorData(buffer, time_stamp_end, imu_raw_data))
+	std::vector<IMURawData> imu_raw_data;
+	if (m_pCeleDriver->getSensorData(pData, length, timestampEnd, imu_raw_data))
 	{
-		imu_data = vector<IMURawData>(imu_raw_data.size());
+		imu_data = std::vector<IMURawData>(imu_raw_data.size());
 		for (int i = 0; i < imu_raw_data.size(); i++)
 		{
 			//cout << "--------------"<<imu_raw_data[i].time_stamp << endl;
-			memcpy(imu_data[i].imu_data, imu_raw_data[i].imu_data, sizeof(imu_raw_data[i].imu_data));
-			imu_data[i].time_stamp = imu_raw_data[i].time_stamp;
+			memcpy(imu_data[i].imuData, imu_raw_data[i].imuData, sizeof(imu_raw_data[i].imuData));
+			imu_data[i].timestamp = imu_raw_data[i].timestamp;
 			//imu_data[i] = ((struct IMURawData*)&imu_raw_data[i]);
 		}
 		//record sensor data
 		if (m_pDataRecorder->isRecording())
 		{
-			m_pDataRecorder->writeData(buffer, time_stamp_end, imu_data);
+			m_pDataRecorder->writeData(pData, length, timestampEnd, imu_data);
 		}
 
 		/*if (buffer.size() > 0)
@@ -319,15 +328,33 @@ void CeleX5::getMIPIData(vector<uint8_t> &buffer, std::time_t& time_stamp_end, v
 	}
 }
 
-void CeleX5::parseMIPIData(uint8_t* pData, int dataSize)
+/*
+*  @function :  parseMIPIData
+*  @brief    :	interface for parsing MIPI format data
+*  @input    :	pData : the data for parsing
+*				dataSize : the size of pData buffer
+*  @output   :
+*  @return   :
+*/
+void CeleX5::parseMIPIData(uint8_t* pData, uint32_t dataSize)
 {
 	std::vector<IMURawData> imu_data;
 	m_pDataProcessor->processMIPIData(pData, dataSize, 0, imu_data);
 }
 
-void CeleX5::parseMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData> imu_data)
+/*
+*  @function :  parseMIPIData
+*  @brief    :	interface for parsing MIPI format data
+*  @input    :	pData : the data for parsing
+*				dataSize : the size of pData buffer
+*				timeStampEnd : the end time stamp of the buffer
+*				imuData : the vector for saving raw IMU buffer
+*  @output   :
+*  @return   :
+*/
+void CeleX5::parseMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData> imuData)
 {
-	m_pDataProcessor->processMIPIData(pData, dataSize, time_stamp_end, imu_data);
+	m_pDataProcessor->processMIPIData(pData, dataSize, timestampEnd, imuData);
 }
 
 /*
@@ -414,9 +441,9 @@ void CeleX5::disableIMUModule()
 	//imu_enable: bit[8], hard_reset: bit[3:2], als_enable: bit[1]
 	//als: bit[1] = 1 menas disabled; bit[1] = 0 means enabled
 	if (m_bALSEnabled)
-		m_pCeleDriver->i2c_set(254, 0x0000);
+		m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0000);
 	else
-		m_pCeleDriver->i2c_set(254, 0x0002);
+		m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0002);
 
 	m_pDataProcessor->disableIMUModule();
 }
@@ -432,9 +459,9 @@ void CeleX5::enableIMUModule()
 {
 	//imu_enable: bit[8], hard_reset: bit[3:2], als_enable: bit[1]
 	if (m_bALSEnabled)
-		m_pCeleDriver->i2c_set(254, 0x0100);
+		m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0100);
 	else
-		m_pCeleDriver->i2c_set(254, 0x0102);
+		m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0102);
 
 	m_pDataProcessor->enableIMUModule();
 }
@@ -488,6 +515,42 @@ bool CeleX5::isEventDenoisingEnabled()
 }
 
 /*
+*  @function :  disableFrameDenoising
+*  @brief    :	disable the frame denoise module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
+void CeleX5::disableFrameDenoising()
+{
+	m_pDataProcessor->disableFrameDenoising();
+}
+
+/*
+*  @function :  enableFrameDenoising
+*  @brief    :	enable the frame denoise module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
+void CeleX5::enableFrameDenoising()
+{
+	m_pDataProcessor->enableFrameDenoising();
+}
+
+/*
+*  @function :  isFrameDenoisingEnabled
+*  @brief    :	get the state of frame denoise module
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for frame denoise module enable; false for disabled
+*/
+bool CeleX5::isFrameDenoisingEnabled()
+{
+	return m_pDataProcessor->isFrameDenoisingEnabled();
+}
+
+/*
 *  @function :  disableEventCountSlice
 *  @brief    :	disable the event count slice module
 *  @input    :
@@ -523,6 +586,43 @@ bool CeleX5::isEventCountSliceEnabled()
 	return m_pDataProcessor->isEventCountSliceEnabled();
 }
 
+
+/*
+*  @function :  disableEventOpticalFlow
+*  @brief    :	disable the event optical-flow module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
+void CeleX5::disableEventOpticalFlow()
+{
+	m_pDataProcessor->disableEventOpticalFlow();
+}
+
+/*
+*  @function :  enableEventOpticalFlow
+*  @brief    :	enable the event optical-flow module
+*  @input    :
+*  @output   :
+*  @return   :
+*/
+void CeleX5::enableEventOpticalFlow()
+{
+	m_pDataProcessor->enableEventOpticalFlow();;
+}
+
+/*
+*  @function :  isEventOpticalFlowEnabled
+*  @brief    :	get the state of event optical-flow
+*  @input    :
+*  @output   :
+*  @return   :  bool : true for event optical-flow module enable; false for disabled
+*/
+bool CeleX5::isEventOpticalFlowEnabled()
+{
+	return m_pDataProcessor->isEventOpticalFlowEnabled();
+}
+
 /*
 *  @function :  getFullPicBuffer
 *  @brief    :	get the full buffer of sensor
@@ -530,7 +630,7 @@ bool CeleX5::isEventCountSliceEnabled()
 *  @output   :	buffer : the buffer pointer for full frame
 *  @return   :
 */
-void CeleX5::getFullPicBuffer(unsigned char* buffer)
+void CeleX5::getFullPicBuffer(uint8_t* buffer)
 {
 	m_pDataProcessor->getFullPicBuffer(buffer);
 }
@@ -543,9 +643,9 @@ void CeleX5::getFullPicBuffer(unsigned char* buffer)
 *				timeStamp : the time stamp of the full frame
 *  @return   :
 */
-void CeleX5::getFullPicBuffer(unsigned char* buffer, std::time_t& time_stamp)
+void CeleX5::getFullPicBuffer(uint8_t* buffer, std::time_t& timestamp)
 {
-	m_pDataProcessor->getFullPicBuffer(buffer, time_stamp);
+	m_pDataProcessor->getFullPicBuffer(buffer, timestamp);
 }
 
 /*
@@ -577,7 +677,7 @@ cv::Mat CeleX5::getFullPicMat()
 *				type : the type the event frame
 *  @return   :
 */
-void CeleX5::getEventPicBuffer(unsigned char* buffer, emEventPicType type)
+void CeleX5::getEventPicBuffer(uint8_t* buffer, EventPicType type)
 {
 	m_pDataProcessor->getEventPicBuffer(buffer, type);
 }
@@ -591,9 +691,9 @@ void CeleX5::getEventPicBuffer(unsigned char* buffer, emEventPicType type)
 *				type : the type the event frame
 *  @return   :
 */
-void CeleX5::getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emEventPicType type)
+void CeleX5::getEventPicBuffer(uint8_t* buffer, std::time_t& timestamp, EventPicType type)
 {
-	m_pDataProcessor->getEventPicBuffer(buffer, time_stamp, type);
+	m_pDataProcessor->getEventPicBuffer(buffer, timestamp, type);
 }
 
 /*
@@ -603,7 +703,7 @@ void CeleX5::getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, e
 *  @output   :	type : the type the event frame
 *  @return   :	the mat format event pic
 */
-cv::Mat CeleX5::getEventPicMat(emEventPicType type)
+cv::Mat CeleX5::getEventPicMat(EventPicType type)
 {
 	//CeleX5ProcessedData* pSensorData = m_pDataProcessor->getProcessedData();
 	//if (pSensorData)
@@ -625,14 +725,14 @@ cv::Mat CeleX5::getEventPicMat(emEventPicType type)
 *				type : the type the optical flow frame
 *  @return   :
 */
-void CeleX5::getOpticalFlowPicBuffer(unsigned char* buffer, emFullPicType type)
+void CeleX5::getOpticalFlowPicBuffer(uint8_t* buffer, OpticalFlowPicType type)
 {
 	m_pDataProcessor->getOpticalFlowPicBuffer(buffer, type);
 }
 
-void CeleX5::getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emFullPicType type/* = Full_Optical_Flow_Pic*/)
+void CeleX5::getOpticalFlowPicBuffer(uint8_t* buffer, std::time_t& timestamp, OpticalFlowPicType type/* = Optical_Flow_Pic*/)
 {
-	m_pDataProcessor->getOpticalFlowPicBuffer(buffer, time_stamp, type);
+	m_pDataProcessor->getOpticalFlowPicBuffer(buffer, timestamp, type);
 }
 
 /*
@@ -642,7 +742,7 @@ void CeleX5::getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_st
 *  @output   :	type : the type the optical flow frame
 *  @return   :	the mat format optical flow pic
 */
-cv::Mat CeleX5::getOpticalFlowPicMat(emFullPicType type)
+cv::Mat CeleX5::getOpticalFlowPicMat(OpticalFlowPicType type)
 {
 	//CeleX5ProcessedData* pSensorData = m_pDataProcessor->getProcessedData();
 	//if (pSensorData)
@@ -676,7 +776,7 @@ bool CeleX5::getEventDataVector(std::vector<EventData> &vector)
 *				frameNo : the frame number of the event vector
 *  @return   :	bool : true for non-empty vector; false for empty vector
 */
-bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint64_t& frameNo)
+bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo)
 {
 	return m_pDataProcessor->getEventDataVector(vector, frameNo);
 }
@@ -689,9 +789,9 @@ bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint64_t& frameN
 *				frameNo : the frame number of the event vector
 *  @return   :	bool : true for non-empty vector; false for empty vector
 */
-bool CeleX5::getEventDataVectorEx(std::vector<EventData> &vector, std::time_t& time_stamp, bool bDenoised)
+bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo, std::time_t& timestamp)
 {
-	return m_pDataProcessor->getEventDataVectorEx(vector, time_stamp, bDenoised);
+	return m_pDataProcessor->getEventDataVector(vector, frameNo, timestamp);
 }
 
 /*
@@ -706,8 +806,13 @@ int CeleX5::getIMUData(std::vector<IMUData>& data)
 	return m_pDataProcessor->getIMUData(data);
 }
 
-// Set the Sensor operation mode in fixed mode
-// address = 53, width = [2:0]
+/*
+*  @function :  setSensorFixedMode
+*  @brief    :	set the Sensor operation mode in fixed mode
+*  @input    :
+*  @output   :	mode : the fixed working mode of CeleX-5 sensor
+*  @return   :	the number of IMU data packets actually obtained.
+*/
 void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 {
 	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_In_Pixel_Timestamp_Mode == mode)
@@ -735,23 +840,22 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 	setALSEnabled(false);
 
 	//Enter CFG Mode
-	wireIn(93, 0, 0xFF);
-	wireIn(90, 1, 0xFF);
+	enterCFGMode();
 
 	//Write Fixed Sensor Mode
-	wireIn(53, static_cast<uint32_t>(mode), 0xFF);
+	wireIn(SENSOR_MODE_1, static_cast<uint32_t>(mode), 0xFF);
 
 	//Disable brightness adjustment (auto isp), always load sensor core parameters from profile0
-	wireIn(221, 0, 0xFF); //AUTOISP_BRT_EN
-	wireIn(223, 0, 0xFF); //AUTOISP_TRIGGER
-	wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
-	writeRegister(233, -1, 232, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
-	writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
+	wireIn(AUTOISP_BRT_EN, 0, 0xFF); //AUTOISP_BRT_EN
+	wireIn(AUTOISP_TRIGGER, 0, 0xFF); //AUTOISP_TRIGGER
+	wireIn(AUTOISP_PROFILE_ADDR, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
+	writeRegister(AUTOISP_BRT_VALUE_H, -1, AUTOISP_BRT_VALUE_L, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
+	writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
 
 	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_In_Pixel_Timestamp_Mode == mode)
 	{
 		m_iEventDataFormat = 1;
-		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+		wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 		m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 		/*
 		(1) CSR_114 / CSR_115 = 96
@@ -763,15 +867,15 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		(6) CSR_84 / CSR_85 = 462
 		(7) CSR_86 / CSR_87 = 1200
 		*/
-		writeRegister(79, -1, 80, 200);
-		writeRegister(82, -1, 83, 800);
-		writeRegister(84, -1, 85, 462);
-		writeRegister(86, -1, 87, 1200);
+		writeRegister(MIPI_ROW_NUM_EVENT_H, -1, MIPI_ROW_NUM_EVENT_L, 200);
+		writeRegister(MIPI_HD_GAP_FULLFRAME_H, -1, MIPI_HD_GAP_FULLFRAME_L, 800);
+		writeRegister(MIPI_HD_GAP_EVENT_H, -1, MIPI_HD_GAP_EVENT_L, 462);
+		writeRegister(MIPI_GAP_EOF_SOF_H, -1, MIPI_GAP_EOF_SOF_L, 1200);
 	}
 	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == mode)
 	{
 		m_iEventDataFormat = 2;
-		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+		wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 		m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 		/*
 		(1) CSR_114 / CSR_115 = 96
@@ -783,10 +887,10 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		(6) CSR_84 / CSR_85 = 680
 		(7) CSR_86 / CSR_87 = 1300
 		*/
-		writeRegister(79, -1, 80, 200);
-		writeRegister(82, -1, 83, 720);
-		writeRegister(84, -1, 85, 680);
-		writeRegister(86, -1, 87, 1300);
+		writeRegister(MIPI_ROW_NUM_EVENT_H, -1, MIPI_ROW_NUM_EVENT_L, 200);
+		writeRegister(MIPI_HD_GAP_FULLFRAME_H, -1, MIPI_HD_GAP_FULLFRAME_L, 720);
+		writeRegister(MIPI_HD_GAP_EVENT_H, -1, MIPI_HD_GAP_EVENT_L, 680);
+		writeRegister(MIPI_GAP_EOF_SOF_H, -1, MIPI_GAP_EOF_SOF_L, 1300);
 	}
 
 	if (CeleX5::Event_In_Pixel_Timestamp_Mode == mode ||
@@ -795,29 +899,28 @@ void CeleX5::setSensorFixedMode(CeleX5Mode mode)
 		CeleX5::Optical_Flow_FPN_Mode == mode)
 	{
 		//wireIn(45, 1, 0xFF);
-		vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
+		std::vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
 		CfgInfo cfg_col_gain = cfgSensorCoreParameters.at(23);
 		wireIn(45, 1, cfg_col_gain.value);
 		//cout << "cfg_col_gain.value = " << cfg_col_gain.value << endl;
 	}
 
-	vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
+	std::vector<CfgInfo> cfgSensorCoreParameters = m_mapCfgDefaults["Sensor_Core_Parameters"];
 	CfgInfo cfg_bias_rampn = cfgSensorCoreParameters.at(7);
 	CfgInfo cfg_bias_rampp = cfgSensorCoreParameters.at(8);
 	if (CeleX5::Optical_Flow_FPN_Mode == mode)
 	{
-		//writeRegister(16, -1, 17, 530);
-		writeRegister(16, -1, 17, cfg_bias_rampn.value + (cfg_bias_rampp.value - cfg_bias_rampn.value)/2);
+		//writeRegister(BIAS_RAMPP_H, -1, BIAS_RAMPP_L, 530);
+		writeRegister(BIAS_RAMPP_H, -1, BIAS_RAMPP_L, cfg_bias_rampn.value + (cfg_bias_rampp.value - cfg_bias_rampn.value) / 2);
 	}
 	else
 	{
-		//writeRegister(16, -1, 17, 735);
-		writeRegister(16, -1, 17, cfg_bias_rampp.value);
+		//writeRegister(BIAS_RAMPP_H, -1, BIAS_RAMPP_L, 735);
+		writeRegister(BIAS_RAMPP_H, -1, BIAS_RAMPP_L, cfg_bias_rampp.value);
 	}
 
 	//Enter Start Mode
-	wireIn(90, 0, 0xFF);
-	wireIn(93, 1, 0xFF);
+	enterStartMode();
 
 	if (CeleX5::Event_Intensity_Mode == mode ||
 		CeleX5::Full_Picture_Mode == mode)
@@ -840,15 +943,22 @@ CeleX5::CeleX5Mode CeleX5::getSensorFixedMode()
 	return m_pDataProcessor->getSensorFixedMode();
 }
 
-// Set the Sensor operation mode in loop mode
-// loop = 1: the first operation mode in loop mode, address = 53, width = [2:0]
-// loop = 2: the second operation mode in loop mode, address = 54, width = [2:0]
-// loop = 3: the third operation mode in loop mode, address = 55, width = [2:0]
+/*
+*  @function :  setSensorLoopMode
+*  @brief    :	set the sensor operation mode in loop mode
+*  @input    :	mode :  the working mode of CeleX-5 sensor
+*				loopNum : the number of the loop
+*				loopNum = 1: the first operation mode in loop mode, address = 53, width = [2:0]
+*				loopNum = 2: the second operation mode in loop mode, address = 54, width = [2:0]
+*				loopNum = 3: the third operation mode in loop mode, address = 55, width = [2:0]
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setSensorLoopMode(CeleX5Mode mode, int loopNum)
 {
 	if (loopNum < 1 || loopNum > 3)
 	{
-		cout << "CeleX5::setSensorMode: wrong loop number!";
+		std::cout << "CeleX5::setSensorMode: wrong loop number!" << std::endl;
 		return;
 	}
 	clearData();
@@ -883,18 +993,18 @@ void CeleX5::setSensorLoopMode(CeleX5Mode mode, int loopNum)
 	}
 	}*/
 	enterCFGMode();
-	wireIn(52 + loopNum, static_cast<uint32_t>(mode), 0xFF);
+	wireIn(SENSOR_MODE_1 + loopNum - 1, static_cast<uint32_t>(mode), 0xFF);
 
 	if (CeleX5::Event_Intensity_Mode == mode || CeleX5::Event_In_Pixel_Timestamp_Mode == mode)
 	{
 		m_iEventDataFormat = 1;
-		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+		wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 		m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 
-		writeRegister(79, -1, 80, 200);
-		writeRegister(82, -1, 83, 800);
-		writeRegister(84, -1, 85, 462);
-		writeRegister(86, -1, 87, 1200);
+		writeRegister(MIPI_ROW_NUM_EVENT_H, -1, MIPI_ROW_NUM_EVENT_L, 200);
+		writeRegister(MIPI_HD_GAP_FULLFRAME_H, -1, MIPI_HD_GAP_FULLFRAME_L, 800);
+		writeRegister(MIPI_HD_GAP_EVENT_H, -1, MIPI_HD_GAP_EVENT_L, 462);
+		writeRegister(MIPI_GAP_EOF_SOF_H, -1, MIPI_GAP_EOF_SOF_L, 1200);
 	}
 	else if (CeleX5::Event_Off_Pixel_Timestamp_Mode == mode)
 	{
@@ -911,13 +1021,13 @@ void CeleX5::setSensorLoopMode(CeleX5Mode mode, int loopNum)
 			m_pDataProcessor->getSensorLoopMode(loopNum2) != CeleX5::Event_In_Pixel_Timestamp_Mode)
 		{
 			m_iEventDataFormat = 2;
-			wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+			wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 			m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 
-			writeRegister(79, -1, 80, 200);
-			writeRegister(82, -1, 83, 720);
-			writeRegister(84, -1, 85, 680);
-			writeRegister(86, -1, 87, 1300);
+			writeRegister(MIPI_ROW_NUM_EVENT_H, -1, MIPI_ROW_NUM_EVENT_L, 200);
+			writeRegister(MIPI_HD_GAP_FULLFRAME_H, -1, MIPI_HD_GAP_FULLFRAME_L, 720);
+			writeRegister(MIPI_HD_GAP_EVENT_H, -1, MIPI_HD_GAP_EVENT_L, 680);
+			writeRegister(MIPI_GAP_EOF_SOF_H, -1, MIPI_GAP_EOF_SOF_L, 1300);
 		}
 	}
 	enterStartMode();
@@ -936,8 +1046,13 @@ CeleX5::CeleX5Mode CeleX5::getSensorLoopMode(int loopNum)
 	return m_pDataProcessor->getSensorLoopMode(loopNum);
 }
 
-// enable or disable loop mode
-// address = 64, width = [0], 0: fixed mode / 1: loop mode
+/*
+*  @function :  setLoopModeEnabled
+*  @brief    :	enable or disable the loop mode of the sensor
+*  @input    :	enable : true for enable, false for disable
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setLoopModeEnabled(bool enable)
 {
 	m_bLoopModeEnabled = enable;
@@ -960,22 +1075,22 @@ void CeleX5::setLoopModeEnabled(bool enable)
 	enterCFGMode();
 	if (enable)
 	{
-		wireIn(64, 1, 0xFF);
+		wireIn(SENSOR_MODE_SELECT, 1, 0xFF);
 
 		if (CeleX5::CeleX5_MIPI == m_emDeviceType)
 		{
 			//Disable brightness adjustment (auto isp), always load sensor core parameters from profile0
-			wireIn(221, 0, 0xFF); //AUTOISP_BRT_EN, disable auto isp
-			wireIn(223, 1, 0xFF); //AUTOISP_TRIGGER
-			wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
-			writeRegister(233, -1, 232, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
-			writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
+			wireIn(AUTOISP_BRT_EN, 0, 0xFF); //AUTOISP_BRT_EN, disable auto isp
+			wireIn(AUTOISP_TRIGGER, 1, 0xFF); //AUTOISP_TRIGGER
+			wireIn(AUTOISP_PROFILE_ADDR, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
+			writeRegister(AUTOISP_BRT_VALUE_H, -1, AUTOISP_BRT_VALUE_L, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
+			writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
 		}
 
 		if (bChangeParameters)
 		{
 			m_iEventDataFormat = 2;
-			wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+			wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 			m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 			/*
 			(1) CSR_114 / CSR_115 = 96
@@ -987,15 +1102,15 @@ void CeleX5::setLoopModeEnabled(bool enable)
 			(6) CSR_84 / CSR_85 = 680
 			(7) CSR_86 / CSR_87 = 1300
 			*/
-			writeRegister(79, -1, 80, 200);
-			writeRegister(82, -1, 83, 720);
-			writeRegister(84, -1, 85, 680);
-			writeRegister(86, -1, 87, 1300);
+			writeRegister(MIPI_ROW_NUM_EVENT_H, -1, MIPI_ROW_NUM_EVENT_L, 200);
+			writeRegister(MIPI_HD_GAP_FULLFRAME_H, -1, MIPI_HD_GAP_FULLFRAME_L, 720);
+			writeRegister(MIPI_HD_GAP_EVENT_H, -1, MIPI_HD_GAP_EVENT_L, 680);
+			writeRegister(MIPI_GAP_EOF_SOF_H, -1, MIPI_GAP_EOF_SOF_L, 1300);
 		}
 	}
 	else
 	{
-		wireIn(64, 0, 0xFF);
+		wireIn(SENSOR_MODE_SELECT, 0, 0xFF);
 	}
 	enterStartMode();
 	m_pDataProcessor->setLoopModeEnabled(enable);
@@ -1032,7 +1147,7 @@ bool CeleX5::setFpnFile(const std::string& fpnFile)
 *  @output   :
 *  @return   :
 */
-void CeleX5::generateFPN(std::string fpnFile)
+void CeleX5::generateFPN(const std::string& fpnFile)
 {
 	if (getSensorFixedMode() == CeleX5::Event_In_Pixel_Timestamp_Mode)
 	{
@@ -1067,20 +1182,7 @@ void CeleX5::setClockRate(uint32_t value)
 	if (value > 100 || value < 20)
 		return;
 	m_uiClockRate = value;
-	if (CeleX5::CeleX5_OpalKelly == m_emDeviceType)
-	{
-		enterCFGMode();
-
-		// Disable PLL
-		wireIn(150, 0, 0xFF);
-		// Write PLL Clock Parameter
-		wireIn(159, value * 3 / 5, 0xFF);
-		// Enable PLL
-		wireIn(150, 1, 0xFF);
-
-		enterStartMode();
-	}
-	else if (CeleX5::CeleX5_MIPI == m_emDeviceType)
+	if (CeleX5::CeleX5_MIPI == m_emDeviceType)
 	{
 		if (value < 70)
 		{
@@ -1089,34 +1191,40 @@ void CeleX5::setClockRate(uint32_t value)
 		enterCFGMode();
 
 		// Disable PLL
-		wireIn(150, 0, 0xFF);
+		wireIn(PLL_PD_B, 0, 0xFF);
 		int clock[15] = { 20,  30,  40,  50,  60,  70,  80,  90, 100, 110, 120, 130, 140, 150, 160 };
 
-		int PLL_DIV_N[15] = { 12,  18,  12,  15,  18,  21,  12,  18,  15,  22,  18,  26,  21,  30, 24 };
-		int PLL_DIV_L[15] = { 2,   3,   2,   2,   2,   2,   2,   3,   2,   3,   2,   3,   2,   3,  2 };
-		int PLL_FOUT_DIV1[15] = { 3,   2,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0,  0 };
-		int PLL_FOUT_DIV2[15] = { 3,   2,   3,   3,   3,   3,   3,   2,   3,   3,   3,   3,   3,   3,  3 };
+		int _PLL_DIV_N[15] = { 12,  18,  12,  15,  18,  21,  12,  18,  15,  22,  18,  26,  21,  30, 24 };
+		int _PLL_DIV_L[15] = { 2,   3,   2,   2,   2,   2,   2,   3,   2,   3,   2,   3,   2,   3,  2 };
+		int _PLL_FOUT_DIV1[15] = { 3,   2,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0,  0 };
+		int _PLL_FOUT_DIV2[15] = { 3,   2,   3,   3,   3,   3,   3,   2,   3,   3,   3,   3,   3,   3,  3 };
 
-		int MIPI_PLL_DIV_I[15] = { 3,   2,   3,   3,   2,   2,   3,   2,   3,   2,   2,   2,   2,   2,  1 };
+		int _MIPI_PLL_DIV_I[15] = { 3,   2,   3,   3,   2,   2,   3,   2,   3,   2,   2,   2,   2,   2,  1 };
 		int MIPI_PLL_DIV_N[15] = { 120, 120, 120, 96,  120, 102, 120, 120, 96,  130, 120, 110, 102, 96, 120 };
 
 		int index = value / 10 - 2;
 
-		cout << "CeleX5::setClockRate: " << clock[index] << " MHz" << endl;
+		std::cout << "CeleX5::setClockRate: " << clock[index] << " MHz" << std::endl;
 
 		// Write PLL Clock Parameter
-		writeRegister(159, -1, -1, PLL_DIV_N[index]);
-		writeRegister(160, -1, -1, PLL_DIV_L[index]);
-		writeRegister(151, -1, -1, PLL_FOUT_DIV1[index]);
-		writeRegister(152, -1, -1, PLL_FOUT_DIV2[index]);
+		writeRegister(PLL_DIV_N, -1, -1, _PLL_DIV_N[index]);
+		writeRegister(PLL_DIV_L, -1, -1, _PLL_DIV_L[index]);
+		writeRegister(PLL_FOUT_DIV1, -1, -1, _PLL_FOUT_DIV1[index]);
+		writeRegister(PLL_FOUT_DIV2, -1, -1, _PLL_FOUT_DIV2[index]);
 
 		// Enable PLL
-		wireIn(150, 1, 0xFF);
+		wireIn(PLL_PD_B, 1, 0xFF);
 
 		disableMIPI();
-		writeRegister(113, -1, -1, MIPI_PLL_DIV_I[index]);
-		writeRegister(115, -1, 114, MIPI_PLL_DIV_N[index]);
+		writeRegister(MIPI_PLL_DIV_I, -1, -1, _MIPI_PLL_DIV_I[index]);
+		writeRegister(MIPI_PLL_DIV_N_H, -1, MIPI_PLL_DIV_N_L, MIPI_PLL_DIV_N[index]);
 		enableMIPI();
+
+		if (value > 100)
+		{
+			writeRegister(84, -1, 85, 900);
+			writeRegister(86, -1, 87, 1000);
+		}
 
 		enterStartMode();
 
@@ -1175,16 +1283,19 @@ uint32_t CeleX5::getThreshold()
 	return m_uiThreshold;
 }
 
-// Set brightness
-// <BIAS_BRT_I>
-// high byte address = 22, width = [1:0]
-// low byte address = 23, width = [7:0]
+/*
+*  @function :  setBrightness
+*  @brief    :	set the brightness of the sensor
+*  @input    :	value : brightness value
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setBrightness(uint32_t value)
 {
 	m_uiBrightness = value;
 
 	enterCFGMode();
-	writeRegister(22, -1, 23, value);
+	writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, value);
 	enterStartMode();
 }
 
@@ -1229,13 +1340,13 @@ void CeleX5::setISOLevel(uint32_t value)
 
 		enterCFGMode();
 
-		writeRegister(CSR_COL_GAIN, -1, -1, col_gain[index]);
-		writeRegister(CSR_BIAS_ADVL_I_H, -1, CSR_BIAS_ADVL_I_L, bias_advl_i[index]);
-		writeRegister(CSR_BIAS_ADVH_I_H, -1, CSR_BIAS_ADVH_I_L, bias_advh_i[index]);
-		writeRegister(CSR_BIAS_ADVCL_I_H, -1, CSR_BIAS_ADVCL_I_L, bias_advcl_i[index]);
-		writeRegister(CSR_BIAS_ADVCH_I_H, -1, CSR_BIAS_ADVCH_I_L, bias_advch_i[index]);
+		writeRegister(COL_GAIN, -1, -1, col_gain[index]);
+		writeRegister(BIAS_ADVL_I_H, -1, BIAS_ADVL_I_L, bias_advl_i[index]);
+		writeRegister(BIAS_ADVH_I_H, -1, BIAS_ADVH_I_L, bias_advh_i[index]);
+		writeRegister(BIAS_ADVCL_I_H, -1, BIAS_ADVCL_I_L, bias_advcl_i[index]);
+		writeRegister(BIAS_ADVCH_I_H, -1, BIAS_ADVCH_I_L, bias_advch_i[index]);
 
-		writeRegister(42, -1, 43, bias_vcm_i[index]);
+		writeRegister(BIAS_VCM_I_H, -1, BIAS_VCM_I_L, bias_vcm_i[index]);
 
 		enterStartMode();
 	}
@@ -1259,11 +1370,11 @@ void CeleX5::setISOLevel(uint32_t value)
 
 		enterCFGMode();
 
-		writeRegister(CSR_COL_GAIN, -1, -1, col_gain[index]);
-		writeRegister(CSR_BIAS_ADVL_I_H, -1, CSR_BIAS_ADVL_I_L, bias_advl_i[index]);
-		writeRegister(CSR_BIAS_ADVH_I_H, -1, CSR_BIAS_ADVH_I_L, bias_advh_i[index]);
-		writeRegister(CSR_BIAS_ADVCL_I_H, -1, CSR_BIAS_ADVCL_I_L, bias_advcl_i[index]);
-		writeRegister(CSR_BIAS_ADVCH_I_H, -1, CSR_BIAS_ADVCH_I_L, bias_advch_i[index]);
+		writeRegister(COL_GAIN, -1, -1, col_gain[index]);
+		writeRegister(BIAS_ADVL_I_H, -1, BIAS_ADVL_I_L, bias_advl_i[index]);
+		writeRegister(BIAS_ADVH_I_H, -1, BIAS_ADVH_I_L, bias_advh_i[index]);
+		writeRegister(BIAS_ADVCL_I_H, -1, BIAS_ADVCL_I_L, bias_advcl_i[index]);
+		writeRegister(BIAS_ADVCH_I_H, -1, BIAS_ADVCH_I_L, bias_advch_i[index]);
 
 		writeRegister(42, -1, 43, bias_vcm_i[index]);
 
@@ -1295,13 +1406,25 @@ uint32_t CeleX5::getISOLevelCount()
 	return m_uiISOLevelCount;
 }
 
-// related to fps (main clock frequency), hardware parameter
+/*
+*  @function :  getFullPicFrameTime
+*  @brief    :	get the frame time of full pic
+*  @input    :
+*  @output   :
+*  @return   :	frame time(related to clock rate)
+*/
 uint32_t CeleX5::getFullPicFrameTime()
 {
 	return 1000 / m_uiClockRate;
 }
 
-//software parameter
+/*
+*  @function :  setEventFrameTime
+*  @brief    :	set the event frame time in Event mode
+*  @input    :	value : the frame time of Event Mode, unit is ms
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setEventFrameTime(uint32_t value)
 {
 	m_pDataProcessor->setEventFrameTime(value, m_uiClockRate);
@@ -1319,18 +1442,24 @@ uint32_t CeleX5::getEventFrameTime()
 	return m_pDataProcessor->getEventFrameTime();
 }
 
-//hardware parameter
+/*
+*  @function :  setOpticalFlowFrameTime
+*  @brief    :	set the frame time in optical flow  mode
+*  @input    :	value : the frame time of optical flow Mode, unit is ms
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setOpticalFlowFrameTime(uint32_t value)
 {
 	if (value <= 10 || value >= 180)
 	{
-		cout << __FUNCTION__ << ": value is out of range!" << endl;
+		std::cout << __FUNCTION__ << ": value is out of range!" << std::endl;
 		return;
 	}
 	m_uiOpticalFlowFrameTime = value;
 	//
 	enterCFGMode();
-	wireIn(169, (value - 10) * 3 / 2, 0xFF);
+	wireIn(PLL_FOUT3_POST_DIV, (value - 10) * 3 / 2, 0xFF);
 	enterStartMode();
 }
 
@@ -1356,9 +1485,13 @@ uint32_t CeleX5::getEventCountSliceNum()
 	return m_pDataProcessor->getEventCountSliceNum();
 }
 
-// Set the duration of event mode (Mode_A/B/C) when sensor operates in loop mode
-// low byte address = 57, width = [7:0]
-// high byte address = 58, width = [1:0]
+/*
+*  @function :  setEventDuration
+*  @brief    :	set the duration of event mode (Mode_A/B/C) when sensor operates in loop mode
+*  @input    :	value : the time duration of the Event Mode
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setEventDuration(uint32_t value)
 {
 	enterCFGMode();
@@ -1368,28 +1501,30 @@ void CeleX5::setEventDuration(uint32_t value)
 	uint32_t valueH = value >> 8;
 	uint32_t valueL = 0xFF & value;
 
-	wireIn(58, valueH, 0xFF);
-	wireIn(57, valueL, 0xFF);
+	wireIn(EVENT_DURATION_H, valueH, 0xFF);
+	wireIn(EVENT_DURATION_L, valueL, 0xFF);
 
 	enterStartMode();
 }
 
-// Set the mumber of pictures to acquire in Mode_D/E/F/G/H
-// Mode_D: address = 59, width = [7:0]
-// Mode_E: address = 60, width = [7:0]
-// Mode_F: address = 61, width = [7:0]
-// Mode_G: address = 62, width = [7:0]
-// Mode_H: address = 63, width = [7:0]
+/*
+*  @function :  setPictureNumber
+*  @brief    :	set the mumber of pictures
+*  @input    :	num : the picture number
+*				mode :  the mode need to be set the picture number
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setPictureNumber(uint32_t num, CeleX5Mode mode)
 {
 	enterCFGMode();
 
 	if (Full_Picture_Mode == mode)
-		wireIn(59, num, 0xFF);
+		wireIn(PICTURE_NUMBER_1, num, 0xFF);
 	else if (Optical_Flow_Mode == mode)
-		wireIn(60, num, 0xFF);
+		wireIn(PICTURE_NUMBER_2, num, 0xFF);
 	else if (Multi_Read_Optical_Flow_Mode == mode)
-		wireIn(62, num, 0xFF);
+		wireIn(PICTURE_NUMBER_4, num, 0xFF);
 
 	enterStartMode();
 }
@@ -1445,7 +1580,7 @@ void CeleX5::restartSensor()
 void CeleX5::stopSensor()
 {
 	//hard_reset: bit[3:2], als_enable: bit[1]
-	m_pCeleDriver->i2c_set(254, 10); //1010
+	m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 10); //1010
 }
 
 /*
@@ -1575,7 +1710,7 @@ uint32_t CeleX5::getEventCountStepSize()
 void CeleX5::setRowDisabled(uint8_t rowMask)
 {
 	enterCFGMode();
-	wireIn(44, rowMask, 0xFF);
+	wireIn(ROW_ENABLE, rowMask, 0xFF);
 	enterStartMode();
 }
 
@@ -1602,7 +1737,7 @@ void CeleX5::setShowImagesEnabled(bool enable)
 void CeleX5::setEventDataFormat(int format)
 {
 	m_iEventDataFormat = format;
-	wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+	wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 	m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 }
 
@@ -1630,15 +1765,20 @@ void CeleX5::setEventFrameStartPos(uint32_t value)
 	m_pDataProcessor->setEventFrameStartPos(value);
 }
 
-// FLICKER_DETECT_EN: CSR_183
-// Flicker detection enable select: 1:enable / 0:disable
+/*
+*  @function :  setAntiFlashlightEnabled
+*  @brief    :	enable or disable the flicker
+*  @input    :	enable : enable select: 1:enable / 0:disable
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setAntiFlashlightEnabled(bool enabled)
 {
 	enterCFGMode();
 	if (enabled)
-		writeRegister(183, -1, -1, 1);
+		writeRegister(FLICKER_DETECT_EN, -1, -1, 1);
 	else
-		writeRegister(183, -1, -1, 0);
+		writeRegister(FLICKER_DETECT_EN, -1, -1, 0);
 	enterStartMode();
 }
 
@@ -1658,42 +1798,42 @@ void CeleX5::setAutoISPEnabled(bool enable)
 		if (!m_bAutoISPFrofileLoaded)
 		{
 			//--------------- for auto isp --------------- 
-			wireIn(220, 3, 0xFF); //AUTOISP_PROFILE_ADDR
+			wireIn(AUTOISP_PROFILE_ADDR, 3, 0xFF); //AUTOISP_PROFILE_ADDR
 			writeCSRDefaults("Sensor_Core_Parameters"); //Load Sensor Core Parameters
-			writeRegister(22, -1, 23, m_arrayBrightness[3]);
+			writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_arrayBrightness[3]);
 
-			wireIn(220, 2, 0xFF); //AUTOISP_PROFILE_ADDR
+			wireIn(AUTOISP_PROFILE_ADDR, 2, 0xFF); //AUTOISP_PROFILE_ADDR
 			writeCSRDefaults("Sensor_Core_Parameters"); //Load Sensor Core Parameters
-			writeRegister(22, -1, 23, m_arrayBrightness[2]);
+			writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_arrayBrightness[2]);
 
-			wireIn(220, 1, 0xFF); //AUTOISP_PROFILE_ADDR
+			wireIn(AUTOISP_PROFILE_ADDR, 1, 0xFF); //AUTOISP_PROFILE_ADDR
 			writeCSRDefaults("Sensor_Core_Parameters"); //Load Sensor Core Parameters
-			writeRegister(22, -1, 23, m_arrayBrightness[1]);
+			writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_arrayBrightness[1]);
 
-			//wireIn(221, 0, 0xFF); //AUTOISP_BRT_EN, disable auto ISP
-			//wireIn(222, 0, 0xFF); //AUTOISP_TEM_EN
-			//wireIn(223, 0, 0xFF); //AUTOISP_TRIGGER
+			//wireIn(AUTOISP_BRT_EN, 0, 0xFF); //AUTOISP_BRT_EN, disable auto ISP
+			//wireIn(AUTOISP_TEM_EN, 0, 0xFF); //AUTOISP_TEM_EN
+			//wireIn(AUTOISP_TRIGGER, 0, 0xFF); //AUTOISP_TRIGGER
 
 			writeRegister(225, -1, 224, m_uiAutoISPRefreshTime); //AUTOISP_REFRESH_TIME
 
-			writeRegister(235, -1, 234, m_arrayISPThreshold[0]); //AUTOISP_BRT_THRES1
-			writeRegister(237, -1, 236, m_arrayISPThreshold[1]); //AUTOISP_BRT_THRES2
-			writeRegister(239, -1, 238, m_arrayISPThreshold[2]); //AUTOISP_BRT_THRES3
+			writeRegister(AUTOISP_BRT_THRES1_H, -1, AUTOISP_BRT_THRES1_L, m_arrayISPThreshold[0]); //AUTOISP_BRT_THRES1
+			writeRegister(AUTOISP_BRT_THRES2_H, -1, AUTOISP_BRT_THRES2_L, m_arrayISPThreshold[1]); //AUTOISP_BRT_THRES2
+			writeRegister(AUTOISP_BRT_THRES3_H, -1, AUTOISP_BRT_THRES3_L, m_arrayISPThreshold[2]); //AUTOISP_BRT_THRES3
 
-			writeRegister(233, -1, 232, 1500); //AUTOISP_BRT_VALUE
+			writeRegister(AUTOISP_BRT_VALUE_H, -1, AUTOISP_BRT_VALUE_L, 1500); //AUTOISP_BRT_VALUE
 
 			m_bAutoISPFrofileLoaded = true;
 
 		}
-		wireIn(221, 1, 0xFF); //AUTOISP_BRT_EN, enable auto ISP
+		wireIn(AUTOISP_BRT_EN, 1, 0xFF); //AUTOISP_BRT_EN, enable auto ISP
 		if (isLoopModeEnabled())
-			wireIn(223, 1, 0xFF); //AUTOISP_TRIGGER
+			wireIn(AUTOISP_TRIGGER, 1, 0xFF); //AUTOISP_TRIGGER
 		else
-			wireIn(223, 0, 0xFF); //AUTOISP_TRIGGER
+			wireIn(AUTOISP_TRIGGER, 0, 0xFF); //AUTOISP_TRIGGER
 
-		wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
-		writeRegister(233, -1, 232, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
-		writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
+		wireIn(AUTOISP_PROFILE_ADDR, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
+		writeRegister(AUTOISP_BRT_VALUE_H, -1, AUTOISP_BRT_VALUE_L, 1500); //AUTOISP_BRT_VALUE, Set initial brightness value 1500
+		writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
 
 		enterStartMode();
 
@@ -1708,9 +1848,9 @@ void CeleX5::setAutoISPEnabled(bool enable)
 		enterCFGMode();
 
 		//Disable brightness adjustment (auto isp), always load sensor core parameters from profile0
-		wireIn(221, 0, 0xFF); //AUTOISP_BRT_EN, disable auto ISP
-		wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
-		writeRegister(22, -1, 23, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
+		wireIn(AUTOISP_BRT_EN, 0, 0xFF); //AUTOISP_BRT_EN, disable auto ISP
+		wireIn(AUTOISP_PROFILE_ADDR, 0, 0xFF); //AUTOISP_PROFILE_ADDR, Write core parameters to profile0
+		writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_uiBrightness); //BIAS_BRT_I, Override the brightness value in profile0, avoid conflict with AUTOISP profile0
 
 		enterStartMode();
 	}
@@ -1741,16 +1881,16 @@ void CeleX5::setALSEnabled(bool enable)
 	if (enable)
 	{
 		if (isIMUModuleEnabled())
-			m_pCeleDriver->i2c_set(254, 0x0100);
+			m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0100);
 		else
-			m_pCeleDriver->i2c_set(254, 0x0000);
+			m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0000);
 	}
 	else
 	{
 		if (isIMUModuleEnabled())
-			m_pCeleDriver->i2c_set(254, 0x0102);
+			m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0102);
 		else
-			m_pCeleDriver->i2c_set(254, 0x0002);
+			m_pCeleDriver->i2cSet(VIRTUAL_USB_ADDR, 0x0002);
 	}
 	m_bALSEnabled = enable;
 }
@@ -1779,11 +1919,11 @@ void CeleX5::setISPThreshold(uint32_t value, int num)
 {
 	m_arrayISPThreshold[num - 1] = value;
 	if (num == 1)
-		writeRegister(235, -1, 234, m_arrayISPThreshold[0]); //AUTOISP_BRT_THRES1
+		writeRegister(AUTOISP_BRT_THRES1_H, -1, AUTOISP_BRT_THRES1_L, m_arrayISPThreshold[0]); //AUTOISP_BRT_THRES1
 	else if (num == 2)
-		writeRegister(237, -1, 236, m_arrayISPThreshold[1]); //AUTOISP_BRT_THRES2
+		writeRegister(AUTOISP_BRT_THRES2_H, -1, AUTOISP_BRT_THRES2_L, m_arrayISPThreshold[1]); //AUTOISP_BRT_THRES2
 	else if (num == 3)
-		writeRegister(239, -1, 238, m_arrayISPThreshold[2]); //AUTOISP_BRT_THRES3
+		writeRegister(AUTOISP_BRT_THRES3_H, -1, AUTOISP_BRT_THRES3_L, m_arrayISPThreshold[2]); //AUTOISP_BRT_THRES3
 }
 
 /*
@@ -1797,8 +1937,8 @@ void CeleX5::setISPThreshold(uint32_t value, int num)
 void CeleX5::setISPBrightness(uint32_t value, int num)
 {
 	m_arrayBrightness[num - 1] = value;
-	wireIn(220, num - 1, 0xFF); //AUTOISP_PROFILE_ADDR
-	writeRegister(22, -1, 23, m_arrayBrightness[num - 1]);
+	wireIn(AUTOISP_PROFILE_ADDR, num - 1, 0xFF); //AUTOISP_PROFILE_ADDR
+	writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_arrayBrightness[num - 1]);
 }
 
 /*
@@ -1808,7 +1948,7 @@ void CeleX5::setISPBrightness(uint32_t value, int num)
 *  @output   :
 *  @return   :
 */
-void CeleX5::startRecording(std::string filePath)
+void CeleX5::startRecording(const std::string& filePath)
 {
 	m_pDataRecorder->startRecording(filePath);
 	m_pDataProcessThread->setRecordState(true);
@@ -1828,25 +1968,32 @@ void CeleX5::stopRecording()
 		BinFileAttributes header;
 		if (isLoopModeEnabled())
 		{
-			header.data_type = 3;
-			header.loopA_mode = m_pDataProcessor->getSensorLoopMode(1);
-			header.loopB_mode = m_pDataProcessor->getSensorLoopMode(2);
-			header.loopC_mode = m_pDataProcessor->getSensorLoopMode(3);
+			header.dataType = 3;
+			header.loopAMode = m_pDataProcessor->getSensorLoopMode(1);
+			header.loopBMode = m_pDataProcessor->getSensorLoopMode(2);
+			header.loopCMode = m_pDataProcessor->getSensorLoopMode(3);
 		}
 		else
 		{
-			header.data_type = 2;
-			header.loopA_mode = m_pDataProcessor->getSensorFixedMode();
-			header.loopB_mode = 255;
-			header.loopC_mode = 255;
+			header.dataType = 2;
+			header.loopAMode = m_pDataProcessor->getSensorFixedMode();
+			header.loopBMode = 255;
+			header.loopCMode = 255;
 		}
-		header.event_data_format = m_iEventDataFormat;
+		header.eventDataFormat = m_iEventDataFormat;
 		m_pDataRecorder->stopRecording(&header);
 	}
 	m_pDataProcessThread->setRecordState(false);
 }
 
-bool CeleX5::openBinFile(std::string filePath)
+/*
+*  @function :  openBinFile
+*  @brief    :	open the bin file in the user-specified directory
+*  @input    :	filePath : the directory path and name of the bin file to be played
+*  @output   :
+*  @return   :	bool value whether the bin file is opened
+*/
+bool CeleX5::openBinFile(const std::string& filePath)
 {
 	m_uiPackageCount = 0;
 	m_bFirstReadFinished = false;
@@ -1858,7 +2005,7 @@ bool CeleX5::openBinFile(std::string filePath)
 	m_ifstreamPlayback.open(filePath.c_str(), std::ios::binary);
 	if (!m_ifstreamPlayback.good())
 	{
-		cout << "Can't Open File: " << filePath.c_str() << endl;
+		std::cout << "Can't Open File: " << filePath.c_str() << std::endl;
 		return false;
 	}
 	m_pDataProcessThread->clearData();
@@ -1867,27 +2014,31 @@ bool CeleX5::openBinFile(std::string filePath)
 	m_pDataProcessor->resetTimestamp();
 	// read header
 	m_ifstreamPlayback.read((char*)&m_stBinFileHeader, sizeof(BinFileAttributes));
-	cout << "data_type = " << (int)m_stBinFileHeader.data_type
-		<< ", loopA_mode = " << (int)m_stBinFileHeader.loopA_mode << ", loopB_mode = " << (int)m_stBinFileHeader.loopB_mode << ", loopC_mode = " << (int)m_stBinFileHeader.loopC_mode
-		<< ", event_data_format = " << (int)m_stBinFileHeader.event_data_format
-		<< ", hour = " << (int)m_stBinFileHeader.hour << ", minute = " << (int)m_stBinFileHeader.minute << ", second = " << (int)m_stBinFileHeader.second
-		<< ", package_count = " << (int)m_stBinFileHeader.package_count << endl;
+	std::cout << "data_type = " << (int)m_stBinFileHeader.dataType
+		<< ", loopA_mode = " << (int)m_stBinFileHeader.loopAMode
+		<< ", loopB_mode = " << (int)m_stBinFileHeader.loopBMode
+		<< ", loopC_mode = " << (int)m_stBinFileHeader.loopCMode
+		<< ", event_data_format = " << (int)m_stBinFileHeader.eventDataFormat
+		<< ", hour = " << (int)m_stBinFileHeader.hour
+		<< ", minute = " << (int)m_stBinFileHeader.minute
+		<< ", second = " << (int)m_stBinFileHeader.second
+		<< ", package_count = " << (int)m_stBinFileHeader.packageCount << std::endl;
 
-	m_uiTotalPackageCount = m_stBinFileHeader.package_count;
+	m_uiTotalPackageCount = m_stBinFileHeader.packageCount;
 	m_pDataProcessThread->start();
-	setEventDataFormat(m_stBinFileHeader.event_data_format);
-	if (m_stBinFileHeader.data_type == 1 || m_stBinFileHeader.data_type == 3)
+	setEventDataFormat(m_stBinFileHeader.eventDataFormat);
+	if (m_stBinFileHeader.dataType == 1 || m_stBinFileHeader.dataType == 3)
 	{
 		m_bLoopModeEnabled = true;
 		m_pDataProcessor->setLoopModeEnabled(true);
-		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopA_mode), 1);
-		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopB_mode), 2);
-		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopC_mode), 3);
+		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopAMode), 1);
+		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopBMode), 2);
+		m_pDataProcessor->setSensorLoopMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopCMode), 3);
 	}
 	else
 	{
 		m_bLoopModeEnabled = false;
-		m_pDataProcessor->setSensorFixedMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopA_mode));
+		m_pDataProcessor->setSensorFixedMode(CeleX5::CeleX5Mode(m_stBinFileHeader.loopAMode));
 	}
 	return true;
 }
@@ -1922,15 +2073,16 @@ bool CeleX5::readBinFileData()
 	if (dataLen > 0)
 	{
 		m_uiPackageCount++;
-		if ((0x02 & m_stBinFileHeader.data_type) == 0x02) //has IMU data
+		if ((0x02 & m_stBinFileHeader.dataType) == 0x02) //has IMU data
 		{
 			time_t timeStamp;
 			m_ifstreamPlayback.read((char*)&timeStamp, 8);
+			//cout << "timeStamp = " << timeStamp << endl;
 			//m_pDataProcessThread->addData(m_pDataToRead, dataLen, timeStamp);
 
 			int imuSize = 0;
 			IMURawData imuRawData;
-			vector<IMURawData> vecIMUData;
+			std::vector<IMURawData> vecIMUData;
 			m_ifstreamPlayback.read((char*)&imuSize, 4);
 			if (imuSize > 0)
 			{
@@ -1962,7 +2114,7 @@ bool CeleX5::readBinFileData()
 		m_bFirstReadFinished = true;
 		//m_ifstreamPlayback.close();
 		setPlaybackState(BinReadFinished);
-		cout << "Read Playback file Finished!" << endl;
+		std::cout << "Read Playback file Finished!" << std::endl;
 
 		m_uiTotalPackageCount = m_uiPackageCount;
 	}
@@ -2006,44 +2158,93 @@ void CeleX5::setCurrentPackageNo(uint32_t value)
 	setPlaybackState(Replay);
 	m_uiPackageCount = value;
 	m_ifstreamPlayback.clear();
-	m_ifstreamPlayback.seekg(m_vecPackagePos[value], ios::beg);
+	m_ifstreamPlayback.seekg(m_vecPackagePos[value], std::ios::beg);
 	m_pDataProcessThread->setPackageNo(value);
 }
 
+/*
+*  @function :  getBinFileAttributes
+*  @brief    :	get the attributes of the bin file
+*  @input    :
+*  @output   :
+*  @return   :	a structure of the file attributes
+*/
 CeleX5::BinFileAttributes CeleX5::getBinFileAttributes()
 {
 	return m_stBinFileHeader;
 }
 
+/*
+*  @function :  replay
+*  @brief    :	replay the bin file
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::replay()
 {
 	setPlaybackState(Replay);
 	m_uiPackageCount = 0;
 	m_ifstreamPlayback.clear();
-	m_ifstreamPlayback.seekg(sizeof(BinFileAttributes), ios::beg);
+	m_ifstreamPlayback.seekg(sizeof(BinFileAttributes), std::ios::beg);
 	m_pDataProcessThread->setPackageNo(0);
 }
 
+/*
+*  @function :  play
+*  @brief    :	play the bin file
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::play()
 {
 	m_pDataProcessThread->resume();
 }
 
+/*
+*  @function :  pause
+*  @brief    :	pause the bin file
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::pause()
 {
 	m_pDataProcessThread->suspend();
 }
 
+/*
+*  @function :  getPlaybackState
+*  @brief    :	get the state of playback
+*  @input    :
+*  @output   :
+*  @return   :	current play state
+*/
 PlaybackState CeleX5::getPlaybackState()
 {
 	return m_pDataProcessThread->getPlaybackState();
 }
 
+/*
+*  @function :  setPlaybackState
+*  @brief    :	set the state of playback
+*  @input    :	state : playback state
+*  @output   :
+*  @return   :	
+*/
 void CeleX5::setPlaybackState(PlaybackState state)
 {
 	m_pDataProcessThread->setPlaybackState(state);
 }
 
+/*
+*  @function :  setIsPlayBack
+*  @brief    :	set the state of playback
+*  @input    :	state : true for is playback, false for not playing
+*  @output   :
+*  @return   :
+*/
 void CeleX5::setIsPlayBack(bool state)
 {
 	m_pDataProcessThread->setIsPlayback(state);
@@ -2056,48 +2257,168 @@ void CeleX5::setIsPlayBack(bool state)
 	}
 }
 
+void CeleX5::saveBinFile(std::string srcPath, int startPackageCount, int endPackageCount)
+{
+	if (m_ifstreamPlayback.is_open())
+	{
+		m_ifstreamPlayback.close();
+	}
+	m_ifstreamPlayback.open(srcPath.c_str(), std::ios::binary);
+	if (!m_ifstreamPlayback.good())
+	{
+		std::cout << "Can't Open File: " << srcPath.c_str() << std::endl;
+	}
+
+	if (startPackageCount > endPackageCount)
+		std::cout << "startPackageCount > endPackageCount" << std::endl;
+	if (startPackageCount >= m_vecPackagePos.size() - 1)
+		std::cout << "startPackageCount >= m_vecPackagePos.size() - 1" << std::endl;
+	if (endPackageCount >= m_vecPackagePos.size() - 1)
+		std::cout << "endPackageCount >= m_vecPackagePos.size() - 1" << std::endl;
+
+	std::cout << "m_vecPackagePos[startPackageCount] = " << m_vecPackagePos[startPackageCount] << std::endl;
+	std::cout << "m_vecPackagePos[endPackageCount] = " << m_vecPackagePos[endPackageCount] << std::endl;
+
+	m_ifstreamPlayback.seekg(m_vecPackagePos[startPackageCount], std::ios::beg);
+
+	std::ofstream ofBinClip;
+	std::string objPath = srcPath.insert(srcPath.size() - 4, "_clip");
+	ofBinClip.open(objPath, std::ios::binary);
+	std::cout << "objPath = " << objPath << std::endl;
+	ofBinClip.write((char*)&m_stBinFileHeader, sizeof(BinFileAttributes));
+
+	for (int i = 0; i < endPackageCount - startPackageCount; i++)
+	{
+		int len = m_vecPackagePos[startPackageCount + i + 1] - m_vecPackagePos[startPackageCount + i];
+		
+		//m_ifstreamPlayback.read(buffer, len);
+		//cout << "len = " << len << endl;
+		uint32_t lenToRead = 0;
+		m_ifstreamPlayback.read((char*)&lenToRead, 4);
+		//cout << "lenToRead = " << lenToRead << endl;
+		ofBinClip.write((char*)&lenToRead, 4);
+
+		char* buffer = new char[lenToRead];
+		m_ifstreamPlayback.read(buffer, lenToRead);
+		ofBinClip.write(buffer, lenToRead);
+
+		if ((0x02 & m_stBinFileHeader.dataType) == 0x02) //has IMU data
+		{
+			time_t timeStamp;
+			m_ifstreamPlayback.read((char*)&timeStamp, 8);
+			//cout << "timestamp = " << timeStamp << endl;
+			ofBinClip.write((char*)&timeStamp, 8);
+
+			int imuSize = 0;
+			IMURawData imuRawData;
+			m_ifstreamPlayback.read((char*)&imuSize, 4);
+			ofBinClip.write((char*)&imuSize, 4);
+			//cout << "imu size = " << imuSize << endl;
+			if (imuSize > 0)
+			{
+				for (int i = 0; i < imuSize; i++)
+				{
+					m_ifstreamPlayback.read((char*)&imuRawData, sizeof(IMURawData));
+					//cout << "imuRawData.time_stamp: " << imuRawData.time_stamp << endl;
+					ofBinClip.write((char*)&imuRawData, sizeof(IMURawData));
+				}
+			}
+		}
+		delete[] buffer;
+	}
+	ofBinClip.close();
+	std::cout << "------------ Save clip bin file successfully! ------------" << std::endl;
+}
+
+/*
+*  @function :  getSensorDataServer
+*  @brief    :	get CX5SensorDataServer pointer
+*  @input    :
+*  @output   :
+*  @return   :	CX5SensorDataServer pointer
+*/
 CX5SensorDataServer* CeleX5::getSensorDataServer()
 {
 	return m_pDataProcessor->getSensorDataServer();
 }
 
+/*
+*  @function :  getDeviceType
+*  @brief    :	get current device type of sensor
+*  @input    :
+*  @output   :
+*  @return   :	device type
+*/
 CeleX5::DeviceType CeleX5::getDeviceType()
 {
 	return m_emDeviceType;
 }
 
+/*
+*  @function :  getFullFrameFPS
+*  @brief    :	get FPS of full frame buffer
+*  @input    :
+*  @output   :
+*  @return   :	frame FPS of full pic
+*/
 uint32_t CeleX5::getFullFrameFPS()
 {
 	return m_uiPackageCountPS;
 }
 
+/*
+*  @function :  getEventRate
+*  @brief    :	get event rate(events per second)
+*  @input    :
+*  @output   :
+*  @return   :	event rate 
+*/
 uint32_t CeleX5::getEventRate()
 {
 	return m_pDataProcessor->getEventRate();
 }
 
-map<string, vector<CeleX5::CfgInfo>> CeleX5::getCeleX5Cfg()
+/*
+*  @function :  getALSValue
+*  @brief    :	get ALS value
+*  @input    :
+*  @output   :
+*  @return   :	ALS value
+*/
+int CeleX5::getALSValue()
 {
-	map<string, vector<HHCommandBase*>> mapCfg = m_pSequenceMgr->getCeleX5Cfg();
+	return m_pCeleDriver->getALSValue();
+}
+
+/*
+*  @function :  getCeleX5Cfg
+*  @brief    :	get the parameters in the config file
+*  @input    :
+*  @output   :
+*  @return   :	key-value type parameters in the config file
+*/
+std::map<std::string, std::vector<CeleX5::CfgInfo>> CeleX5::getCeleX5Cfg()
+{
+	std::map<std::string, std::vector<WireinCommand*>> mapCfg = m_pCeleX5CfgMgr->getCeleX5Cfg();
 	//
-	map<string, vector<CeleX5::CfgInfo>> mapCfg1;
+	std::map<std::string, std::vector<CeleX5::CfgInfo>> mapCfg1;
 	for (auto itr = mapCfg.begin(); itr != mapCfg.end(); itr++)
 	{
-		//cout << "CelexSensorDLL::getCeleX5Cfg: " << itr->first << endl;
-		vector<HHCommandBase*> pCmdList = itr->second;
-		vector<CeleX5::CfgInfo> vecCfg;
+		//cout << "CeleX5::getCeleX5Cfg: " << itr->first << endl;
+		std::vector<WireinCommand*> pCmdList = itr->second;
+		std::vector<CeleX5::CfgInfo> vecCfg;
 		for (auto itr1 = pCmdList.begin(); itr1 != pCmdList.end(); itr1++)
 		{
-			WireinCommandEx* pCmd = (WireinCommandEx*)(*itr1);
-			//cout << "----- Register Name: " << pCmd->name() << endl;
+			WireinCommand* pCmd = (WireinCommand*)(*itr1);
+			//cout << "----- Register Name: " << pCmd->getName() << endl;
 			CeleX5::CfgInfo cfgInfo;
-			cfgInfo.name = pCmd->name();
-			cfgInfo.min = pCmd->minValue();
-			cfgInfo.max = pCmd->maxValue();
-			cfgInfo.value = pCmd->value();
-			cfgInfo.high_addr = pCmd->highAddr();
-			cfgInfo.middle_addr = pCmd->middleAddr();
-			cfgInfo.low_addr = pCmd->lowAddr();
+			cfgInfo.name = pCmd->getName();
+			cfgInfo.min = pCmd->getMinValue();
+			cfgInfo.max = pCmd->getMaxValue();
+			cfgInfo.value = pCmd->getValue();
+			cfgInfo.highAddr = pCmd->getHighAddr();
+			cfgInfo.middleAddr = pCmd->getMiddleAddr();
+			cfgInfo.lowAddr = pCmd->getLowAddr();
 			vecCfg.push_back(cfgInfo);
 		}
 		mapCfg1[itr->first] = vecCfg;
@@ -2105,11 +2426,28 @@ map<string, vector<CeleX5::CfgInfo>> CeleX5::getCeleX5Cfg()
 	return mapCfg1;
 }
 
-map<string, vector<CeleX5::CfgInfo>> CeleX5::getCeleX5CfgModified()
+/*
+*  @function :  getCeleX5CfgModified
+*  @brief    :	get the modified parameters in the config file
+*  @input    :
+*  @output   :
+*  @return   :	key-value type parameters in the modified config file
+*/
+std::map<std::string, std::vector<CeleX5::CfgInfo>> CeleX5::getCeleX5CfgModified()
 {
 	return m_mapCfgModified;
 }
 
+/*
+*  @function :  writeRegister
+*  @brief    :	write register
+*  @input    :	addressH : address at high position
+*				addressM : address at middle position
+*				addressL : address at low position
+*				value : 8-bit address
+*  @output   :
+*  @return   :
+*/
 void CeleX5::writeRegister(int16_t addressH, int16_t addressM, int16_t addressL, uint32_t value)
 {
 	if (addressL == -1)
@@ -2128,9 +2466,18 @@ void CeleX5::writeRegister(int16_t addressH, int16_t addressM, int16_t addressL,
 	}
 }
 
-CeleX5::CfgInfo CeleX5::getCfgInfoByName(string csrType, string name, bool bDefault)
+/*
+*  @function :  getCfgInfoByName
+*  @brief    :	get the config parameters by each register
+*  @input    :  csrType : the group type of the registers
+*				name : the name of register
+*				bDefault : true for default config file, false for modified config file
+*  @output   :
+*  @return   :	configuration infomations of each register
+*/
+CeleX5::CfgInfo CeleX5::getCfgInfoByName(const std::string& csrType, const std::string& name, bool bDefault)
 {
-	map<string, vector<CfgInfo>> mapCfg;
+	std::map<std::string, std::vector<CfgInfo>> mapCfg;
 	if (bDefault)
 		mapCfg = m_mapCfgDefaults;
 	else
@@ -2138,19 +2485,17 @@ CeleX5::CfgInfo CeleX5::getCfgInfoByName(string csrType, string name, bool bDefa
 	CeleX5::CfgInfo cfgInfo;
 	for (auto itr = mapCfg.begin(); itr != mapCfg.end(); itr++)
 	{
-		string tapName = itr->first;
+		std::string tapName = itr->first;
 		if (csrType == tapName)
 		{
-			vector<CfgInfo> vecCfg = itr->second;
-			int index = 0;
-			for (auto itr1 = vecCfg.begin(); itr1 != vecCfg.end(); itr1++)
+			std::vector<CfgInfo> vecCfg = itr->second;
+			for (auto itrCfg = vecCfg.begin(); itrCfg != vecCfg.end(); itrCfg++)
 			{
-				if ((*itr1).name == name)
+				if ((*itrCfg).name == name)
 				{
-					cfgInfo = (*itr1);
+					cfgInfo = (*itrCfg);
 					return cfgInfo;
 				}
-				index++;
 			}
 			break;
 		}
@@ -2158,20 +2503,27 @@ CeleX5::CfgInfo CeleX5::getCfgInfoByName(string csrType, string name, bool bDefa
 	return cfgInfo;
 }
 
-void CeleX5::writeCSRDefaults(string csrType)
+/*
+*  @function :  writeCSRDefaults
+*  @brief    :	write the control system register
+*  @input    :  csrType : the group type of the registers
+*  @output   :
+*  @return   :
+*/
+void CeleX5::writeCSRDefaults(const std::string& csrType)
 {
-	cout << "CeleX5::writeCSRDefaults: " << csrType << endl;
+	std::cout << "CeleX5::writeCSRDefaults: " << csrType << std::endl;
 	m_mapCfgModified[csrType] = m_mapCfgDefaults[csrType];
 	for (auto itr = m_mapCfgDefaults.begin(); itr != m_mapCfgDefaults.end(); itr++)
 	{
 		//cout << "group name: " << itr->first << endl;
-		string tapName = itr->first;
+		std::string tapName = itr->first;
 		if (csrType == tapName)
 		{
-			vector<CeleX5::CfgInfo> vecCfg = itr->second;
-			for (auto itr1 = vecCfg.begin(); itr1 != vecCfg.end(); itr1++)
+			std::vector<CeleX5::CfgInfo> vecCfg = itr->second;
+			for (auto itrCfg = vecCfg.begin(); itrCfg != vecCfg.end(); itrCfg++)
 			{
-				CeleX5::CfgInfo cfgInfo = (*itr1);
+				CeleX5::CfgInfo cfgInfo = (*itrCfg);
 				writeRegister(cfgInfo);
 			}
 			break;
@@ -2179,27 +2531,36 @@ void CeleX5::writeCSRDefaults(string csrType)
 	}
 }
 
-void CeleX5::modifyCSRParameter(string csrType, string cmdName, uint32_t value)
+/*
+*  @function :  modifyCSRParameter
+*  @brief    :	modify the control system register parameters
+*  @input    :  csrType : the group type of the registers
+*				cmdName : command name
+*				value : 8-bit address value
+*  @output   :
+*  @return   :
+*/
+void CeleX5::modifyCSRParameter(const std::string& csrType, const std::string& cmdName, uint32_t value)
 {
 	CeleX5::CfgInfo cfgInfo;
 	for (auto itr = m_mapCfgModified.begin(); itr != m_mapCfgModified.end(); itr++)
 	{
-		string tapName = itr->first;
+		std::string tapName = itr->first;
 		if (csrType.empty())
 		{
-			vector<CfgInfo> vecCfg = itr->second;
+			std::vector<CfgInfo> vecCfg = itr->second;
 			int index = 0;
-			for (auto itr1 = vecCfg.begin(); itr1 != vecCfg.end(); itr1++)
+			for (auto itrCfg = vecCfg.begin(); itrCfg != vecCfg.end(); itrCfg++)
 			{
-				if ((*itr1).name == cmdName)
+				if ((*itrCfg).name == cmdName)
 				{
-					cfgInfo = (*itr1);
-					cout << "CeleX5::modifyCSRParameter: Old value = " << cfgInfo.value << endl;
+					cfgInfo = (*itrCfg);
+					std::cout << "CeleX5::modifyCSRParameter: Old value = " << cfgInfo.value << std::endl;
 					//modify the value in m_pMapCfgModified
 					cfgInfo.value = value;
 					vecCfg[index] = cfgInfo;
 					m_mapCfgModified[tapName] = vecCfg;
-					cout << "CeleX5::modifyCSRParameter: New value = " << cfgInfo.value << endl;
+					std::cout << "CeleX5::modifyCSRParameter: New value = " << cfgInfo.value << std::endl;
 					break;
 				}
 				index++;
@@ -2209,19 +2570,19 @@ void CeleX5::modifyCSRParameter(string csrType, string cmdName, uint32_t value)
 		{
 			if (csrType == tapName)
 			{
-				vector<CfgInfo> vecCfg = itr->second;
+				std::vector<CfgInfo> vecCfg = itr->second;
 				int index = 0;
-				for (auto itr1 = vecCfg.begin(); itr1 != vecCfg.end(); itr1++)
+				for (auto itrCfg = vecCfg.begin(); itrCfg != vecCfg.end(); itrCfg++)
 				{
-					if ((*itr1).name == cmdName)
+					if ((*itrCfg).name == cmdName)
 					{
-						cfgInfo = (*itr1);
-						cout << "CeleX5::modifyCSRParameter: Old value = " << cfgInfo.value << endl;
+						cfgInfo = (*itrCfg);
+						std::cout << "CeleX5::modifyCSRParameter: Old value = " << cfgInfo.value << std::endl;
 						//modify the value in m_pMapCfgModified
 						cfgInfo.value = value;
 						vecCfg[index] = cfgInfo;
 						m_mapCfgModified[tapName] = vecCfg;
-						cout << "CeleX5::modifyCSRParameter: New value = " << cfgInfo.value << endl;
+						std::cout << "CeleX5::modifyCSRParameter: New value = " << cfgInfo.value << std::endl;
 						break;
 					}
 					index++;
@@ -2230,56 +2591,63 @@ void CeleX5::modifyCSRParameter(string csrType, string cmdName, uint32_t value)
 			}
 		}
 	}
-	m_pSequenceMgr->saveCeleX5XML(m_mapCfgModified);
+	m_pCeleX5CfgMgr->saveCeleX5XML(m_mapCfgModified);
 }
 
+/*
+*  @function :  configureSettings
+*  @brief    :	configure settings
+*  @input    :  type : the type of current device
+*  @output   :
+*  @return   :	bool : true for configured successfully
+*/
 bool CeleX5::configureSettings(CeleX5::DeviceType type)
 {
 	if (CeleX5::CeleX5_MIPI == type)
 	{
 		setALSEnabled(false);
 		//--------------- Step1 ---------------
-		wireIn(94, 0, 0xFF); //PADDR_EN
+		wireIn(PADDR_EN, 0, 0xFF); //PADDR_EN
 
 		//--------------- Step2: Load PLL Parameters ---------------
 		//Disable PLL
-		cout << "--- Disable PLL ---" << endl;
-		wireIn(150, 0, 0xFF); //PLL_PD_B
+		std::cout << "--- Disable PLL ---" << std::endl;
+		wireIn(PLL_PD_B, 0, 0xFF); //PLL_PD_B
 		//Load PLL Parameters
-		cout << endl << "--- Load PLL Parameters ---" << endl;
+		std::cout << std::endl << "--- Load PLL Parameters ---" << std::endl;
 		writeCSRDefaults("PLL_Parameters");
 		//Enable PLL
-		cout << "--- Enable PLL ---" << endl;
-		wireIn(150, 1, 0xFF); //PLL_PD_B
+		std::cout << "--- Enable PLL ---" << std::endl;
+		wireIn(PLL_PD_B, 1, 0xFF); //PLL_PD_B
 
 		//--------------- Step3: Load MIPI Parameters ---------------
-		cout << endl << "--- Disable MIPI ---" << endl;
+		std::cout << std::endl << "--- Disable MIPI ---" << std::endl;
 		disableMIPI();
 
-		cout << endl << "--- Load MIPI Parameters ---" << endl;
+		std::cout << std::endl << "--- Load MIPI Parameters ---" << std::endl;
 		writeCSRDefaults("MIPI_Parameters");
-		//writeRegister(115, -1, 114, 120); //MIPI_PLL_DIV_N
+		//writeRegister(MIPI_PLL_DIV_N_H, -1, MIPI_PLL_DIV_N_L, 120); //MIPI_PLL_DIV_N
 
 		//Enable MIPI
-		cout << endl << "--- Enable MIPI ---" << endl;
+		std::cout << std::endl << "--- Enable MIPI ---" << std::endl;
 		enableMIPI();
 
 		//--------------- Step4: ---------------
-		cout << endl << "--- Enter CFG Mode ---" << endl;
+		std::cout << std::endl << "--- Enter CFG Mode ---" << std::endl;
 		enterCFGMode();
 
 		//----- Load Sensor Core Parameters -----
-		wireIn(220, 0, 0xFF); //AUTOISP_PROFILE_ADDR
+		wireIn(AUTOISP_PROFILE_ADDR, 0, 0xFF); //AUTOISP_PROFILE_ADDR
 		writeCSRDefaults("Sensor_Core_Parameters"); //Load Sensor Core Parameters
-		writeRegister(22, -1, 23, m_uiBrightness);
+		writeRegister(BIAS_BRT_I_H, -1, BIAS_BRT_I_L, m_uiBrightness);
 
 		writeCSRDefaults("Sensor_Operation_Mode_Control_Parameters");
 
 		writeCSRDefaults("Sensor_Data_Transfer_Parameters");
-		wireIn(73, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
+		wireIn(EVENT_PACKET_SELECT, m_iEventDataFormat, 0xFF); //EVENT_PACKET_SELECT
 		m_pDataProcessor->setMIPIDataFormat(m_iEventDataFormat);
 
-		cout << endl << "--- Enter Start Mode ---" << endl;
+		std::cout << std::endl << "--- Enter Start Mode ---" << std::endl;
 		enterStartMode();
 
 		if (m_pCeleDriver)
@@ -2288,6 +2656,14 @@ bool CeleX5::configureSettings(CeleX5::DeviceType type)
 	return true;
 }
 
+/*
+*  @function :  wireIn
+*  @brief    :	write register
+*  @input    :  address : address of register
+*				value : value of register
+*  @output   :
+*  @return   :
+*/
 void CeleX5::wireIn(uint32_t address, uint32_t value, uint32_t mask)
 {
 	if (CeleX5::CeleX5_MIPI == m_emDeviceType)
@@ -2303,7 +2679,7 @@ void CeleX5::wireIn(uint32_t address, uint32_t value, uint32_t mask)
 				usleep(1000 * 2);
 #endif
 			}
-			if (m_pCeleDriver->i2c_set(address, value))
+			if (m_pCeleDriver->i2cSet(address, value))
 			{
 				//cout << "CeleX5::wireIn(i2c_set): address = " << address << ", value = " << value << endl;
 			}
@@ -2315,58 +2691,98 @@ void CeleX5::wireIn(uint32_t address, uint32_t value, uint32_t mask)
 	}
 }
 
+/*
+*  @function :  writeRegister
+*  @brief    :	write registers
+*  @input    :  cfgInfo : configuration infomations of each register
+*  @output   :
+*  @return   :
+*/
 void CeleX5::writeRegister(CfgInfo cfgInfo)
 {
-	if (cfgInfo.low_addr == -1)
+	if (cfgInfo.lowAddr == -1)
 	{
-		wireIn(cfgInfo.high_addr, cfgInfo.value, 0xFF);
+		wireIn(cfgInfo.highAddr, cfgInfo.value, 0xFF);
 	}
 	else
 	{
-		if (cfgInfo.middle_addr == -1)
+		if (cfgInfo.middleAddr == -1)
 		{
 			uint32_t valueH = cfgInfo.value >> 8;
 			uint32_t valueL = 0xFF & cfgInfo.value;
-			wireIn(cfgInfo.high_addr, valueH, 0xFF);
-			wireIn(cfgInfo.low_addr, valueL, 0xFF);
+			wireIn(cfgInfo.highAddr, valueH, 0xFF);
+			wireIn(cfgInfo.lowAddr, valueL, 0xFF);
 		}
 	}
 }
 
-//Enter CFG Mode
+/*
+*  @function :  enterCFGMode
+*  @brief    :	enter config mode
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enterCFGMode()
 {
-	wireIn(93, 0, 0xFF);
-	wireIn(90, 1, 0xFF);
+	wireIn(SOFT_TRIGGER, 0, 0xFF);
+	wireIn(SOFT_RESET, 1, 0xFF);
 }
 
-//Enter Start Mode
+/*
+*  @function :  enterStartMode
+*  @brief    :	enter start mode
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enterStartMode()
 {
-	wireIn(90, 0, 0xFF);
-	wireIn(93, 1, 0xFF);
+	wireIn(SOFT_RESET, 0, 0xFF);
+	wireIn(SOFT_TRIGGER, 1, 0xFF);
 }
 
+/*
+*  @function :  disableMIPI
+*  @brief    :	disable the MIPI when the registers need to be written
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::disableMIPI()
 {
-	wireIn(139, 0, 0xFF);
-	wireIn(140, 0, 0xFF);
-	wireIn(141, 0, 0xFF);
-	wireIn(142, 0, 0xFF);
-	wireIn(143, 0, 0xFF);
-	wireIn(144, 0, 0xFF);
+	wireIn(MIPI_NPOWD_PLL, 0, 0xFF);
+	wireIn(MIPI_NPOWD_BGR, 0, 0xFF);
+	wireIn(MIPI_NRSET_PLL, 0, 0xFF);
+	wireIn(MIPI_NPOWD_PHY, 0, 0xFF);
+	wireIn(MIPI_NRSET_PHY, 0, 0xFF);
+	wireIn(MIPI_NDIS_PHY, 0, 0xFF);
 }
 
+/*
+*  @function :  enableMIPI
+*  @brief    :	enable the MIPI when the registers have been written
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::enableMIPI()
 {
-	wireIn(139, 1, 0xFF);
-	wireIn(140, 1, 0xFF);
-	wireIn(141, 1, 0xFF);
-	wireIn(142, 1, 0xFF);
-	wireIn(143, 1, 0xFF);
-	wireIn(144, 1, 0xFF);
+	wireIn(MIPI_NPOWD_PLL, 1, 0xFF);
+	wireIn(MIPI_NPOWD_BGR, 1, 0xFF);
+	wireIn(MIPI_NRSET_PLL, 1, 0xFF);
+	wireIn(MIPI_NPOWD_PHY, 1, 0xFF);
+	wireIn(MIPI_NRSET_PHY, 1, 0xFF);
+	wireIn(MIPI_NDIS_PHY, 1, 0xFF);
 }
 
+/*
+*  @function :  clearData
+*  @brief    :	clear the data buffer
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::clearData()
 {
 	m_pDataProcessThread->clearData();
@@ -2405,11 +2821,27 @@ int CeleX5::denoisingMaskByEventTime(const cv::Mat& countEventImg, double timele
 	return 1;
 }
 
+/*
+*  @function :  saveFullPicRawData
+*  @brief    :	save a raw data of full pic(for test)
+*  @input    :
+*  @output   :
+*  @return   :
+*/
 void CeleX5::saveFullPicRawData()
 {
 	m_pDataProcessor->saveFullPicRawData();
 }
 
+/*
+*  @function :  calDirectionAndSpeedEx
+*  @brief    :	caculate the speed buffer and direction buffer of the optical buffer
+*  @input    :	pBuffer : the original optical flow buffer
+*				speedBuffer : the speed buffer of optical flow buffer
+*				dirBuffer : the direction buffer of optical flow buffer
+*  @output   :
+*  @return   :	
+*/
 void CeleX5::calDirectionAndSpeedEx(cv::Mat pBuffer, cv::Mat &speedBuffer, cv::Mat &dirBuffer)
 {
 	cv::Mat pBufferBlurred;
@@ -2452,7 +2884,6 @@ void CeleX5::calDirectionAndSpeedEx(cv::Mat pBuffer, cv::Mat &speedBuffer, cv::M
 						u = (2 * neighborDist) / (pBuffer.at<uchar>(i, j + neighborDist) - pBuffer.at<uchar>(i, j - neighborDist));
 						u_min_timestamp = min(pBuffer.at<uchar>(i, j + neighborDist), pBuffer.at<uchar>(i, j - neighborDist));
 					}
-
 				}
 
 				if (i <= neighborDist - 1 || i >= CELEX5_ROW - neighborDist)
@@ -2529,7 +2960,7 @@ void CeleX5::calDirectionAndSpeedEx(cv::Mat pBuffer, cv::Mat &speedBuffer, cv::M
 				}
 				if (velocity > 255)
 					velocity = 255;
-				speedBuffer.at<uchar>(i, j) = velocity*500;
+				speedBuffer.at<uchar>(i, j) = velocity * 500;
 
 				float theta = 0;
 				theta = atan2(v, u) * 180 / CV_PI;

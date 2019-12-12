@@ -1,5 +1,21 @@
+/*
+* Copyright (c) 2017-2020 CelePixel Technology Co. Ltd. All Rights Reserved
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #include <string.h>
-#include "Package.h"
+#include "package.h"
 
 CElement::CElement()
 {
@@ -20,7 +36,7 @@ uint8_t *CElement::end()
 	return data + wdataLen;
 }
 
-void CElement::Save(uint8_t *buffer, uint16_t wLen)
+void CElement::save(uint8_t *buffer, uint16_t wLen)
 {
 	if (wLen > MAX_ELEMENT_BUFFER_SIZE)
 		wLen = MAX_ELEMENT_BUFFER_SIZE;
@@ -30,76 +46,135 @@ void CElement::Save(uint8_t *buffer, uint16_t wLen)
 
 CPackage::CPackage()
 {
-	Status = BUFFER_STATUS_EMPTY;
-	Offset = 0;
-	m_lTime_Stamp_End = 0;
+	m_emStatus = BUFFER_STATUS_EMPTY;
+	m_uiOffset = 0;
+	m_lTimestampEnd = 0;
+#ifdef NOT_USE_VECTOR
+	m_pPackageBuffer = new uint8_t[MAX_ELEMENT_BUFFER_SIZE * 50];
+#else
 	for (int i = 0; i < 50; i++)
-    {
-        CElement *element = new CElement();
+	{
+		CElement *element = new CElement();
 		if (element)
 		{
-			element_list.push_back(element);
+			m_vecElementList.push_back(element);
 		}
-    }
+	}
+#endif // _NOT_USE_VECTOR_
 }
 
 CPackage::~CPackage()
 {
-	while (!element_list.empty())
+#ifdef NOT_USE_VECTOR
+	if (m_pPackageBuffer != nullptr)
 	{
-		CElement *element = *element_list.begin();
-		element_list.erase(element_list.begin());
+		delete[] m_pPackageBuffer;
+		m_pPackageBuffer = nullptr;
+	}
+#else
+	while (!m_vecElementList.empty())
+	{
+		CElement *element = *m_vecElementList.begin();
+		m_vecElementList.erase(m_vecElementList.begin());
 		delete element;
 	}
+#endif
 }
 
-void CPackage::Insert(uint8_t *buffer, uint16_t wLen)
+void CPackage::insert(uint8_t *buffer, uint16_t wLen)
 {
-	if (Offset < element_list.size())
+#ifdef NOT_USE_VECTOR
+	if (m_uiOffset < MAX_ELEMENT_BUFFER_SIZE * 50 - wLen)
 	{
-		element_list[Offset]->Save(buffer, wLen);
-		Offset++;
+		memcpy(m_pPackageBuffer + m_uiOffset, buffer, wLen);
+		m_uiOffset += wLen;
 	}
 	else
 	{
-		/*CElement *element = new CElement();
-		if (element)
-		{
-			element->Save(buffer, wLen);
-			element_list.push_back(element);
-			Offset++;
-		}*/
+		//printf("-------------- CPackage::insert wrong data --------------\n");
 	}
-}
-
-void CPackage::End(void)
-{
-	Status = BUFFER_STATUS_FULL;
-}
-
-void CPackage::ClearData()
-{
-	Status = BUFFER_STATUS_EMPTY;
-	Offset = 0;
-	//element_list.clear();
-}
-
-int CPackage::Size()
-{
-	return Offset;
-}
-
-bool CPackage::GetImage(std::vector<uint8_t> &Image)
-{
-	Image.clear();
-	if (Status == BUFFER_STATUS_FULL)
+#else
+	if (m_uiOffset < m_vecElementList.size())
 	{
-		for (size_t i = 0; i < Offset; i++)
+		m_vecElementList[m_uiOffset]->save(buffer, wLen);
+		m_uiOffset++;
+	}
+	else
+	{
+		//("-------------- CPackage::insert wrong data --------------\n");
+	}
+#endif
+}
+
+void CPackage::end(void)
+{
+	m_emStatus = BUFFER_STATUS_FULL;
+}
+
+void CPackage::clearData()
+{
+	m_emStatus = BUFFER_STATUS_EMPTY;
+	m_uiOffset = 0;
+}
+
+int CPackage::size()
+{
+	return m_uiOffset;
+}
+
+bool CPackage::getImage(std::vector<uint8_t> &image)
+{
+	image.clear();
+	if (m_emStatus == BUFFER_STATUS_FULL)
+	{
+		for (size_t i = 0; i < m_uiOffset; i++)
 		{
-			Image.insert(Image.end(), element_list[i]->begin(), element_list[i]->end());
+			image.insert(image.end(), m_vecElementList[i]->begin(), m_vecElementList[i]->end());
 		}
-		Offset = 0;
-		Status = BUFFER_STATUS_EMPTY;
+		m_uiOffset = 0;
+		m_emStatus = BUFFER_STATUS_EMPTY;
+		return true;
+	}
+	return false;
+}
+
+bool CPackage::getData(uint8_t* pData, uint32_t& length)
+{
+	if (nullptr == pData)
+		return false;
+	if (m_emStatus == BUFFER_STATUS_FULL)
+	{	
+#ifdef NOT_USE_VECTOR
+		if (m_uiOffset > 1536001)
+		{
+			m_uiOffset = 0;
+			m_emStatus = BUFFER_STATUS_EMPTY;
+			//printf("----------------- wrong data size = %d\n", m_uiOffset);
+			return false;
+		}
+		memcpy(pData, m_pPackageBuffer, m_uiOffset);
+		length = m_uiOffset;
+#else
+		int offSize = 0;
+		int dataSize = 0;
+		for (size_t i = 0; i < m_uiOffset; i++)
+		{
+			dataSize = m_vecElementList[i]->end() - m_vecElementList[i]->begin();
+			if (offSize + dataSize > 1536001)
+			{
+				m_uiOffset = 0;
+				m_emStatus = BUFFER_STATUS_EMPTY;
+				//printf("----------------- wrong data size = %d\n", offSize + dataSize);
+				return false;
+			}
+			memcpy(pData + offSize, m_vecElementList[i]->begin(), dataSize);
+			offSize += dataSize;	
+		}
+		length = offSize;
+#endif
+		//printf("------------------- length = %d\n", length);
+		m_uiOffset = 0;
+		m_emStatus = BUFFER_STATUS_EMPTY;
 		return true;
 	}
 	return false;

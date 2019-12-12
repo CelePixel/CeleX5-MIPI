@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -14,12 +14,10 @@
 * limitations under the License.
 */
 
-#include "dataprocessthread.h"
 #include <iostream>
+#include "dataprocessthread.h"
 
-using namespace std;
-
-DataProcessThreadEx::DataProcessThreadEx(const std::string &name)
+DataProcessThread::DataProcessThread(const std::string &name)
 	: XThread(name)
 	, m_uiPackageNo(0)
 	, m_emDeviceType(CeleX5::Unknown_Devive)
@@ -28,31 +26,31 @@ DataProcessThreadEx::DataProcessThreadEx(const std::string &name)
 	, m_bRecordData(false)
 	, m_bShowImagesEnabled(true)
 {
-	m_pData = new unsigned char[1536001];
+	m_pMipiPackage = new uint8_t[1536001];
 }
 
-DataProcessThreadEx::~DataProcessThreadEx()
+DataProcessThread::~DataProcessThread()
 {
-	delete[] m_pData;
-	m_pData = NULL;
+	delete[] m_pMipiPackage;
+	m_pMipiPackage = nullptr;
 }
 
-void DataProcessThreadEx::addData(unsigned char *data, long length, time_t timeStamp)
+void DataProcessThread::addData(uint8_t* data, uint32_t length, time_t timeStamp)
 {
 	m_queueData.push(data, length, timeStamp);
 }
 
-void DataProcessThreadEx::addData(unsigned char* data, long length, vector<IMURawData> imuData, time_t timeStamp)
+void DataProcessThread::addData(uint8_t* data, uint32_t length, std::vector<IMURawData> imuData, std::time_t timeStamp)
 {
 	m_queueData.push(data, length, imuData, timeStamp);
 }
 
-void DataProcessThreadEx::addData(vector<uint8_t> vecData)
+void DataProcessThread::addData(std::vector<uint8_t> vecData)
 {
 	//cout << "size = " << vecData.size() << endl;
 	if (vecData.size() > 0)
 	{
-		vector<uint8_t> vec;
+		std::vector<uint8_t> vec;
 		vec.swap(vecData);
 		//cout << "DataProcessThread::addData = " << vec.size() << endl;
 		m_queueVecData.push(vec);
@@ -60,68 +58,68 @@ void DataProcessThreadEx::addData(vector<uint8_t> vecData)
 	//cout << m_queueVecData.size() << endl;
 }
 
-void DataProcessThreadEx::clearData()
+void DataProcessThread::clearData()
 {
 	m_queueData.clear();
 	m_uiPackageNo = 0;
 }
 
-uint32_t DataProcessThreadEx::queueSize()
+uint32_t DataProcessThread::queueSize()
 {
 	return m_queueData.size();
 }
 
-uint32_t DataProcessThreadEx::getPackageNo()
+uint32_t DataProcessThread::getPackageNo()
 {
 	return m_uiPackageNo;
 }
 
-void DataProcessThreadEx::setPackageNo(uint32_t no)
+void DataProcessThread::setPackageNo(uint32_t no)
 {
 	m_uiPackageNo = no;
 }
 
-void DataProcessThreadEx::setDeviceType(CeleX5::DeviceType type)
+void DataProcessThread::setDeviceType(CeleX5::DeviceType type)
 {
 	m_emDeviceType = type;
 }
 
-void DataProcessThreadEx::setCeleX(CeleX5* pCeleX5)
+void DataProcessThread::setCeleX(CeleX5* pCeleX5)
 {
 	m_pCeleX5 = pCeleX5;
 }
 
-void DataProcessThreadEx::setDataProcessor(CeleX5DataProcessor* pDataProcessor)
+void DataProcessThread::setDataProcessor(CeleX5DataProcessor* pDataProcessor)
 {
 	m_pDataProcessor = pDataProcessor;
 }
 
-void DataProcessThreadEx::setIsPlayback(bool state)
+void DataProcessThread::setIsPlayback(bool state)
 {
 	m_bPlaybackBinFile = state;
 }
 
-PlaybackState DataProcessThreadEx::getPlaybackState()
+PlaybackState DataProcessThread::getPlaybackState()
 {
 	return m_emPlaybackState;
 }
 
-void DataProcessThreadEx::setPlaybackState(PlaybackState state)
+void DataProcessThread::setPlaybackState(PlaybackState state)
 {
 	m_emPlaybackState = state;
 }
 
-void DataProcessThreadEx::setRecordState(bool bRecord)
+void DataProcessThread::setRecordState(bool bRecord)
 {
 	m_bRecordData = bRecord;
 }
 
-void DataProcessThreadEx::setShowImagesEnabled(bool enable)
+void DataProcessThread::setShowImagesEnabled(bool enable)
 {
 	m_bShowImagesEnabled = enable;
 }
 
-void DataProcessThreadEx::run()
+void DataProcessThread::run()
 {
 	while (m_bRun)
 	{
@@ -138,13 +136,13 @@ void DataProcessThreadEx::run()
 		{
 			if (m_queueData.size() > 0)
 			{
-				long dataLen = 0;
+				uint32_t dataLen = 0;
 				time_t timestamp = 0;
-				m_queueData.pop(m_pData, &dataLen, m_vecIMUData, &timestamp);
-				//cout << "------------------" << "pop data size = " << dataLen << endl;
+				m_queueData.pop(m_pMipiPackage, &dataLen, m_vecIMUData, &timestamp);
+				//std::cout << "------------------" << "pop data size = " << dataLen << std::endl;
 				if (dataLen > 0)
 				{
-					m_pDataProcessor->processMIPIData(m_pData, dataLen, timestamp, m_vecIMUData);
+					m_pDataProcessor->processMIPIData(m_pMipiPackage, dataLen, timestamp, m_vecIMUData);
 					//cout << __FUNCTION__ << ": imu size = " << m_vecIMUData.size() << endl;
 					if (m_vecIMUData.size() > 0)
 						m_vecIMUData.clear();
@@ -162,13 +160,14 @@ void DataProcessThreadEx::run()
 		else //--- for real display ---
 		{
 			std::time_t time_stamp_end = 0;
-			vector<IMURawData> imu_data;
-			m_pCeleX5->getMIPIData(m_vecMIPIPackage, time_stamp_end, imu_data);
-			if (m_vecMIPIPackage.size() > 0)
+			std::vector<IMURawData> imu_data;
+			uint32_t dataLen = 0;
+			m_pCeleX5->getMIPIData(m_pMipiPackage, dataLen, time_stamp_end, imu_data);
+			if (dataLen > 0)
 			{
+				//std::cout << "dataLen = " << dataLen << std::endl;
 				if (!m_bRecordData || (m_bRecordData && m_bShowImagesEnabled))
-					m_pDataProcessor->processMIPIData(m_vecMIPIPackage.data(), m_vecMIPIPackage.size(), time_stamp_end, imu_data);
-				m_vecMIPIPackage.clear();
+					m_pDataProcessor->processMIPIData(m_pMipiPackage, dataLen, time_stamp_end, imu_data);
 			}
 		}
 	}

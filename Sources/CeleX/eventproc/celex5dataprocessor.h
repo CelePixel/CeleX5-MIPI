@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -21,26 +21,28 @@
 #include "../include/celex5/celex5processeddata.h"
 #include "../include/celex5/celex5datamanager.h"
 
+#define MAX_BUFFER_NUM    2
+
 class CeleX5DataProcessor
 {
 public:
 	CeleX5DataProcessor();
 	~CeleX5DataProcessor();
 
-	void getFullPicBuffer(unsigned char* buffer);
-	void getFullPicBuffer(unsigned char* buffer, std::time_t& time_stamp);
+	void getFullPicBuffer(uint8_t* buffer);
+	void getFullPicBuffer(uint8_t* buffer, std::time_t& timestamp);
 	//
-	void getEventPicBuffer(unsigned char* buffer, CeleX5::emEventPicType type);
-	void getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, CeleX5::emEventPicType type);
+	void getEventPicBuffer(uint8_t* buffer, CeleX5::EventPicType type);
+	void getEventPicBuffer(uint8_t* buffer, std::time_t& timestamp, CeleX5::EventPicType type);
 	//
-	void getOpticalFlowPicBuffer(unsigned char* buffer, CeleX5::emFullPicType type);
-	void getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_stamp, CeleX5::emFullPicType type);
+	void getOpticalFlowPicBuffer(uint8_t* buffer, CeleX5::OpticalFlowPicType type);
+	void getOpticalFlowPicBuffer(uint8_t* buffer, std::time_t& timestamp, CeleX5::OpticalFlowPicType type);
 
 	bool getEventDataVector(std::vector<EventData> &vecData);
-	bool getEventDataVector(std::vector<EventData> &vecData, uint64_t& frameNo);
-	bool getEventDataVectorEx(std::vector<EventData> &vecData, std::time_t& time_stamp, bool bDenoised);
+	bool getEventDataVector(std::vector<EventData> &vecData, uint32_t& frameNo);
+	bool getEventDataVector(std::vector<EventData> &vecData, uint32_t& frameNo, std::time_t& timestamp);
 
-	void processMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData>& imu_data);
+	void processMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData>& imuData);
 
 	void disableFrameModule();
 	void enableFrameModule();
@@ -57,6 +59,14 @@ public:
 	void disableEventDenoising();
 	void enableEventDenoising();
 	bool isEventDenoisingEnabled();
+
+	void disableFrameDenoising();
+	void enableFrameDenoising();
+	bool isFrameDenoisingEnabled();
+
+	void disableEventOpticalFlow();
+	void enableEventOpticalFlow();
+	bool isEventOpticalFlowEnabled();
 
 	/*
 	* Enable/Disable the Event Count Slice
@@ -100,62 +110,63 @@ public:
 	uint32_t getEventRate();
 
 private:
-	void processFullPicData(uint8_t* pData, int dataSize, std::time_t time_stamp_end);
+	void processFullPicData(uint8_t* pData, int dataSize, std::time_t timestampEnd);
 	void parseEventDataFormat0(uint8_t* pData, int dataSize); //Format0: 24-bit packet with ADC data (CSR_73=2'b00)
 	void parseEventDataFormat1(uint8_t* pData, int dataSize); //Format1: 28-bit packet with ADC data (CSR_73=2'b01)
 	void parseEventDataFormat2(uint8_t* pData, int dataSize); //Format2: 14-bit packet without ADC data (CSR_73=2'b10)
 	//
-	void parseIMUData(std::time_t time_stamp);
+	void parseIMUData(std::time_t timestamp);
 
 	void checkIfShowImage(); //only for mipi
-	bool createImage(std::time_t time_stamp_end);
+	bool createImage(std::time_t timestampEnd);
 	void generateFPNimpl();
-	int  calculateDenoiseScore(unsigned char* pBuffer, unsigned int pos);
-	int  calMean(unsigned char* pBuffer, unsigned int pos);
-	void calDirectionAndSpeed(int i, int j, uint16_t* pBuffer, unsigned char* &speedBuffer, unsigned char* &dirBuffer);
+	void loadOpticalFlowFPN();
+
+	void calculateDenoisedBuffer(uint8_t* pDesBuffer1, uint8_t* pDesBuffer2, uint8_t* pSrcBuffer, int neighbours);
+
+	void calDirectionAndSpeed(int i, int j, uint32_t* pBuffer, uint8_t* &speedBuffer, uint8_t* &dirBuffer);
+	void calDirectionAndSpeed(uint32_t* pBuffer, uint8_t* &speedBuffer, uint8_t* &dirBuffer);
 
 	void saveFullPicRawData(uint8_t* pData);
 
 	bool findModeInLoopGroup(CeleX5::CeleX5Mode mode);
 
 	void processMIPIEventTimestamp();
-	void saveIntensityEvent(int col, int adc_12bit, int adc_8bit);
-	void saveOpticalFlowEvent(int col, int adc_12bit, int adc_8bit);
+	void saveIntensityEvent(int col, int adc12bit, int adc8bit);
+	void saveOpticalFlowEvent(int col, int adc12bit, int adc8bit);
 	void saveFormat2Event(int col, int adc); //save event into buffer and event vector.
 	int  getCurrentIndex(int initIndex);
 
 	void denoisedPerRow(bool bHasADC);
-	void calEventCountSlice(int i, int index);
+	void calEventCountSlice(uint8_t* pEventCountSliceBuffer);
 
 private:
 	CeleX5ProcessedData*     m_pCX5ProcessedData;
 	CX5SensorDataServer*     m_pCX5Server;
 	//
-	unsigned char*           m_pEventCountBuffer;
-	uint16_t*                m_pEventADCBuffer;
-	uint16_t*                m_pLastADC;
+	uint8_t*                 m_pEventCountBuffer;
+	uint32_t*                m_pEventADCBuffer;
+	uint32_t*                m_pLastADC;
 	//for fpn
 	long*                    m_pFpnGenerationBuffer;
 	int*                     m_pFpnBuffer;
-	int*                     m_pFpnBuffer_OF;
+	int*                     m_pFpnBufferOF;
 	//
+	uint8_t*                 m_pFullPic[MAX_BUFFER_NUM];
 	//
-	unsigned char*           m_pFullFrameBuffer_ForUser;
+	uint8_t*                 m_pEventBinaryPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventDenoisedBinaryPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventCountPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventDenoisedCountPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventGrayPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventAccumulatedPic[MAX_BUFFER_NUM];
+	uint8_t*	             m_pEventSuperimposedPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventCountSlicePic[MAX_BUFFER_NUM];
+	//
+	uint8_t*                 m_pOpticalFlowPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pOpticalFlowSpeedPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pOpticalFlowDirectionPic[MAX_BUFFER_NUM];
 
-	unsigned char*           m_pEventFrameBuffer1_ForUser;
-	unsigned char*           m_pEventFrameBuffer2_ForUser;
-	unsigned char*           m_pEventFrameBuffer3_ForUser;
-	unsigned char*           m_pEventFrameBuffer4_ForUser;
-	unsigned char*           m_pEventFrameBuffer5_ForUser;
-	unsigned char*           m_pEventFrameBuffer6_ForUser;
-	unsigned char*           m_pEventFrameBuffer7_ForUser;
-	unsigned char*           m_pEventFrameBuffer8_ForUser;
-
-	unsigned char*           m_pOpticalFrameBuffer1_ForUser;
-	unsigned char*           m_pOpticalFrameBuffer2_ForUser;
-	unsigned char*           m_pOpticalFrameBuffer3_ForUser;
-
-    uint8_t*                 m_pEventSliceBuffer;
 	uint8_t*                 m_pEventCountSlice[10];
 	//
 	CeleX5::CeleX5Mode       m_emCurrentSensorMode;
@@ -164,14 +175,14 @@ private:
 	CeleX5::CeleX5Mode       m_emSensorLoopBMode;
 	CeleX5::CeleX5Mode       m_emSensorLoopCMode;
 	//
-	string                   m_strFpnFilePath;
+	std::string              m_strFpnFilePath;
 	//
 	uint32_t                 m_uiPixelCount;
 	uint32_t                 m_uiPixelCountForEPS; //For event rate
 	uint32_t                 m_uiEventNumberEPS; //The number of events that being produced per second
 	uint32_t                 m_uiEventTCounter; //This value will be reset after the end of a frame
-	uint64_t                 m_uiEventTCounter_Total; //This value won't be reset, it's a monotonically increasing value
-	uint64_t                 m_uiEventTCounter_EPS; //This value will be reset after the end of a second
+	uint32_t                 m_uiEventTCounterTotal; //This value won't be reset, it's a monotonically increasing value
+	uint32_t                 m_uiEventTCounterEPS; //This value will be reset after the end of a second
 	uint32_t                 m_uiEventRowCycleCount;
 
 	uint32_t                 m_uiEventTCountForShow;
@@ -183,9 +194,8 @@ private:
 	uint32_t                 m_uiISOLevel; //range: 1 ~ 6
 	EventShowType            m_emEventShowType;
 
-	int32_t                  m_iLastRowTimeStamp;
-	int32_t                  m_iRowTimeStamp;
-	
+	int32_t                  m_iLastRowTimestamp;
+	int32_t                  m_iRowTimestamp;
 	int32_t                  m_iLastRow;
 	int32_t                  m_iCurrentRow;
 	uint32_t                 m_uiRowCount;
@@ -198,44 +208,47 @@ private:
 	bool                     m_bLoopModeEnabled;
 	int						 m_iRotateType;	//rotate param
 
-	vector<EventData>        m_vecEventData;
-	vector<EventData>        m_vecEventDataPerRow;
-	vector<EventData>        m_vecEventData_ForUser;
+	std::vector<EventData>   m_vecEventData;
+	std::vector<EventData>   m_vecEventDataPerRow;
 
 	int                      m_iMIPIDataFormat;
-	uint16_t                 m_uiEventTUnitList[16];
+	uint16_t                 m_uiEventTUnitN; //Numerator
+	uint16_t                 m_uiEventTUnitDList[16]; //Denominator
+	uint16_t                 m_uiCurrentEventTUnitD;
 	
 	std::ofstream            m_ofLogFile;
-	uint64_t                 m_uiEventFrameNo;
+	uint32_t                 m_uiEventFrameNo;
 	uint32_t                 m_uiEOTrampNo;
-	std::time_t              m_lEventFrameTimeStamp;
-	std::time_t              m_lLastPackageTimeStamp;
 	uint32_t                 m_uiPackageTCounter;
 	uint32_t                 m_uiEventCountStep;
 
-	vector<IMUData>          m_vectorIMUData;
-	vector<IMURawData>       m_vectorIMU_Raw_data;
+	std::time_t              m_lCurrentEventFrameTimestamp;
+	std::time_t              m_lLastPackageTimestamp;
+	std::time_t              m_lFullFrameTimestamp;
+	std::time_t              m_lEventFrameTimestamp;
+	std::time_t              m_lOpticalFrameTimestamp;
+
+	std::vector<IMUData>     m_vectorIMUData;
+	std::vector<IMURawData>  m_vectorIMURawData;
 
 	bool                     m_bSaveFullPicRawData;
-	uint32_t                 m_uiCurrentEventTUnit;
 	//
 	bool                     m_bFrameModuleEnabled;
 	bool                     m_bEventStreamEnabled;
 	bool                     m_bIMUModuleEnabled;
 	bool                     m_bEventDenoisingEnabled;
+	bool                     m_bFrameDenoisingEnabled;
 	bool                     m_bEventCountSliceEnabled;
-	//
-	std::time_t              m_lFullFrameTimeStamp_ForUser;
-	std::time_t              m_lEventFrameTimeStamp_ForUser;
-	std::time_t              m_lOpticalFrameTimeStamp_ForUser;
-	bool                     m_bFirstEventTimestamp;
+	bool                     m_bEventOpticalFlowEnabled;
 	//
 	int                      m_iLastLoopNum;
 	CeleX5::CeleX5Mode       m_emLastLoopMode;
 	int                      m_iFPNIndexForAdjustPic;
-	//
-	bool                      m_bStartGenerateOFFPN;
-	uint16_t*                 m_pOFFPNEventLatestValue;
+	uint32_t                 m_uiMinInPixelTimestamp;
+	uint32_t                 m_uiMaxInPixelTimestamp;
+
+	bool                     m_bStartGenerateOFFPN;
+	uint16_t*                m_pOFFPNEventLatestValue;
 };
 
 #endif // CELEX5DATAPROCESSOR_H

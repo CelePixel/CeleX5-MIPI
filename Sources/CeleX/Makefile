@@ -43,49 +43,45 @@ OBJECTS_DIR   = ./
 
 
 SOURCES       = ./base/xthread.cpp \
-		./base/xbase.cpp \
+		./base/filedirectory.cpp\
 		./base/dataqueue.cpp \
 		./configproc/tinyxml/tinyxmlparser.cpp \
 		./configproc/tinyxml/tinyxmlerror.cpp \
 		./configproc/tinyxml/tinyxml.cpp \
 		./configproc/tinyxml/tinystr.cpp \
-		./eventproc/eventprocessing.cpp \
 		./eventproc/datarecorder.cpp \
 		./eventproc/dataprocessthread.cpp \
 		./eventproc/celex5processeddata.cpp \
 		./eventproc/celex5dataprocessor.cpp \
 		./eventproc/celex5.cpp \
-		./configproc/hhxmlreader.cpp \
-		./configproc/hhwireincommand.cpp \
-		./configproc/hhsequencemgr.cpp \
-		./configproc/hhcommand.cpp \
-		./cx3driver/USBIR.cpp \
-		./cx3driver/Package.cpp \
-		./cx3driver/Cypress.cpp \
-		./cx3driver/CeleDriver.cpp \
-		./cx3driver/BulkTransfer.cpp 
+		./configproc/xmlreader.cpp \
+		./configproc/wireincommand.cpp \
+		./configproc/celex5cfgmgr.cpp \
+		./cx3driver/usbinterface.cpp \
+		./cx3driver/package.cpp \
+		./cx3driver/cypress.cpp \
+		./cx3driver/celedriver.cpp \
+		./cx3driver/bulktransfer.cpp 
 OBJECTS       = xthread.o \
-		xbase.o \
+		filedirectory.o \
 		dataqueue.o \
 		tinyxmlparser.o \
 		tinyxmlerror.o \
 		tinyxml.o \
 		tinystr.o \
-		eventprocessing.o \
 		datarecorder.o \
 		dataprocessthread.o \
 		celex5processeddata.o \
 		celex5dataprocessor.o \
 		celex5.o \
-		hhxmlreader.o \
-		hhwireincommand.o \
-		hhsequencemgr.o \
-		hhcommand.o \
-		USBIR.o \
-		Package.o \
-		Cypress.o \
-		CeleDriver.o \
-		BulkTransfer.o
+		xmlreader.o \
+		wireincommand.o \
+		celex5cfgmgr.o \
+		usbinterface.o \
+		package.o \
+		cypress.o \
+		celedriver.o \
+		bulktransfer.o
 
 TARGET        = libCeleX.so
 TARGETA       = libCeleX.a
@@ -126,8 +122,8 @@ compiler_clean:
 xthread.o: ./base/xthread.cpp ./base/xthread.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o xthread.o ./base/xthread.cpp
 
-xbase.o: ./base/xbase.cpp ./base/xbase.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o xbase.o ./base/xbase.cpp
+filedirectory.o: ./base/filedirectory.cpp ./base/filedirectory.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o filedirectory.o ./base/filedirectory.cpp
 
 dataqueue.o: ./base/dataqueue.cpp ./base/dataqueue.h \
 		./include/celextypes.h
@@ -148,14 +144,9 @@ tinyxml.o: ./configproc/tinyxml/tinyxml.cpp ./configproc/tinyxml/tinyxml.h \
 tinystr.o: ./configproc/tinyxml/tinystr.cpp ./configproc/tinyxml/tinystr.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o tinystr.o ./configproc/tinyxml/tinystr.cpp
 
-eventprocessing.o: ./eventproc/eventprocessing.cpp ./include/celextypes.h \
-		./include/dvslib/eventproc.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o eventprocessing.o ./eventproc/eventprocessing.cpp
-
 datarecorder.o: ./eventproc/datarecorder.cpp ./eventproc/datarecorder.h \
 		./include/celex5/celex5.h \
-		./include/celextypes.h \
-		./base/xbase.h
+		./include/celextypes.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o datarecorder.o ./eventproc/datarecorder.cpp
 
 dataprocessthread.o: ./eventproc/dataprocessthread.cpp ./eventproc/dataprocessthread.h \
@@ -177,17 +168,14 @@ celex5dataprocessor.o: ./eventproc/celex5dataprocessor.cpp ./eventproc/celex5dat
 		./include/celex5/celex5.h \
 		./include/celextypes.h \
 		./include/celex5/celex5processeddata.h \
-		./include/celex5/celex5datamanager.h \
-		./base/xbase.h
+		./include/celex5/celex5datamanager.h 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o celex5dataprocessor.o ./eventproc/celex5dataprocessor.cpp
 
 celex5.o: ./eventproc/celex5.cpp ./include/celex5/celex5.h \
 		./include/celextypes.h \
-		./base/xbase.h \
-		./cx3driver/CeleDriver.h \
-		./configproc/hhsequencemgr.h \
-		./configproc/hhwireincommand.h \
-		./configproc/hhcommand.h \
+		./cx3driver/celedriver.h \
+		./configproc/celex5cfgmgr.h \
+		./configproc/wireincommand.h \
 		./eventproc/dataprocessthread.h \
 		./base/dataqueue.h \
 		./base/xthread.h \
@@ -197,64 +185,57 @@ celex5.o: ./eventproc/celex5.cpp ./include/celex5/celex5.h \
 		./eventproc/datarecorder.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o celex5.o ./eventproc/celex5.cpp
 
-hhxmlreader.o: ./configproc/hhxmlreader.cpp ./configproc/hhxmlreader.h \
+xmlreader.o: ./configproc/xmlreader.cpp ./configproc/xmlreader.h \
 		./include/celex5/celex5.h \
 		./include/celextypes.h \
-		./base/xbase.h \
-		./configproc/hhwireincommand.h \
-		./configproc/hhcommand.h \
-		./configproc/hhsequencemgr.h \
+		./configproc/wireincommand.h \
+		./configproc/celex5cfgmgr.h \
 		./configproc/tinyxml/tinyxml.h \
 		./configproc/tinyxml/tinystr.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hhxmlreader.o ./configproc/hhxmlreader.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o xmlreader.o ./configproc/xmlreader.cpp
 
-hhwireincommand.o: ./configproc/hhwireincommand.cpp ./configproc/hhwireincommand.h \
-		./configproc/hhcommand.h \
-		./base/xbase.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hhwireincommand.o ./configproc/hhwireincommand.cpp
+wireincommand.o: ./configproc/wireincommand.cpp ./configproc/wireincommand.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o wireincommand.o ./configproc/wireincommand.cpp
 
-hhsequencemgr.o: ./configproc/hhsequencemgr.cpp ./configproc/hhsequencemgr.h \
+celex5cfgmgr.o: ./configproc/celex5cfgmgr.cpp ./configproc/celex5cfgmgr.h \
 		./include/celex5/celex5.h \
 		./include/celextypes.h \
-		./configproc/hhcommand.h \
-		./configproc/hhxmlreader.h \
+		./configproc/xmlreader.h \
 		./configproc/tinyxml/tinyxml.h \
 		./configproc/tinyxml/tinystr.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hhsequencemgr.o ./configproc/hhsequencemgr.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o celex5cfgmgr.o ./configproc/celex5cfgmgr.cpp
 
-hhcommand.o: ./configproc/hhcommand.cpp ./configproc/hhcommand.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hhcommand.o ./configproc/hhcommand.cpp
 
-USBIR.o: ./cx3driver/USBIR.cpp ./cx3driver/USBIR.h \
-		./cx3driver/BulkTransfer.h \
+usbinterface.o: ./cx3driver/usbinterface.cpp ./cx3driver/usbinterface.h \
+		./cx3driver/bulktransfer.h \
 		./cx3driver/include/libusb.h \
-		./cx3driver/Package.h \
-		./cx3driver/CeleDriver.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o USBIR.o ./cx3driver/USBIR.cpp
+		./cx3driver/package.h \
+		./cx3driver/celedriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o usbinterface.o ./cx3driver/usbinterface.cpp
 
-Package.o: ./cx3driver/Package.cpp ./cx3driver/Package.h \
-		./cx3driver/CeleDriver.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Package.o ./cx3driver/Package.cpp
+package.o: ./cx3driver/package.cpp ./cx3driver/package.h \
+		./cx3driver/celedriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o package.o ./cx3driver/package.cpp
 
-Cypress.o: ./cx3driver/Cypress.cpp ./cx3driver/Cypress.h \
-		./cx3driver/USBIR.h \
-		./cx3driver/BulkTransfer.h \
+cypress.o: ./cx3driver/cypress.cpp ./cx3driver/cypress.h \
+		./cx3driver/usbinterface.h \
+		./cx3driver/bulktransfer.h \
 		./cx3driver/include/libusb.h \
-		./cx3driver/Package.h \
-		./cx3driver/CeleDriver.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Cypress.o ./cx3driver/Cypress.cpp
+		./cx3driver/package.h \
+		./cx3driver/celedriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o cypress.o ./cx3driver/cypress.cpp
 
-CeleDriver.o: ./cx3driver/CeleDriver.cpp ./cx3driver/CeleDriver.h \
-		./cx3driver/Cypress.h \
-		./cx3driver/USBIR.h \
-		./cx3driver/BulkTransfer.h \
+celedriver.o: ./cx3driver/celedriver.cpp ./cx3driver/celedriver.h \
+		./cx3driver/cypress.h \
+		./cx3driver/usbinterface.h \
+		./cx3driver/bulktransfer.h \
 		./cx3driver/include/libusb.h \
-		./cx3driver/Package.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CeleDriver.o ./cx3driver/CeleDriver.cpp
+		./cx3driver/package.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o celedriver.o ./cx3driver/celedriver.cpp
 
-BulkTransfer.o: ./cx3driver/BulkTransfer.cpp ./cx3driver/BulkTransfer.h \
+bulktransfer.o: ./cx3driver/bulktransfer.cpp ./cx3driver/bulktransfer.h \
 		./cx3driver/include/libusb.h \
-		./cx3driver/Package.h \
-		./cx3driver/CeleDriver.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o BulkTransfer.o ./cx3driver/BulkTransfer.cpp
+		./cx3driver/package.h \
+		./cx3driver/celedriver.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o bulktransfer.o ./cx3driver/bulktransfer.cpp
 

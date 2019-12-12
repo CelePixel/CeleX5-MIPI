@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -21,14 +21,7 @@
 #include <vector>
 #include <ctime>
 #include <string>
-
-using namespace std;
-
-typedef struct IMU_Raw_Data
-{
-	uint8_t       imu_data[20];
-	std::time_t   time_stamp;
-} IMU_Raw_Data;
+#include "../include/celextypes.h"
 
 class Cypress;
 class CeleDriver
@@ -38,26 +31,27 @@ public:
 	~CeleDriver(void);
 
 public:
-	bool openUSB(); //added by xiaoqin @2018.11.02
-	bool openStream(); //added by xiaoqin @2018.11.02
+	bool openUSB();
+	bool openStream();
 
-	void closeUSB(); //added by xiaoqin @2018.11.07
-	void closeStream(); //added by xiaoqin @2018.11.07
+	void closeUSB();
+	void closeStream(); 
 
-	bool writeSerialNumber(std::string number); //added by xiaoqin @2018.12.06
-	std::string getSerialNumber(); //added by xiaoqin @2018.12.06
-	std::string getFirmwareVersion(); //added by xiaoqin @2018.12.06
-	std::string getFirmwareDate(); //added by xiaoqin @2018.12.06
+	bool writeSerialNumber(std::string number); 
+	std::string getSerialNumber();
+	std::string getFirmwareVersion(); 
+	std::string getFirmwareDate();
 
-	bool getimage(vector<uint8_t> &image);
-	bool getSensorData(vector<uint8_t> &image, std::time_t& time_stamp_end, vector<IMU_Raw_Data>& imu_data); //added by xiaoqin @2019.01.24
+	bool getSensorData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imuData); //added by xiaoqin @2019.01.24
 	void clearData();
 
+	uint16_t getALSValue();
+
 public:
-	bool i2c_set(uint16_t reg, uint16_t value);
-	bool i2c_get(uint16_t reg, uint16_t &value);
-	bool mipi_set(uint16_t reg, uint16_t value);
-	bool mipi_get(uint16_t reg, uint16_t &value);
+	bool i2cSet(uint16_t reg, uint16_t value);
+	bool i2cGet(uint16_t reg, uint16_t &value);
+	bool mipiSet(uint16_t reg, uint16_t value);
+	bool mipiGet(uint16_t reg, uint16_t &value);
 
 private:
 	Cypress*    m_pCypress;

@@ -168,43 +168,40 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="base\dataqueue.cpp" />
-    <ClCompile Include="base\xbase.cpp" />
+    <ClCompile Include="base\filedirectory.cpp" />
     <ClCompile Include="base\xthread.cpp" />
-    <ClCompile Include="configproc\hhcommand.cpp" />
-    <ClCompile Include="configproc\hhsequencemgr.cpp" />
-    <ClCompile Include="configproc\hhwireincommand.cpp" />
-    <ClCompile Include="configproc\hhxmlreader.cpp" />
+    <ClCompile Include="configproc\celex5cfgmgr.cpp" />
+    <ClCompile Include="configproc\wireincommand.cpp" />
+    <ClCompile Include="configproc\xmlreader.cpp" />
     <ClCompile Include="configproc\tinyxml\tinystr.cpp" />
     <ClCompile Include="configproc\tinyxml\tinyxml.cpp" />
     <ClCompile Include="configproc\tinyxml\tinyxmlerror.cpp" />
     <ClCompile Include="configproc\tinyxml\tinyxmlparser.cpp" />
-    <ClCompile Include="cx3driver\BulkTransfer.cpp" />
-    <ClCompile Include="cx3driver\CeleDriver.cpp" />
-    <ClCompile Include="cx3driver\Cypress.cpp" />
-    <ClCompile Include="cx3driver\Package.cpp" />
-    <ClCompile Include="cx3driver\USBIR.cpp" />
+    <ClCompile Include="cx3driver\bulktransfer.cpp" />
+    <ClCompile Include="cx3driver\celedriver.cpp" />
+    <ClCompile Include="cx3driver\cypress.cpp" />
+    <ClCompile Include="cx3driver\package.cpp" />
+    <ClCompile Include="cx3driver\usbinterface.cpp" />
     <ClCompile Include="eventproc\celex5.cpp" />
     <ClCompile Include="eventproc\celex5dataprocessor.cpp" />
     <ClCompile Include="eventproc\celex5processeddata.cpp" />
     <ClCompile Include="eventproc\dataprocessthread.cpp" />
     <ClCompile Include="eventproc\datarecorder.cpp" />
-    <ClCompile Include="eventproc\eventprocessing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="base\dataqueue.h" />
-    <ClInclude Include="base\xbase.h" />
+    <ClInclude Include="base\filedirectory.h" />
     <ClInclude Include="base\xthread.h" />
-    <ClInclude Include="configproc\hhcommand.h" />
-    <ClInclude Include="configproc\hhsequencemgr.h" />
-    <ClInclude Include="configproc\hhwireincommand.h" />
-    <ClInclude Include="configproc\hhxmlreader.h" />
+    <ClInclude Include="configproc\celex5cfgmgr.h" />
+    <ClInclude Include="configproc\wireincommand.h" />
+    <ClInclude Include="configproc\xmlreader.h" />
     <ClInclude Include="configproc\tinyxml\tinystr.h" />
     <ClInclude Include="configproc\tinyxml\tinyxml.h" />
-    <ClInclude Include="cx3driver\BulkTransfer.h" />
-    <ClInclude Include="cx3driver\CeleDriver.h" />
-    <ClInclude Include="cx3driver\Cypress.h" />
-    <ClInclude Include="cx3driver\Package.h" />
-    <ClInclude Include="cx3driver\USBIR.h" />
+    <ClInclude Include="cx3driver\bulktransfer.h" />
+    <ClInclude Include="cx3driver\celedriver.h" />
+    <ClInclude Include="cx3driver\cypress.h" />
+    <ClInclude Include="cx3driver\package.h" />
+    <ClInclude Include="cx3driver\usbinterface.h" />
     <ClInclude Include="eventproc\celex5dataprocessor.h" />
     <ClInclude Include="eventproc\dataprocessthread.h" />
     <ClInclude Include="eventproc\datarecorder.h" />
@@ -212,7 +209,6 @@
     <ClInclude Include="include\celex5\celex5datamanager.h" />
     <ClInclude Include="include\celex5\celex5processeddata.h" />
     <ClInclude Include="include\celextypes.h" />
-    <ClInclude Include="include\dvslib\eventproc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,15 +22,15 @@
 #include "celex5dataprocessor.h"
 #include "../include/celex5/celex5.h"
 
-class DataProcessThreadEx : public XThread
+class DataProcessThread : public XThread
 {
 public:
-	DataProcessThreadEx(const std::string& name);
-	~DataProcessThreadEx();
+	DataProcessThread(const std::string& name);
+	~DataProcessThread();
 
-	void addData(unsigned char* data, long length, time_t timeStamp = 0);
-	void addData(unsigned char* data, long length, vector<IMURawData> imuData, time_t timeStamp);
-	void addData(vector<uint8_t> vecData);
+	void addData(uint8_t* data, uint32_t length, std::time_t timeStamp = 0);
+	void addData(uint8_t* data, uint32_t length, std::vector<IMURawData> imuData, time_t timeStamp);
+	void addData(std::vector<uint8_t> vecData);
 	void clearData();
 	uint32_t queueSize();
 	uint32_t getPackageNo();
@@ -50,17 +50,16 @@ protected:
 	void run() override;
 
 private:
-	unsigned char*                 m_pData;
-	DataQueueEx                    m_queueData;
+	DataQueue                      m_queueData;
 	CeleX5DataProcessor*           m_pDataProcessor;
-	std::queue<vector<uint8_t>>    m_queueVecData;
+	std::queue<std::vector<uint8_t>>    m_queueVecData;
 	uint32_t                       m_uiPackageNo;
 	CeleX5::DeviceType             m_emDeviceType;
 	CeleX5*                        m_pCeleX5;
-	vector<uint8_t>                m_vecMIPIPackage;
+	uint8_t*                       m_pMipiPackage;
 	bool                           m_bPlaybackBinFile;
 	PlaybackState                  m_emPlaybackState;
-	vector<IMURawData>			   m_vecIMUData;
+	std::vector<IMURawData>			   m_vecIMUData;
 	bool                           m_bRecordData;
 	bool                           m_bShowImagesEnabled;
 };
