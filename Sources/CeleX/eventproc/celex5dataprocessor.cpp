@@ -2729,7 +2729,7 @@ void CeleX5DataProcessor::saveOpticalFlowEvent(int col, int adc12bit, int adc8bi
 	else
 		tRampNo = m_uiEOTrampNo;
 
-	uint32_t tInPixelIncreasing = adcFPN + tRampNo * 7550; //3310*2.281 = 7750¦Ìs
+	uint32_t tInPixelIncreasing = (adcFPN + tRampNo * 3310) * 7563 / 3310; //¦Ìs
 	if (tInPixelIncreasing > m_uiMaxInPixelTimestamp)
 		m_uiMaxInPixelTimestamp = tInPixelIncreasing;
 	if (tInPixelIncreasing < m_uiMinInPixelTimestamp)
