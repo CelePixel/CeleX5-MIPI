@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018  CelePixel Technology Co. Ltd.  All rights reserved.
+* Copyright (c) 2017-2020  CelePixel Technology Co. Ltd.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -39,15 +39,11 @@
 #endif
 #endif
 
-using namespace std;
-
 class CeleDriver;
 class CeleX5DataProcessor;
-class HHSequenceMgr;
-class DataProcessThreadEx;
-class DataReaderThread;
+class CeleX5CfgMgr;
+class DataProcessThread;
 class CX5SensorDataServer;
-class CommandBase;
 class DataRecorder;
 class CELEX_EXPORTS CeleX5
 {
@@ -69,7 +65,7 @@ public:
 		Multi_Read_Optical_Flow_Mode = 6,	//Using Multi_Read_Optical_Flow_Mode, Full_Optical_Flow_M_Mode  is deprecated.
 	};
 
-	enum emEventPicType {
+	enum EventPicType {
 		EventBinaryPic = 0,
 		EventAccumulatedPic = 1,
 		EventGrayPic = 2,
@@ -77,38 +73,39 @@ public:
 		EventDenoisedBinaryPic = 4,
 		EventSuperimposedPic = 5,
 		EventDenoisedCountPic = 6,
-		EventCountSlicePic = 7
+		EventCountSlicePic = 7,
+		EventInPixelTimestampPic = 8
 	};
 
-	enum emFullPicType {
-		Full_Optical_Flow_Pic = 0,
-		Full_Optical_Flow_Speed_Pic = 1,
-		Full_Optical_Flow_Direction_Pic = 2
+	enum OpticalFlowPicType {
+		OpticalFlowPic = 0,
+		OpticalFlowSpeedPic = 1,
+		OpticalFlowDirectionPic = 2
 	};
 
 	typedef struct CfgInfo
 	{
-		std::string name;
 		uint32_t    min;
 		uint32_t    max;
 		uint32_t    value;
 		uint32_t    step;
-		int16_t     high_addr;
-		int16_t     middle_addr;
-		int16_t     low_addr;
+		int16_t     highAddr;
+		int16_t     middleAddr;
+		int16_t     lowAddr;
+		std::string name;
 	} CfgInfo;
 
 	typedef struct BinFileAttributes
 	{
-		uint8_t    data_type; //bit0: 0: fixed mode; 1: loop mode; bit1: 0: no IMU data; 1: has IMU data
-		uint8_t    loopA_mode;
-		uint8_t    loopB_mode;
-		uint8_t    loopC_mode;
-		uint8_t    event_data_format;
+		uint8_t    dataType; //bit0: 0: fixed mode; 1: loop mode; bit1: 0: no IMU data; 1: has IMU data
+		uint8_t    loopAMode;
+		uint8_t    loopBMode;
+		uint8_t    loopCMode;
+		uint8_t    eventDataFormat;
 		uint8_t    hour;
 		uint8_t    minute;
 		uint8_t    second;
-		uint32_t   package_count;
+		uint32_t   packageCount;
 	} BinFileAttributes;
 
 	CeleX5();
@@ -122,16 +119,16 @@ public:
 	* If you don't care about IMU data, you can use the first getMIPIData interface, 
 	* otherwise you need to use the second getMIPIData interface.
 	*/
-	void getMIPIData(vector<uint8_t> &buffer);
-	void getMIPIData(vector<uint8_t> &buffer, std::time_t& time_stamp_end, vector<IMURawData>& imu_data);
+	void getMIPIData(uint8_t* pData, uint32_t& length);
+	void getMIPIData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imuData);
 
 	/*
 	* Parse Sensor raw data interfaces
 	* If you don't care about IMU data, you can use the first parseMIPIData interface,
 	* otherwise you need to use the second parseMIPIData interface.
 	*/
-	void parseMIPIData(uint8_t* pData, int dataSize);
-	void parseMIPIData(uint8_t* pData, int dataSize, std::time_t time_stamp_end, vector<IMURawData> imu_data);
+	void parseMIPIData(uint8_t* pData, uint32_t dataSize);
+	void parseMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData> imuData);
 
 	/* 
 	* Enable/Disable the Create Image Frame module
@@ -165,6 +162,13 @@ public:
 	bool isEventDenoisingEnabled();
 
 	/*
+	* Enable/Disable the Frame Denoising
+	*/
+	void disableFrameDenoising();
+	void enableFrameDenoising();
+	bool isFrameDenoisingEnabled();
+
+	/*
 	* Enable/Disable the Event Count Slice
 	*/
 	void disableEventCountSlice();
@@ -172,32 +176,39 @@ public:
 	bool isEventCountSliceEnabled();
 
 	/*
+	* Enable/Disable the Event Optical Flow
+	*/
+	void disableEventOpticalFlow();
+	void enableEventOpticalFlow();
+	bool isEventOpticalFlowEnabled();
+
+	/*
 	* Get Full-frame pic buffer or mat
 	*/
-	void getFullPicBuffer(unsigned char* buffer);
-	void getFullPicBuffer(unsigned char* buffer, std::time_t& time_stamp);
+	void getFullPicBuffer(uint8_t* buffer);
+	void getFullPicBuffer(uint8_t* buffer, std::time_t& timestamp);
 	cv::Mat getFullPicMat();
 
 	/*
 	* Get event pic buffer or mat
 	*/
-	void getEventPicBuffer(unsigned char* buffer, emEventPicType type = EventBinaryPic);
-	void getEventPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emEventPicType type = EventBinaryPic);
-	cv::Mat getEventPicMat(emEventPicType type);
+	void getEventPicBuffer(uint8_t* buffer, EventPicType type = EventBinaryPic);
+	void getEventPicBuffer(uint8_t* buffer, std::time_t& timestamp, EventPicType type = EventBinaryPic);
+	cv::Mat getEventPicMat(EventPicType type);
 
 	/*
 	* Get optical-flow pic buffer or mat
 	*/
-	void getOpticalFlowPicBuffer(unsigned char* buffer, emFullPicType type = Full_Optical_Flow_Pic);
-	void getOpticalFlowPicBuffer(unsigned char* buffer, std::time_t& time_stamp, emFullPicType type = Full_Optical_Flow_Pic);
-	cv::Mat getOpticalFlowPicMat(emFullPicType type);
+	void getOpticalFlowPicBuffer(uint8_t* buffer, OpticalFlowPicType type = OpticalFlowPic);
+	void getOpticalFlowPicBuffer(uint8_t* buffer, std::time_t& timestamp, OpticalFlowPicType type = OpticalFlowPic);
+	cv::Mat getOpticalFlowPicMat(OpticalFlowPicType type);
 
 	/*
 	* Get event data vector interfaces
 	*/
 	bool getEventDataVector(std::vector<EventData> &vector);
-	bool getEventDataVector(std::vector<EventData> &vector, uint64_t& frameNo);
-	bool getEventDataVectorEx(std::vector<EventData> &vector, std::time_t& time_stamp, bool bDenoised = false);
+	bool getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo);
+	bool getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo, std::time_t& timestamp);
 
 	/*
 	* Get IMU Data
@@ -226,8 +237,8 @@ public:
 	/*
 	* Generate fpn file
 	*/
-	void generateFPN(std::string fpnFile);
-	void stopGenerateFPN();
+	void generateFPN(const std::string& fpnFile);
+    void stopGenerateFPN();
 
 	/*
 	* Clock
@@ -365,13 +376,13 @@ public:
 	/*
 	* Start/Stop recording raw data.
 	*/
-	void startRecording(std::string filePath);
+	void startRecording(const std::string& filePath);
 	void stopRecording();
 
 	/*
 	* Playback Interfaces
 	*/
-	bool openBinFile(std::string filePath);
+	bool openBinFile(const std::string& filePath);
 	bool readBinFileData();
 	uint32_t getTotalPackageCount();
 	uint32_t getCurrentPackageNo();
@@ -383,6 +394,7 @@ public:
 	PlaybackState getPlaybackState();
 	void setPlaybackState(PlaybackState state);
 	void setIsPlayBack(bool state);
+	void saveBinFile(std::string strPath, int startPackageCount, int endPackageCount);
 
 	CX5SensorDataServer* getSensorDataServer();
 	
@@ -396,15 +408,17 @@ public:
 	*/
 	uint32_t getEventRate(); 
 
+	int getALSValue();
+
 	/*
 	* Sensor Configures
 	*/
-	map<string, vector<CfgInfo> > getCeleX5Cfg();
-	map<string, vector<CfgInfo> > getCeleX5CfgModified();
+	std::map<std::string, std::vector<CfgInfo> > getCeleX5Cfg();
+	std::map<std::string, std::vector<CfgInfo> > getCeleX5CfgModified();
 	void writeRegister(int16_t addressH, int16_t addressM, int16_t addressL, uint32_t value);
-	CfgInfo getCfgInfoByName(string csrType, string name, bool bDefault);
-	void writeCSRDefaults(string csrType);
-	void modifyCSRParameter(string csrType, string cmdName, uint32_t value);
+	CfgInfo getCfgInfoByName(const std::string& csrType, const std::string& name, bool bDefault);
+	void writeCSRDefaults(const std::string& csrType);
+	void modifyCSRParameter(const std::string& csrType, const std::string& cmdName, uint32_t value);
 
 	//--- for test ---
 	int  denoisingMaskByEventTime(const cv::Mat& countEventImg, double timelength, cv::Mat& denoiseMaskImg);
@@ -429,14 +443,14 @@ private:
 private:
 	CeleDriver*                    m_pCeleDriver;
 	CeleX5DataProcessor*           m_pDataProcessor;
-	HHSequenceMgr*                 m_pSequenceMgr;
-	DataProcessThreadEx*           m_pDataProcessThread;
+	CeleX5CfgMgr*                  m_pCeleX5CfgMgr;
+	DataProcessThread*             m_pDataProcessThread;
 	DataRecorder*                  m_pDataRecorder;
 	//
-	map<string, vector<CfgInfo> >  m_mapCfgDefaults;
-	map<string, vector<CfgInfo> >  m_mapCfgModified;
+	std::map<std::string, std::vector<CfgInfo> >  m_mapCfgDefaults;
+	std::map<std::string, std::vector<CfgInfo> >  m_mapCfgModified;
 	//
-	unsigned char*                 m_pReadBuffer;
+	uint8_t*                       m_pReadBuffer;
 	uint8_t*                       m_pDataToRead;
 
 	std::ifstream                  m_ifstreamPlayback;	//playback
@@ -447,11 +461,11 @@ private:
 	uint32_t                       m_uiBrightness;
 	uint32_t                       m_uiThreshold;
 	uint32_t                       m_uiClockRate;
-	uint32_t                       m_uiLastClockRate; // for test
+	uint32_t                       m_uiLastClockRate;
 	int                            m_iEventDataFormat;
 	uint32_t                       m_uiPackageCount;
 	uint32_t                       m_uiTotalPackageCount;
-	vector<uint64_t>               m_vecPackagePos;
+	std::vector<uint64_t>          m_vecPackagePos;
 	bool                           m_bFirstReadFinished;
 	BinFileAttributes              m_stBinFileHeader;
 	DeviceType                     m_emDeviceType;
