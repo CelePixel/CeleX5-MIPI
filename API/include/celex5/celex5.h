@@ -73,7 +73,7 @@ public:
 		EventDenoisedBinaryPic = 4,
 		EventSuperimposedPic = 5,
 		EventDenoisedCountPic = 6,
-		EventCountSlicePic = 7,
+		EventCountDensityPic = 7,
 		EventInPixelTimestampPic = 8
 	};
 
@@ -119,16 +119,16 @@ public:
 	* If you don't care about IMU data, you can use the first getMIPIData interface, 
 	* otherwise you need to use the second getMIPIData interface.
 	*/
-	void getMIPIData(uint8_t* pData, uint32_t& length);
-	void getMIPIData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imuData);
+	void getCeleXRawData(uint8_t* pData, uint32_t& length);
+	void getCeleXRawData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imuData);
 
 	/*
 	* Parse Sensor raw data interfaces
 	* If you don't care about IMU data, you can use the first parseMIPIData interface,
 	* otherwise you need to use the second parseMIPIData interface.
 	*/
-	void parseMIPIData(uint8_t* pData, uint32_t dataSize);
-	void parseMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData> imuData);
+	void parseCeleXRawData(uint8_t* pData, uint32_t dataSize);
+	void parseCeleXRawData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData> imuData);
 
 	/* 
 	* Enable/Disable the Create Image Frame module
@@ -206,9 +206,9 @@ public:
 	/*
 	* Get event data vector interfaces
 	*/
-	bool getEventDataVector(std::vector<EventData> &vector);
-	bool getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo);
-	bool getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo, std::time_t& timestamp);
+	bool getEventDataVector(std::vector<EventData>& vecEvent);
+	bool getEventDataVector(std::vector<EventData>& vecEvent, uint32_t& frameNo);
+	bool getEventDataVector(std::vector<EventData>& vecEvent, uint32_t& frameNo, std::time_t& timestamp);
 
 	/*
 	* Get IMU Data

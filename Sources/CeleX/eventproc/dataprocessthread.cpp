@@ -162,7 +162,7 @@ void DataProcessThread::run()
 			std::time_t time_stamp_end = 0;
 			std::vector<IMURawData> imu_data;
 			uint32_t dataLen = 0;
-			m_pCeleX5->getMIPIData(m_pMipiPackage, dataLen, time_stamp_end, imu_data);
+			m_pCeleX5->getCeleXRawData(m_pMipiPackage, dataLen, time_stamp_end, imu_data);
 			if (dataLen > 0)
 			{
 				//std::cout << "dataLen = " << dataLen << std::endl;

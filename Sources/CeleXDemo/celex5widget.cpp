@@ -285,7 +285,7 @@ void SensorDataObserver::updateQImageBuffer(unsigned char *pBuffer1, int loopNum
         pp1 = m_imageMode1.bits();
 
     int threshold = 2;
-    if (5 == colorMode) //event count slice
+    if (5 == colorMode) //event count density
     {
         if (-g_iEventCountThreshold > 0)
             threshold = (g_iEventCountThreshold+100)*g_iEventCountMean/100;
@@ -432,7 +432,7 @@ void SensorDataObserver::updateQImageBuffer(unsigned char *pBuffer1, int loopNum
                     *(pp1+2) = value;
                 }
             }
-            else if (5 == colorMode) //event count slice
+            else if (5 == colorMode) //event count density
             {
                 if (value < threshold)
                 {
@@ -760,7 +760,7 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNu
                 else if (4 == m_iPicMode)
                 {
                     colorMode = 5;
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountSlicePic);
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountDensityPic);
                 }
             }
             updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
@@ -814,7 +814,7 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNu
                 else if (2 == m_iPicMode)
                 {
                     colorMode = 5;
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountSlicePic);
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountDensityPic);
                 }
                 else if (3 == m_iPicMode)
                     m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventDenoisedBinaryPic);
@@ -872,7 +872,7 @@ void SensorDataObserver::processSensorBuffer(CeleX5::CeleX5Mode mode, int loopNu
                 else if (5 == m_iPicMode)
                 {
                     colorMode = 5;
-                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountSlicePic);
+                    m_pCeleX5->getEventPicBuffer(m_pBuffer[0], CeleX5::EventCountDensityPic);
                 }
             }
             updateQImageBuffer(m_pBuffer[0], loopNum, colorMode);
@@ -1055,8 +1055,8 @@ void SensorDataObserver::savePics(CeleX5ProcessedData *pSensorData)
         {
             folderNameList << "EventBinaryPic" << "EventInPixelT";
 
-            picTypeList[0] = 0; //CeleX5::EventCountSlicePic
-            picTypeList[1] = 8; //CeleX5::EventCountSlicePic
+            picTypeList[0] = 0; //CeleX5::EventBinaryPic
+            picTypeList[1] = 8; //CeleX5::EventCountDensityPic
         }
         for (int i = 0; i < folderNameList.size(); i++)
         {
@@ -1384,7 +1384,7 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pCbBoxImageType->insertItem(1, "Event Denoised Binary Pic");
     m_pCbBoxImageType->insertItem(2, "Event Count Pic");
     m_pCbBoxImageType->insertItem(3, "Event Denoised Count Pic");
-    m_pCbBoxImageType->insertItem(4, "Event CountSlice Pic");
+    m_pCbBoxImageType->insertItem(4, "Event CountDensity Pic");
     m_pCbBoxImageType->setCurrentIndex(0);
     connect(m_pCbBoxImageType, SIGNAL(currentIndexChanged(int)), this, SLOT(onImageTypeChanged(int)));
 
@@ -1479,12 +1479,12 @@ CeleX5Widget::CeleX5Widget(QWidget *parent)
     m_pEventStartPosSlider->setObjectName("Event Start Pos");
     m_pEventStartPosSlider->hide();
 
-    //--- Event Count Slice ---
-    m_pEventCountSliceSlider = new CfgSlider(m_pScrollWidget, 5, 8, 1, 5, this);
-    m_pEventCountSliceSlider->setGeometry(1350, 450, 500, 70);
-    m_pEventCountSliceSlider->setBiasType("Event Count Slice");
-    m_pEventCountSliceSlider->setDisplayName("Event Count Slice");
-    m_pEventCountSliceSlider->setObjectName("Event Count Slice");
+    //--- Event Count Density ---
+    m_pEventCountDensitySlider = new CfgSlider(m_pScrollWidget, 5, 8, 1, 5, this);
+    m_pEventCountDensitySlider->setGeometry(1350, 450, 500, 70);
+    m_pEventCountDensitySlider->setBiasType("Event Count Density");
+    m_pEventCountDensitySlider->setDisplayName("Event Count Density");
+    m_pEventCountDensitySlider->setObjectName("Event Count Density");
 
     //--- Event Count  ---
     m_pEventCountThresholdSlider = new CfgSlider(m_pScrollWidget, 0, 100, 1, 10, this);
@@ -1720,7 +1720,7 @@ void CeleX5Widget::createButtons(QGridLayout* layout)
     btnNameList.push_back("Configurations");
     btnNameList.push_back("Enable Auto ISP");
     //btnNameList.push_back("More Parameters ...");
-    btnNameList.push_back("Test: Save Pic");
+    //btnNameList.push_back("Test: Save Pic");
     btnNameList.push_back("Rotate_LR");
     btnNameList.push_back("Rotate_UD");
     btnNameList.push_back("ConvertBin2Video");
@@ -1901,7 +1901,7 @@ void CeleX5Widget::switchMode(QPushButton* pButton, bool isLoopMode, bool bPlayb
         m_pCbBoxFixedMode->hide();
         m_pBtnShowStyle->hide();
         m_pEventStartPosSlider->show();
-        m_pEventCountSliceSlider->hide();
+        m_pEventCountDensitySlider->hide();
         m_pEventCountThresholdSlider->hide();
         m_pColPlotWidget->hide();
         m_pPlotGraphicsView->hide();
@@ -1932,9 +1932,9 @@ void CeleX5Widget::switchMode(QPushButton* pButton, bool isLoopMode, bool bPlayb
         m_pCbBoxImageType->show();
         m_pCbBoxFixedMode->show();
         m_pEventStartPosSlider->hide();
-        m_pEventCountSliceSlider->show();
+        m_pEventCountDensitySlider->show();
         m_pEventCountThresholdSlider->show();
-        if (m_pCbBoxImageType->currentText() == "Event CountSlice Pic")
+        if (m_pCbBoxImageType->currentText() == "Event CountDensity Pic")
         {
             m_pColPlotWidget->show();
             m_pPlotGraphicsView->show();
@@ -2586,7 +2586,7 @@ void CeleX5Widget::onValueChanged(uint32_t value, CfgSlider *slider)
     {
         m_pCeleX5->setEventFrameStartPos(value);
     }
-    else if ("Event Count Slice" == slider->getBiasType())
+    else if ("Event Count Density" == slider->getBiasType())
     {
         m_pCeleX5->setEventCountSliceNum(value);
     }
@@ -2815,7 +2815,7 @@ void CeleX5Widget::onBtnSavePicExReleased()
 unsigned char * event_buffer = new unsigned char[1024000];
 void CeleX5Widget::onUpdateEventCountPlot()
 {
-    m_pCeleX5->getEventPicBuffer(event_buffer, CeleX5::EventCountSlicePic);
+    m_pCeleX5->getEventPicBuffer(event_buffer, CeleX5::EventCountDensityPic);
 
     uint64_t total = 0;
     uint32_t count = 0;
@@ -2973,7 +2973,7 @@ void CeleX5Widget::onSensorModeChanged(QString text)
             m_pCbBoxImageType->insertItem(1, "Event Denoised Binary Pic");
             m_pCbBoxImageType->insertItem(2, "Event Count Pic");
             m_pCbBoxImageType->insertItem(3, "Event Denoised Count Pic");
-            m_pCbBoxImageType->insertItem(4, "Event CountSlice Pic");
+            m_pCbBoxImageType->insertItem(4, "Event CountDensity Pic");
             m_pCbBoxImageType->setCurrentIndex(0);
             m_pSensorDataObserver->setMultipleShowEnabled(false);
             m_pBtnShowStyle->setText("Show Multiple Windows");
@@ -2984,7 +2984,7 @@ void CeleX5Widget::onSensorModeChanged(QString text)
             m_pCbBoxImageType->clear();
             m_pCbBoxImageType->insertItem(0, "Event OpticalFlow Pic");
             m_pCbBoxImageType->insertItem(1, "Event Binary Pic");
-            m_pCbBoxImageType->insertItem(2, "Event CountSlice Pic");
+            m_pCbBoxImageType->insertItem(2, "Event CountDensity Pic");
             m_pCbBoxImageType->insertItem(3, "Event Denoised Binary Pic");
             m_pCbBoxImageType->insertItem(4, "Event Count Pic");
             m_pCbBoxImageType->insertItem(5, "Event Denoised Count Pic");
@@ -2998,7 +2998,7 @@ void CeleX5Widget::onSensorModeChanged(QString text)
             m_pCbBoxImageType->insertItem(2, "Event Accumulated Pic");
             m_pCbBoxImageType->insertItem(3, "Event Superimposed Pic");
             m_pCbBoxImageType->insertItem(4, "Event Count Pic");
-            m_pCbBoxImageType->insertItem(5, "Event CountSlice Pic");
+            m_pCbBoxImageType->insertItem(5, "Event CountDensity Pic");
             m_pCbBoxImageType->setCurrentIndex(1);
         }
         else if (mode == "Full_Picture Mode")
@@ -3056,7 +3056,7 @@ void CeleX5Widget::onImageTypeChanged(int index)
     cout << "CeleX5Widget::onImageTypeChanged: " << index << endl;
     m_iCurrCbBoxImageType = index;
     m_pSensorDataObserver->setPictureMode(index);
-    if (m_pCbBoxImageType->currentText() == "Event CountSlice Pic")
+    if (m_pCbBoxImageType->currentText() == "Event CountDensity Pic")
     {
         if(!m_pSensorDataObserver->getMultipleShowEnable())
         {
@@ -3098,7 +3098,7 @@ void CeleX5Widget::onShowMultipleWindows()
     {
         m_pSensorDataObserver->setMultipleShowEnabled(false);
         m_pBtnShowStyle->setText("Show Multiple Windows");
-        if (m_pCbBoxImageType->currentText() == "Event CountSlice Pic")
+        if (m_pCbBoxImageType->currentText() == "Event CountDensity Pic")
         {
             m_pColPlotWidget->show();
             m_pPlotGraphicsView->show();

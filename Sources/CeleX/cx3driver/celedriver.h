@@ -42,6 +42,7 @@ public:
 	std::string getFirmwareVersion(); 
 	std::string getFirmwareDate();
 
+	bool getSensorData(uint8_t* pData, uint32_t& length);
 	bool getSensorData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imuData); //added by xiaoqin @2019.01.24
 	void clearData();
 

@@ -214,7 +214,7 @@ private:
     CfgSlider*          m_pFrameSlider;
     CfgSlider*          m_pEventCountSlider;
     CfgSlider*          m_pEventStartPosSlider;
-    CfgSlider*          m_pEventCountSliceSlider;
+    CfgSlider*          m_pEventCountDensitySlider;
     CfgSlider*          m_pEventCountThresholdSlider;
     CfgSlider*          m_pRowCycleSlider;
     QPushButton*        m_pBtnSavePic;

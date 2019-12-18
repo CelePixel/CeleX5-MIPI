@@ -215,60 +215,23 @@ bool CeleX5::isSensorReady()
 }
 
 /*
-*  @function :  getMIPIData
+*  @function :  getCeleXRawData
 *  @brief    :	interface for getting MIPI format data from cypress
 *  @input    :	buffer : the vector for saving raw image buffer
 *  @output   :
 *  @return   :
 */
-void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length)
+void CeleX5::getCeleXRawData(uint8_t* pData, uint32_t& length)
 {
 	if (CeleX5::CeleX5_MIPI != m_emDeviceType)
 	{
 		return;
 	}
-	//if (m_pCeleDriver->getimage(buffer))
-	{
-		//cout << "image buffer size = " << buffer.size() << endl;
-
-		//record sensor data
-		if (m_pDataRecorder->isRecording())
-		{
-			m_pDataRecorder->writeData(pData, length);
-		}
-
-		//process sensor data
-		/*if (buffer.size() > 0)
-		{
-			if (m_bShowImagesEnabled || (!m_bShowImagesEnabled && !m_pDataRecorder->isRecording()))
-				m_pDataProcessor->processMIPIData(buffer.data(), buffer.size(), 0, vector<IMURawData>());
-		}*/
-
-		//calculate the package count per second
-		if (!m_bLoopModeEnabled && getSensorFixedMode() > 2)
-		{
-			m_uiPackageCounter++;
-#ifdef _WIN32
-			uint32_t t2 = GetTickCount();
-#else
-			uint32_t t2 = clock() / 1000;
-#endif
-			m_uiPackageTDiff += (t2 - m_uiPackageBeginT);
-			m_uiPackageBeginT = t2;
-			if (m_uiPackageTDiff > 1000)
-			{
-				//cout << "--- package count = " << counter << endl;
-				m_pDataProcessor->getProcessedData()->setFullFrameFPS(m_uiPackageCountPS);
-				m_uiPackageTDiff = 0;
-				m_uiPackageCountPS = m_uiPackageCounter;
-				m_uiPackageCounter = 0;
-			}
-		}
-	}
+	m_pCeleDriver->getSensorData(pData, length);
 }
 
 /*
-*  @function :  getMIPIData
+*  @function :  getCeleXRawData
 *  @brief    :	interface for getting MIPI format data, time stamps and raw IMU data
 *  @input    :	buffer : the vector for saving raw image buffer
 *				timeStampEnd : the end time stamp of the buffer
@@ -276,7 +239,7 @@ void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length)
 *  @output   :
 *  @return   :
 */
-void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imu_data)
+void CeleX5::getCeleXRawData(uint8_t* pData, uint32_t& length, std::time_t& timestampEnd, std::vector<IMURawData>& imu_data)
 {
 	if (CeleX5::CeleX5_MIPI != m_emDeviceType)
 	{
@@ -298,12 +261,6 @@ void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length, std::time_t& timestam
 		{
 			m_pDataRecorder->writeData(pData, length, timestampEnd, imu_data);
 		}
-
-		/*if (buffer.size() > 0)
-		{
-			if (m_bShowImagesEnabled || (!m_bShowImagesEnabled && !m_pDataRecorder->isRecording()))
-				m_pDataProcessor->processMIPIData(buffer.data(), buffer.size(), time_stamp_end, imu_data);
-		}*/
 
 		//calculate the package count per second
 		if (!m_bLoopModeEnabled && getSensorFixedMode() > 2)
@@ -329,21 +286,21 @@ void CeleX5::getMIPIData(uint8_t* pData, uint32_t& length, std::time_t& timestam
 }
 
 /*
-*  @function :  parseMIPIData
+*  @function :  parseCeleXRawData
 *  @brief    :	interface for parsing MIPI format data
 *  @input    :	pData : the data for parsing
 *				dataSize : the size of pData buffer
 *  @output   :
 *  @return   :
 */
-void CeleX5::parseMIPIData(uint8_t* pData, uint32_t dataSize)
+void CeleX5::parseCeleXRawData(uint8_t* pData, uint32_t dataSize)
 {
 	std::vector<IMURawData> imu_data;
 	m_pDataProcessor->processMIPIData(pData, dataSize, 0, imu_data);
 }
 
 /*
-*  @function :  parseMIPIData
+*  @function :  parseCeleXRawData
 *  @brief    :	interface for parsing MIPI format data
 *  @input    :	pData : the data for parsing
 *				dataSize : the size of pData buffer
@@ -352,7 +309,7 @@ void CeleX5::parseMIPIData(uint8_t* pData, uint32_t dataSize)
 *  @output   :
 *  @return   :
 */
-void CeleX5::parseMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData> imuData)
+void CeleX5::parseCeleXRawData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData> imuData)
 {
 	m_pDataProcessor->processMIPIData(pData, dataSize, timestampEnd, imuData);
 }
@@ -626,8 +583,8 @@ bool CeleX5::isEventOpticalFlowEnabled()
 /*
 *  @function :  getFullPicBuffer
 *  @brief    :	get the full buffer of sensor
-*  @input    :
-*  @output   :	buffer : the buffer pointer for full frame
+*  @input    :  buffer: the buffer pointer for full frame
+*  @output   :	
 *  @return   :
 */
 void CeleX5::getFullPicBuffer(uint8_t* buffer)
@@ -638,9 +595,8 @@ void CeleX5::getFullPicBuffer(uint8_t* buffer)
 /*
 *  @function :  getFullPicBuffer
 *  @brief    :	get the full buffer of sensor
-*  @input    :
-*  @output   :	buffer : the buffer pointer for full frame
-*				timeStamp : the time stamp of the full frame
+*  @input    :  buffer: the buffer pointer for full frame
+*  @output   :	timeStamp: the time stamp of the full frame
 *  @return   :
 */
 void CeleX5::getFullPicBuffer(uint8_t* buffer, std::time_t& timestamp)
@@ -760,38 +716,39 @@ cv::Mat CeleX5::getOpticalFlowPicMat(OpticalFlowPicType type)
 *  @function :  getEventDataVector
 *  @brief    :	get the vector of the event data
 *  @input    :
-*  @output   :	vector : the vector of the event data
+*  @output   :	vecEvent: the vector of the event data
 *  @return   :	bool : true for non-empty vector; false for empty vector
 */
-bool CeleX5::getEventDataVector(std::vector<EventData> &vector)
+bool CeleX5::getEventDataVector(std::vector<EventData>& vecEvent)
 {
-	return m_pDataProcessor->getEventDataVector(vector);
+	return m_pDataProcessor->getEventDataVector(vecEvent);
 }
 
 /*
 *  @function :  getEventDataVector
 *  @brief    :	get the vector of the event data
 *  @input    :
-*  @output   :	vector : the vector of the event data
+*  @output   :	vecEvent: the vector of the event data
 *				frameNo : the frame number of the event vector
 *  @return   :	bool : true for non-empty vector; false for empty vector
 */
-bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo)
+bool CeleX5::getEventDataVector(std::vector<EventData>& vecEvent, uint32_t& frameNo)
 {
-	return m_pDataProcessor->getEventDataVector(vector, frameNo);
+	return m_pDataProcessor->getEventDataVector(vecEvent, frameNo);
 }
 
 /*
 *  @function :  getEventDataVectorEx
 *  @brief    :	get the vector of the event data
 *  @input    :
-*  @output   :	vector : the vector of the event data
-*				frameNo : the frame number of the event vector
+*  @output   :	vecEvent : the vector of the event data
+*				frameNo  : the frame number of the event vector
+*               timestamp: the pc timestamp when the event data stream was received from sensor
 *  @return   :	bool : true for non-empty vector; false for empty vector
 */
-bool CeleX5::getEventDataVector(std::vector<EventData> &vector, uint32_t& frameNo, std::time_t& timestamp)
+bool CeleX5::getEventDataVector(std::vector<EventData>& vecEvent, uint32_t& frameNo, std::time_t& timestamp)
 {
-	return m_pDataProcessor->getEventDataVector(vector, frameNo, timestamp);
+	return m_pDataProcessor->getEventDataVector(vecEvent, frameNo, timestamp);
 }
 
 /*

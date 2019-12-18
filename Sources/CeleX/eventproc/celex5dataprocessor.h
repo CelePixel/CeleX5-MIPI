@@ -38,9 +38,9 @@ public:
 	void getOpticalFlowPicBuffer(uint8_t* buffer, CeleX5::OpticalFlowPicType type);
 	void getOpticalFlowPicBuffer(uint8_t* buffer, std::time_t& timestamp, CeleX5::OpticalFlowPicType type);
 
-	bool getEventDataVector(std::vector<EventData> &vecData);
-	bool getEventDataVector(std::vector<EventData> &vecData, uint32_t& frameNo);
-	bool getEventDataVector(std::vector<EventData> &vecData, uint32_t& frameNo, std::time_t& timestamp);
+	bool getEventDataVector(std::vector<EventData> &vecEvent);
+	bool getEventDataVector(std::vector<EventData> &vecEvent, uint32_t& frameNo);
+	bool getEventDataVector(std::vector<EventData> &vecEvent, uint32_t& frameNo, std::time_t& timestamp);
 
 	void processMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t timestampEnd, std::vector<IMURawData>& imuData);
 
@@ -159,7 +159,7 @@ private:
 	uint8_t*                 m_pEventCountPic[MAX_BUFFER_NUM];
 	uint8_t*                 m_pEventDenoisedCountPic[MAX_BUFFER_NUM];
 	uint8_t*                 m_pEventGrayPic[MAX_BUFFER_NUM];
-	uint8_t*                 m_pEventAccumulatedPic[MAX_BUFFER_NUM];
+	uint8_t*                 m_pEventAccumulatedPic;
 	uint8_t*	             m_pEventSuperimposedPic[MAX_BUFFER_NUM];
 	uint8_t*                 m_pEventCountSlicePic[MAX_BUFFER_NUM];
 	//
@@ -238,7 +238,7 @@ private:
 	bool                     m_bIMUModuleEnabled;
 	bool                     m_bEventDenoisingEnabled;
 	bool                     m_bFrameDenoisingEnabled;
-	bool                     m_bEventCountSliceEnabled;
+	bool                     m_bEventCountDensityEnabled;
 	bool                     m_bEventOpticalFlowEnabled;
 	//
 	int                      m_iLastLoopNum;

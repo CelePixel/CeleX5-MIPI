@@ -82,12 +82,12 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 	, m_bIMUModuleEnabled(true)
 	, m_bEventDenoisingEnabled(false)
 	, m_bFrameDenoisingEnabled(false)
+	, m_bEventCountDensityEnabled(true)
 	, m_bEventOpticalFlowEnabled(false)
 	, m_bStartGenerateOFFPN(false)
 	, m_iLastLoopNum(3)
 	, m_emLastLoopMode(CeleX5::Unknown_Mode)
 	, m_iFPNIndexForAdjustPic(1)
-	, m_bEventCountSliceEnabled(true)
 	, m_uiMinInPixelTimestamp(0)
 	, m_uiMaxInPixelTimestamp(0)
 {
@@ -133,9 +133,6 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 		m_pEventGrayPic[i] = new uint8_t[CELEX5_PIXELS_NUMBER];
 		memset(m_pEventGrayPic[i], 0, CELEX5_PIXELS_NUMBER);
 
-		m_pEventAccumulatedPic[i] = new uint8_t[CELEX5_PIXELS_NUMBER];
-		memset(m_pEventAccumulatedPic[i], 0, CELEX5_PIXELS_NUMBER);
-
 		m_pEventSuperimposedPic[i] = new uint8_t[CELEX5_PIXELS_NUMBER];
 		memset(m_pEventSuperimposedPic[i], 0, CELEX5_PIXELS_NUMBER);
 
@@ -150,6 +147,9 @@ CeleX5DataProcessor::CeleX5DataProcessor()
 		m_pOpticalFlowDirectionPic[i] = new uint8_t[CELEX5_PIXELS_NUMBER];
 		memset(m_pOpticalFlowDirectionPic[i], 0, CELEX5_PIXELS_NUMBER);
 	}
+
+	m_pEventAccumulatedPic = new uint8_t[CELEX5_PIXELS_NUMBER];
+	memset(m_pEventAccumulatedPic, 0, CELEX5_PIXELS_NUMBER);
 
 	loadOpticalFlowFPN();
 
@@ -181,21 +181,22 @@ CeleX5DataProcessor::~CeleX5DataProcessor()
 
 	for (int i = 0; i < MAX_BUFFER_NUM; ++i)
 	{
-		if (m_pFullPic) delete[] m_pFullPic[i];
+		if (m_pFullPic[i]) delete[] m_pFullPic[i];
 
-		if (m_pEventBinaryPic) delete[] m_pEventBinaryPic[i];
-		if (m_pEventDenoisedBinaryPic) delete[] m_pEventDenoisedBinaryPic[i];
-		if (m_pEventCountPic) delete[] m_pEventCountPic[i];
-		if (m_pEventDenoisedCountPic) delete[] m_pEventDenoisedCountPic[i];
-		if (m_pEventGrayPic) delete[] m_pEventGrayPic[i];
-		if (m_pEventAccumulatedPic) delete[] m_pEventAccumulatedPic[i];
-		if (m_pEventSuperimposedPic) delete[] m_pEventSuperimposedPic[i];
-		if (m_pEventCountSlicePic) delete[] m_pEventCountSlicePic[i];
+		if (m_pEventBinaryPic[i]) delete[] m_pEventBinaryPic[i];
+		if (m_pEventDenoisedBinaryPic[i]) delete[] m_pEventDenoisedBinaryPic[i];
+		if (m_pEventCountPic[i]) delete[] m_pEventCountPic[i];
+		if (m_pEventDenoisedCountPic[i]) delete[] m_pEventDenoisedCountPic[i];
+		if (m_pEventGrayPic[i]) delete[] m_pEventGrayPic[i];
+		//if (m_pEventAccumulatedPic[i]) delete[] m_pEventAccumulatedPic[i];
+		if (m_pEventSuperimposedPic[i]) delete[] m_pEventSuperimposedPic[i];
+		if (m_pEventCountSlicePic[i]) delete[] m_pEventCountSlicePic[i];
 		
-		if (m_pOpticalFlowPic) delete[] m_pOpticalFlowPic[i];
-		if (m_pOpticalFlowSpeedPic) delete[] m_pOpticalFlowSpeedPic[i];
-		if (m_pOpticalFlowDirectionPic) delete[] m_pOpticalFlowDirectionPic[i];
+		if (m_pOpticalFlowPic[i]) delete[] m_pOpticalFlowPic[i];
+		if (m_pOpticalFlowSpeedPic[i]) delete[] m_pOpticalFlowSpeedPic[i];
+		if (m_pOpticalFlowDirectionPic[i]) delete[] m_pOpticalFlowDirectionPic[i];
 	}
+	if (m_pEventAccumulatedPic) delete[] m_pEventAccumulatedPic;
 }
 
 /*
@@ -238,7 +239,7 @@ void CeleX5DataProcessor::getEventPicBuffer(uint8_t* buffer, CeleX5::EventPicTyp
 	else if (type == CeleX5::EventGrayPic)
 		memcpy(buffer, m_pEventGrayPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventAccumulatedPic)
-		memcpy(buffer, m_pEventAccumulatedPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
+		memcpy(buffer, m_pEventAccumulatedPic, CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventSuperimposedPic)
 		memcpy(buffer, m_pEventSuperimposedPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventDenoisedBinaryPic)
@@ -247,7 +248,7 @@ void CeleX5DataProcessor::getEventPicBuffer(uint8_t* buffer, CeleX5::EventPicTyp
 		memcpy(buffer, m_pEventCountPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventDenoisedCountPic)
 		memcpy(buffer, m_pEventDenoisedCountPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
-	else if (type == CeleX5::EventCountSlicePic)
+	else if (type == CeleX5::EventCountDensityPic)
 		memcpy(buffer, m_pEventCountSlicePic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventInPixelTimestampPic)
 		memcpy(buffer, m_pOpticalFlowPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
@@ -268,7 +269,7 @@ void CeleX5DataProcessor::getEventPicBuffer(uint8_t* buffer, std::time_t& timest
 	else if (type == CeleX5::EventGrayPic)
 		memcpy(buffer, m_pEventGrayPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventAccumulatedPic)
-		memcpy(buffer, m_pEventAccumulatedPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
+		memcpy(buffer, m_pEventAccumulatedPic, CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventSuperimposedPic)
 		memcpy(buffer, m_pEventSuperimposedPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventDenoisedBinaryPic)
@@ -277,7 +278,7 @@ void CeleX5DataProcessor::getEventPicBuffer(uint8_t* buffer, std::time_t& timest
 		memcpy(buffer, m_pEventCountPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventDenoisedCountPic)
 		memcpy(buffer, m_pEventDenoisedCountPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
-	else if (type == CeleX5::EventCountSlicePic)
+	else if (type == CeleX5::EventCountDensityPic)
 		memcpy(buffer, m_pEventCountSlicePic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
 	else if (type == CeleX5::EventInPixelTimestampPic)
 		memcpy(buffer, m_pOpticalFlowPic[s_uiReadFrameIndex], CELEX5_PIXELS_NUMBER);
@@ -329,12 +330,12 @@ void CeleX5DataProcessor::getOpticalFlowPicBuffer(uint8_t* buffer, std::time_t& 
 *  @function: getEventDataVector
 *  @brief   : obtain an event data stream over a period time
 *  @input   : 
-*  @output  : vecData: event data vector over a period time
+*  @output  : vecEvent: event data vector over a period time
 *  @return  :
 */
-bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData)
+bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecEvent)
 {
-	vecData = m_vecEventData;
+	vecEvent = m_vecEventData;
 	return true;
 }
 
@@ -342,13 +343,13 @@ bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData)
 *  @function: getEventDataVector
 *  @brief   : obtain an event data stream over a period time and the frame number
 *  @input   : 
-*  @output  : buffer: frame buffer (size is 1280 * 800)
-*             frameNo: frame number
+*  @output  : vecEvent: frame buffer (size is 1280 * 800)
+*             frameNo : frame number
 *  @return  :
 */
-bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData, uint32_t& frameNo)
+bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecEvent, uint32_t& frameNo)
 {
-	vecData = m_vecEventData;
+	vecEvent = m_vecEventData;
 	frameNo = m_uiEventFrameNo;
 	return true;
 }
@@ -357,14 +358,14 @@ bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData, ui
 *  @function: getEventDataVector
 *  @brief   : obtain an event data stream over a period time and the frame number
 *  @input   :
-*  @output  : buffer: frame buffer (size is 1280 * 800)
+*  @output  : vecEvent : frame buffer (size is 1280 * 800)
+*             frameNo  : the frame number of the event vector 
 *             timestamp: the pc timestamp when the event data stream was received from sensor
-*             bDenoised: denoised flag
 *  @return  :
 */
-bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData, uint32_t& frameNo, std::time_t& timestamp)
+bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecEvent, uint32_t& frameNo, std::time_t& timestamp)
 {
-	vecData = m_vecEventData;
+	vecEvent = m_vecEventData;
 	frameNo = m_uiEventFrameNo;
 	if (m_bLoopModeEnabled)
 		timestamp = m_lEventFrameTimestamp;
@@ -384,14 +385,14 @@ bool CeleX5DataProcessor::getEventDataVector(std::vector<EventData> &vecData, ui
 *  @return  :
 */
 //vecData[size -1]: data mode = 1: event / 0: fullpic
-void CeleX5DataProcessor::processMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t time_stamp_end, std::vector<IMURawData>& imu_data)
+void CeleX5DataProcessor::processMIPIData(uint8_t* pData, uint32_t dataSize, std::time_t time_stamp_end, std::vector<IMURawData>& imuData)
 {
 	//cout << "CeleX5DataProcessor::processData: time_stamp_end = " << time_stamp_end << endl;
-	int size = imu_data.size();
+	int size = imuData.size();
 	//cout << "CeleX5DataProcessor::processData: imu_data size = " << size << endl;
 	for (int i = 0; i < size; i++)
 	{
-		m_vectorIMURawData.push_back(imu_data[i]);
+		m_vectorIMURawData.push_back(imuData[i]);
 		//cout << "--- CeleX5DataProcessor::processData: imu_time_stamp = " << imu_data[i].time_stamp << endl;
 	}
 	//cout << "CeleX5DataProcessor::processData: data mode ================= " << (int)*(pData + dataSize -1) << endl;
@@ -565,17 +566,17 @@ bool CeleX5DataProcessor::isFrameDenoisingEnabled()
 
 void CeleX5DataProcessor::disableEventCountSlice()
 {
-	m_bEventCountSliceEnabled = false;
+	m_bEventCountDensityEnabled = false;
 }
 
 void CeleX5DataProcessor::enableEventCountSlice()
 {
-	m_bEventCountSliceEnabled = true;
+	m_bEventCountDensityEnabled = true;
 }
 
 bool CeleX5DataProcessor::isEventCountSliceEnabled()
 {
-	return m_bEventCountSliceEnabled;
+	return m_bEventCountDensityEnabled;
 }
 
 void CeleX5DataProcessor::disableEventOpticalFlow()
@@ -1463,7 +1464,7 @@ bool CeleX5DataProcessor::createImage(std::time_t timestampEnd)
 	uint8_t* pEventCountPic = m_pEventCountPic[s_uiWriteFrameIndex];
 	uint8_t* pEventDenoisedCountPic = m_pEventDenoisedCountPic[s_uiWriteFrameIndex];
 	uint8_t* pEventGrayPic = m_pEventGrayPic[s_uiWriteFrameIndex];
-	uint8_t* pEventAccumulatedPic = m_pEventAccumulatedPic[s_uiWriteFrameIndex];
+	uint8_t* pEventAccumulatedPic = m_pEventAccumulatedPic;
 	uint8_t* pEventSuperimposedPic = m_pEventSuperimposedPic[s_uiWriteFrameIndex];
 	uint8_t* pEventCountSlicePic = m_pEventCountSlicePic[s_uiWriteFrameIndex];
 	uint8_t* pOpticalFlowPic = m_pOpticalFlowPic[s_uiWriteFrameIndex];
@@ -1586,7 +1587,7 @@ bool CeleX5DataProcessor::createImage(std::time_t timestampEnd)
 			//--- calculate denoised pic ---
 			calculateDenoisedBuffer(pEventDenoisedBinaryPic, pEventDenoisedCountPic, pEventCountPic, 4);
 		}
-		if (m_bEventCountSliceEnabled)
+		if (m_bEventCountDensityEnabled)
 		{
 			//--- calculate event count slice ---
 			calEventCountSlice(pEventCountSlicePic);
@@ -1596,6 +1597,8 @@ bool CeleX5DataProcessor::createImage(std::time_t timestampEnd)
 	else if (m_emCurrentSensorMode == CeleX5::Event_In_Pixel_Timestamp_Mode)
 	{
 		int len = m_uiMaxInPixelTimestamp - m_uiMinInPixelTimestamp;
+		if (len <= 0)
+			len = 1;
 		for (int i = 0; i < CELEX5_PIXELS_NUMBER; i++)
 		{
 			index = getCurrentIndex(i);
@@ -1638,7 +1641,7 @@ bool CeleX5DataProcessor::createImage(std::time_t timestampEnd)
 			//--- calculate optical-flow direction and speed ---
 			calDirectionAndSpeed(m_pEventADCBuffer, pOpticalFlowSpeedPic, pOpticalFlowDirectionPic);
 		}
-		if (m_bEventCountSliceEnabled)
+		if (m_bEventCountDensityEnabled)
 		{
 			//--- calculate event count slice ---
 			calEventCountSlice(pEventCountSlicePic);
@@ -1675,7 +1678,7 @@ bool CeleX5DataProcessor::createImage(std::time_t timestampEnd)
 				pEventCountPic[index] = 0;
 			}
 		}
-		if (m_bEventCountSliceEnabled)
+		if (m_bEventCountDensityEnabled)
 		{
 			calEventCountSlice(pEventCountSlicePic);
 		}
@@ -1792,7 +1795,7 @@ bool CeleX5DataProcessor::createImage(std::time_t timestampEnd)
 	{
 		m_emLastLoopMode = m_emCurrentSensorMode;
 	}
-	if (m_bEventCountSliceEnabled)
+	if (m_bEventCountDensityEnabled)
 	{
 		if (m_uiEventCountSliceNum == 5)
 		{
