@@ -1,3 +1,22 @@
+CeleX-5 SDK Version 2.0
+Released Date: 2019-12-18
+
+New Features:
+1) Added support for enable/disable "Reconstructing Image Frame Module".
+2) Added support for enable/disable "Constructing Event Stream Module".
+3) Added support for enable/disable "IMU Module".
+4) Added support for enable/disable "Event Stream Denoising Function".
+5) Added support for enable/disable "Frame Denoising Function".
+6) Added support for enable/disable "Event Count Density Function".
+7) Added support for enable/disable "Event Optical Flow Function".
+
+Changes:
+1) Updated the the default configuration parameters for CeleX5.
+2) Changed the timestamp unit to microsecond (¦Ìs).
+3) Improved performance for processing sensor data.
+
+*****************************************************************************************************
+
 CeleX-5 SDK Version 1.6
 Released Date: 2019-08-20
 
