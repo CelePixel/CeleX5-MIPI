@@ -34,7 +34,6 @@ OpenCV-based interfaces to obtain data from the sensor.
 * _Sources_:
   * _CeleX_: Source code of CeleX5 library.
   * _CeleXDemo_: Source code (developed by Qt) of CeleX5 demo.
-  * _CeleDriver_: Source code of CX3 USB3.0 driver.
 * _Sample-ROS_: : Sample code for ROS Kinetic environment under Ubuntu 16.04.
 * _Samples_: Several examples developed based on SDK and a sample user manual file.
 * _ReleaseNotes.txt_: New features, fixed bugs and SDK development environment.
