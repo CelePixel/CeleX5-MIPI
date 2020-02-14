@@ -958,13 +958,7 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 	{
 		if (dataSize < 357001) //the last package of event data
 		{
-			m_uiPixelCount = 0;
-			m_uiRowCount = 0;
-			m_uiEventRowCycleCount = 0;
-			m_uiEventTCounter = 0;
 			m_uiEventFrameNo++;
-
-			m_vecEventData.clear();
 
 			if (m_bIMUModuleEnabled)
 			{
@@ -979,7 +973,12 @@ void CeleX5DataProcessor::parseEventDataFormat1(uint8_t* pData, int dataSize)
 				m_pCX5ProcessedData->setSensorMode(m_emCurrentSensorMode);
 			}
 			m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
-			//cout << "m_uiEventTCounter = " << m_uiEventTCounter << endl;
+
+			m_uiPixelCount = 0;
+			m_uiRowCount = 0;
+			m_uiEventRowCycleCount = 0;
+			m_uiEventTCounter = 0;
+			m_vecEventData.clear();
 		}
 	}
 }
@@ -1204,14 +1203,7 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 	{
 		if (dataSize < 357001) //the last package of event data
 		{
-			m_uiPixelCount = 0;
-			m_uiRowCount = 0;
-			m_uiEventRowCycleCount = 0;
-			m_uiEventTCounter = 0;
 			m_uiEventFrameNo++;
-
-			m_vecEventData.clear();
-
 			if (m_bIMUModuleEnabled)
 			{
 				parseIMUData(m_lLastPackageTimestamp);
@@ -1225,7 +1217,12 @@ void CeleX5DataProcessor::parseEventDataFormat2(uint8_t* pData, int dataSize)
 				m_pCX5ProcessedData->setSensorMode(m_emCurrentSensorMode);
 			}
 			m_pCX5Server->notify(CeleX5DataManager::CeleX_Frame_Data);
-			//cout << "m_uiEventTCounter = " << m_uiEventTCounter << endl;
+
+			m_uiPixelCount = 0;
+			m_uiRowCount = 0;
+			m_uiEventRowCycleCount = 0;
+			m_uiEventTCounter = 0;
+			m_vecEventData.clear();
 		}
 	}
 
@@ -1368,10 +1365,6 @@ void CeleX5DataProcessor::checkIfShowImage()
 	}
 	if (bShowImage)
 	{
-		m_uiPixelCount = 0;
-		m_uiRowCount = 0;
-		m_uiEventRowCycleCount = 0;
-		m_uiEventTCounter = 0;
 		m_uiEventFrameNo++;
 
 		if (0 == m_lLastPackageTimestamp)
@@ -1446,6 +1439,11 @@ void CeleX5DataProcessor::checkIfShowImage()
 		{
 			m_vecEventData.clear();
 		}
+		//
+		m_uiPixelCount = 0;
+		m_uiRowCount = 0;
+		m_uiEventRowCycleCount = 0;
+		m_uiEventTCounter = 0;
 	}
 }
 
@@ -2547,6 +2545,11 @@ void CeleX5DataProcessor::resetTimestamp()
 uint32_t CeleX5DataProcessor::getEventRate()
 {
 	return m_uiEventNumberEPS;
+}
+
+uint32_t CeleX5DataProcessor::getEventRatePerFrame()
+{
+	return m_uiPixelCount;
 }
 
 /*

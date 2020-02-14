@@ -108,6 +108,7 @@ public:
 	void saveFullPicRawData();
 	void resetTimestamp();
 	uint32_t getEventRate();
+	uint32_t getEventRatePerFrame();
 
 private:
 	void processFullPicData(uint8_t* pData, int dataSize, std::time_t timestampEnd);

@@ -407,6 +407,7 @@ public:
 	* Unit: events per second
 	*/
 	uint32_t getEventRate(); 
+	uint32_t getEventRatePerFrame();
 
 	int getALSValue();
 

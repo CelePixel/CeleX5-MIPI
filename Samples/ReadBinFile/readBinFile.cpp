@@ -26,7 +26,8 @@
 #endif
 
 #define FPN_PATH    "../Samples/config/FPN_2.txt"
-#define BIN_FILE    "YOUR_BIN_FILE_PATH.bin"	//your bin file path
+//#define BIN_FILE    "YOUR_BIN_FILE_PATH.bin"	//your bin file path
+#define BIN_FILE    "E:/API/CeleX5/MIPI/Monocular/Bins/Lighter_Big_20191023_161256307_E_140M.bin"	//your bin file path
 
 CeleX5 *pCeleX5 = new CeleX5;
 
@@ -83,7 +84,7 @@ int main()
 {
 	if (pCeleX5 == NULL)
 		return 0;
-	pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
+	//pCeleX5->openSensor(CeleX5::CeleX5_MIPI);
 	bool success = pCeleX5->openBinFile(BIN_FILE);	//open the bin file
 	CeleX5::CeleX5Mode sensorMode = (CeleX5::CeleX5Mode)pCeleX5->getBinFileAttributes().loopAMode;
 

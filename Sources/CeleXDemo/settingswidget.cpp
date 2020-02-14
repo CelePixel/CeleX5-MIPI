@@ -69,6 +69,10 @@ void SettingsWidget::updateCfgs()
     QList<CfgSlider*> slider1 = this->findChildren<CfgSlider *>("Clock");
     if (slider1.size() > 0)
         slider1[0]->updateValue(m_pCeleX5->getClockRate());
+
+    QList<CfgSlider*> slider2 = this->findChildren<CfgSlider *>("Threshold");
+    if (slider2.size() > 0)
+        slider2[0]->updateValue(m_pCeleX5->getThreshold());
 }
 
 void SettingsWidget::resizeEvent(QResizeEvent *)

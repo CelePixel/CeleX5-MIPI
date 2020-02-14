@@ -2335,6 +2335,11 @@ uint32_t CeleX5::getEventRate()
 	return m_pDataProcessor->getEventRate();
 }
 
+uint32_t CeleX5::getEventRatePerFrame()
+{
+	return m_pDataProcessor->getEventRatePerFrame();;
+}
+
 /*
 *  @function :  getALSValue
 *  @brief    :	get ALS value

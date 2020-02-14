@@ -109,8 +109,97 @@ SensorDataObserver::~SensorDataObserver()
 }
 
 //This function is only for playback
+bool bAdjust = true;
+int frameNum = 0;
+int totalEventCount = 0;
+#define FRAME_NUM    15
 void SensorDataObserver::onFrameDataUpdated(CeleX5ProcessedData* pSensorData)
 {
+    if (frameNum < FRAME_NUM)
+    {
+        cout << m_pCeleX5->getEventRatePerFrame() << endl;
+        if (frameNum >= 5)
+            totalEventCount += m_pCeleX5->getEventRatePerFrame();
+        if (frameNum == FRAME_NUM-1)
+        {
+            int averNum = totalEventCount / (FRAME_NUM-5);
+            cout << "average event count = " << averNum << endl;
+            if (averNum > 100000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(250);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 80000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(240);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 70000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(230);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 60000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(220);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 50000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(210);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 40000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(200);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 30000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(191);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+            else if (averNum > 20000)
+            {
+                if (bAdjust)
+                {
+                    m_pCeleX5->setThreshold(181);
+                    cout << "Threshold = " << m_pCeleX5->getThreshold() << endl;
+                    bAdjust = false;
+                }
+            }
+        }
+        frameNum++;
+    }
+
     if (g_bStartGenerateOFFPN)
     {
         g_dFPNProgessValue = double(pSensorData->getFPNProgress())*100/CELEX5_PIXELS_NUMBER;
