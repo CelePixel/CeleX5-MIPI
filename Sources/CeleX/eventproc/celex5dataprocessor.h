@@ -112,9 +112,9 @@ public:
 
 private:
 	void processFullPicData(uint8_t* pData, int dataSize, std::time_t timestampEnd);
-	void parseEventDataFormat0(uint8_t* pData, int dataSize); //Format0: 24-bit packet with ADC data (CSR_73=2'b00)
-	void parseEventDataFormat1(uint8_t* pData, int dataSize); //Format1: 28-bit packet with ADC data (CSR_73=2'b01)
-	void parseEventDataFormat2(uint8_t* pData, int dataSize); //Format2: 14-bit packet without ADC data (CSR_73=2'b10)
+	void parseEventDataFormat0(uint8_t* pData, int dataSize, std::time_t timestampEnd); //Format0: 24-bit packet with ADC data (CSR_73=2'b00)
+	void parseEventDataFormat1(uint8_t* pData, int dataSize, std::time_t timestampEnd); //Format1: 28-bit packet with ADC data (CSR_73=2'b01)
+	void parseEventDataFormat2(uint8_t* pData, int dataSize, std::time_t timestampEnd); //Format2: 14-bit packet without ADC data (CSR_73=2'b10)
 	//
 	void parseIMUData(std::time_t timestamp);
 
